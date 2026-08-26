@@ -31,7 +31,14 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env*.local
+
+# credentials — NEVER commit
+*serviceAccount*.json
+*firebase-adminsdk*.json
+firebase_project_cred.txt
+files.zip
 
 # vercel
 .vercel

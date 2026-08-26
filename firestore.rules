@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// ============================================================
+// logi — Firestore Security Rules
+// App cá nhân một người dùng: allowlist theo UID + ownership theo path.
+// Giữ nguyên pattern users/{uid}/... của COGI/MESI.
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validCategory(c) {
+      return c in ['learn', 'work', 'fitness', 'sleep', 'leisure'];
+    }
+
+    function validActivity(d) {
+      return d.keys().hasAll(['category', 'startAt', 'status', 'logicalDate', 'logicalWeek'])
+        && validCategory(d.category)
+        && d.status in ['scheduled', 'active', 'done', 'abandoned']
+        && d.startAt is number
+        && (d.endAt == null || (d.endAt is number && d.endAt > d.startAt))
+        // Chặn record vô lý ngay ở tầng DB, không tin client
+        && (d.endAt == null || d.endAt - d.startAt <= 15 * 60 * 60 * 1000)
+        && d.logicalDate is string
+        && d.logicalWeek is string;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /activities/{activityId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validActivity(request.resource.data);
+      }
+
+      // weekTargets/{week} — VD "2026-W35"
+      match /weekTargets/{week} {
+        allow read: if isOwner(uid);
+        // Tuần đã đóng sổ (21:00 CN) thì không sửa được nữa
+        allow create: if isOwner(uid);
+        allow update: if isOwner(uid)
+          && (resource.data.lockedAt == null);
+        allow delete: if false;
+      }
+
+      // meta/debt, meta/settings
+      match /meta/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Mọi thứ còn lại: cấm
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
