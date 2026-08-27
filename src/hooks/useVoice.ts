@@ -166,13 +166,18 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
           | null;
 
         if (!res.ok || !body) {
-          push(body?.error ?? 'Voice failed. Try again.');
+          // Server chối (hết lượt, quá dài, key hỏng) — đừng bỏ người dùng
+          // giữa chừng, mở luôn sheet để ghi tay.
+          push(body?.error ?? 'Voice failed. Fill it in instead.');
+          onManual();
           return;
         }
 
         await runPlan(body, requestId, false, onManual);
       } catch (e) {
+        // Mất mạng: fetch ném ngay. Vẫn phải ghi được bằng tay.
         push(`Voice failed. ${msg(e)}`);
+        onManual();
       } finally {
         setThinking(false);
       }
