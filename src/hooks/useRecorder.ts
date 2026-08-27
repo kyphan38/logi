@@ -70,6 +70,8 @@ export function useRecorder() {
   const chunksRef = useRef<BlobPart[]>([]);
   const startedAtRef = useRef(0);
   const cancelledRef = useRef(false);
+  /** Đang chờ quyền mic. Nhả tay lúc này thì phải huỷ, không để nó ghi tiếp. */
+  const startingRef = useRef(false);
   const capRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -131,6 +133,8 @@ export function useRecorder() {
 
     const ctx = new Ctx();
     audioCtxRef.current = ctx;
+    // iOS mở AudioContext ở trạng thái 'suspended' → waveform đứng im nếu quên.
+    if (ctx.state === 'suspended') void ctx.resume().catch(() => {});
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
     ctx.createMediaStreamSource(stream).connect(analyser);
@@ -212,18 +216,22 @@ export function useRecorder() {
     }
 
     setState('requesting');
+    startingRef.current = true;
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (e) {
+      startingRef.current = false;
       setError(micError(e));
       setState('idle');
       return;
     }
+    startingRef.current = false;
 
-    // Người dùng rời trang trong lúc đang xin quyền.
-    if (!aliveRef.current) {
+    // Nhả tay quá nhanh, hoặc rời trang, trong lúc đang xin quyền.
+    if (!aliveRef.current || cancelledRef.current) {
       stream.getTracks().forEach((t) => t.stop());
+      if (aliveRef.current) setState('idle');
       return;
     }
 
@@ -269,6 +277,8 @@ export function useRecorder() {
   const stop = useCallback((): Promise<Recording | null> => {
     const rec = recRef.current;
     if (!rec || rec.state === 'inactive') {
+      // Chạm rồi nhả trước khi trình duyệt trả quyền mic → đừng ghi nữa.
+      if (startingRef.current) cancelledRef.current = true;
       const done = pendingRef.current; // đã tự dừng ở mốc 30s
       pendingRef.current = null;
       return Promise.resolve(done);

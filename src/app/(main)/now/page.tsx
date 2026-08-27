@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import ActiveSessionCard from '@/components/ActiveSessionCard';
 import CategoryGrid from '@/components/CategoryGrid';
 import StaleSessionModal from '@/components/StaleSessionModal';
+import MicButton from '@/components/MicButton';
 import Toasts from '@/components/Toasts';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -165,6 +166,15 @@ export default function NowPage() {
           onResolved={() => push('Session updated.')}
         />
       ) : null}
+
+      {/* TODO(Task 3): gửi sang /api/parse. Tạm báo mime + độ dài để kiểm tra trên iPhone. */}
+      <MicButton
+        disabled={busy}
+        onResult={(r) => {
+          const kb = Math.round((r.base64.length * 3) / 4 / 1024);
+          push(`${r.mimeType} · ${(r.durationMs / 1000).toFixed(1)}s · ${kb}KB`);
+        }}
+      />
 
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>

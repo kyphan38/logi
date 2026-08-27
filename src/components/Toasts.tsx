@@ -13,7 +13,8 @@ export default function Toasts({
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-center gap-2 px-4 md:bottom-6"
+      // Cao hơn bottom nav một quãng để không đè lên nút mic ở màn Now.
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(9rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-center gap-2 px-4 md:bottom-6"
       role="status"
       aria-live="polite"
     >
