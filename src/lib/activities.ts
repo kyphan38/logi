@@ -394,6 +394,31 @@ export function subscribeByDate(
   );
 }
 
+/**
+ * Nghe cả một tuần logic. Dùng cho balance banner.
+ * Index `logicalWeek ASC + startAt ASC` đã có từ Stage 1.
+ */
+export function subscribeByWeek(
+  uid: string,
+  week: string,
+  cb: (activities: Activity[], meta: SnapMeta) => void,
+  onError?: (e: unknown) => void
+): Unsubscribe {
+  const q = query(col(uid), where('logicalWeek', '==', week), orderBy('startAt', 'asc'));
+  return onSnapshot(
+    q,
+    { includeMetadataChanges: true },
+    (snap) => {
+      // Bỏ record 'scheduled': đó là dự định, chưa phải giờ đã sống.
+      const list = snap.docs
+        .map((d) => toActivity(d.id, d.data()))
+        .filter((a) => a.status !== 'scheduled');
+      cb(list, metaOf(snap));
+    },
+    (e) => onError?.(e)
+  );
+}
+
 /** Đọc một lần các session đang chạy. */
 export async function listActive(uid: string): Promise<Activity[]> {
   const q = query(col(uid), where('status', '==', 'active'));

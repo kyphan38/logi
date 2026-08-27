@@ -3,11 +3,13 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import ActiveSessionCard from '@/components/ActiveSessionCard';
+import BalanceBanner from '@/components/BalanceBanner';
 import CategoryGrid from '@/components/CategoryGrid';
 import ClarifyCard from '@/components/ClarifyCard';
 import StaleSessionModal from '@/components/StaleSessionModal';
 import MicButton from '@/components/MicButton';
 import ParseConfirmCard from '@/components/ParseConfirmCard';
+import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
 import Toasts from '@/components/Toasts';
@@ -20,10 +22,14 @@ import {
   useScheduledActivities,
   useTick,
   useToasts,
+  useWeekActivities,
 } from '@/hooks/useActivities';
+import { useReminders } from '@/hooks/useReminders';
+import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
 import { useVoice } from '@/hooks/useVoice';
 import { ActivityError, deleteActivity, startActivity, stopActivity } from '@/lib/activities';
 import { findStale, logicalDate, overlapHours } from '@/lib/balance';
+import { pickBalance } from '@/lib/banner';
 import { roundDown } from '@/lib/datetime';
 import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
@@ -47,8 +53,28 @@ export default function NowPage() {
 
   const { activities: active, loading: activeLoading, pendingIds } = useActiveActivities();
   const { activities: scheduled, pendingIds: scheduledPending } = useScheduledActivities();
-  const { totals } = useDayActivities(today);
+  const { activities: todayActivities, totals } = useDayActivities(today);
   const { toasts, push, dismiss } = useToasts();
+
+  // Chuyển tuần. Không có cron nên nó phải bám vào lúc người dùng mở app.
+  // Idempotent, nên gọi thừa cũng không sao.
+  useRollover();
+
+  // Cân bằng tuần. Một dòng, hoặc không dòng nào.
+  const week = useCurrentWeek();
+  const { target: weekTarget } = useWeekTarget(week);
+  const { activities: weekActivities } = useWeekActivities(week);
+  const balanceLine = useMemo(
+    () => pickBalance(weekActivities, weekTarget?.weekly ?? null, nowMinute),
+    [weekActivities, weekTarget, nowMinute]
+  );
+
+  // Nhắc thắng balance banner: nó có hành động cụ thể hơn.
+  const { reminder, dismiss: dismissReminder } = useReminders(
+    todayActivities,
+    weekActivities,
+    weekTarget?.weekly ?? null
+  );
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
 
@@ -168,6 +194,17 @@ export default function NowPage() {
           Sign out
         </button>
       </header>
+
+      {reminder ? (
+        <ReminderBanner
+          reminder={reminder}
+          busy={busy}
+          onStartLearn={() => handleStart('learn', 0)}
+          onDismiss={dismissReminder}
+        />
+      ) : (
+        <BalanceBanner line={balanceLine} />
+      )}
 
       {scheduled.length > 0 ? (
         <section className="flex flex-col gap-3" aria-label="Scheduled sessions">

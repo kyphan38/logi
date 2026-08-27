@@ -8,6 +8,7 @@ import {
   promoteScheduled,
   subscribeActive,
   subscribeByDate,
+  subscribeByWeek,
   subscribeRecentDates,
   subscribeScheduled,
   type SnapMeta,
@@ -301,6 +302,43 @@ export function useTick(intervalMs = 1000, enabled = true): number {
 export function useElapsed(startAt: number): number {
   const now = useTick(1000, true);
   return Math.max(0, Math.floor((now - startAt) / 1000));
+}
+
+// ------------------------------------------------------------
+// Một tuần logic — cho balance banner
+// ------------------------------------------------------------
+
+export function useWeekActivities(logicalWeek: string | null) {
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+
+  const [activities, setActivities] = useState<Activity[]>(EMPTY);
+  const [loading, setLoading] = useState(true);
+
+  const key = uid && logicalWeek ? `${uid}|${logicalWeek}` : null;
+  const [prevKey, setPrevKey] = useState(key);
+  if (prevKey !== key) {
+    setPrevKey(key);
+    setActivities(EMPTY);
+    setLoading(key !== null);
+  }
+
+  useEffect(() => {
+    if (!uid || !logicalWeek) return;
+    return subscribeByWeek(
+      uid,
+      logicalWeek,
+      (list) => {
+        setActivities(list);
+        setLoading(false);
+      },
+      // Banner là thứ phụ. Query hỏng thì im lặng biến mất, đừng chen vào
+      // màn hình Now bằng một thông báo lỗi không ai làm gì được.
+      () => setLoading(false)
+    );
+  }, [uid, logicalWeek]);
+
+  return { activities, loading };
 }
 
 // ------------------------------------------------------------

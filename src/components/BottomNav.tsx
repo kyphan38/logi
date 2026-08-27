@@ -9,6 +9,7 @@ type Tab = { href: string; label: string; icon: ReactNode };
 const TABS: Tab[] = [
   { href: '/now', label: 'Now', icon: <IconNow /> },
   { href: '/history', label: 'History', icon: <IconHistory /> },
+  { href: '/targets', label: 'Targets', icon: <IconTargets /> },
   { href: '/analytics', label: 'Analytics', icon: <IconAnalytics /> },
 ];
 
@@ -82,6 +83,15 @@ function IconHistory() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
       <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconTargets() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="3.5" />
     </svg>
   );
 }

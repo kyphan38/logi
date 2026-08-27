@@ -141,6 +141,87 @@ export function coverageOfDay(segments: Segment[], win: DayWindow, now: number):
   };
 }
 
+// ---------------------------------------------------------------------------
+// Bố cục co giãn (Stage 4.5)
+//
+// Tỉ lệ tuyến tính 24h = 1440px để vẽ 5–8 record: phần lớn màn hình là
+// khoảng trống. Ở đây khối có dữ liệu giữ chiều cao đọc được, còn khoảng
+// trống thu về một dòng.
+// ---------------------------------------------------------------------------
+
+/** Chạm được bằng ngón tay theo chuẩn iOS, kể cả session 5 phút. */
+export const ELASTIC_MIN_PX = 44;
+/** Session ngủ 6.5h không được chiếm hết màn hình. */
+export const ELASTIC_MAX_PX = 132;
+export const ELASTIC_SLOPE = 0.22;
+/** Dòng "untracked" — cao vừa đủ đọc, không hơn. */
+export const GAP_ROW_PX = 32;
+
+/**
+ * Bán tỉ lệ, chặn hai đầu. Mất tính tỉ lệ chính xác, nhưng thời lượng luôn
+ * được viết bằng chữ trên block nên thông tin không mất.
+ */
+export function blockHeight(durationMs: number): number {
+  const min = durationMs / 60_000;
+  const raw = ELASTIC_MIN_PX + (min - 30) * ELASTIC_SLOPE;
+  return Math.min(ELASTIC_MAX_PX, Math.max(ELASTIC_MIN_PX, raw));
+}
+
+export interface BlockRow {
+  kind: 'blocks';
+  key: string;
+  start: number;
+  height: number;
+  /** Cùng khung giờ → nằm cạnh nhau, chia đều bề ngang. */
+  blocks: Segment[];
+}
+
+export interface GapRow {
+  kind: 'gap';
+  key: string;
+  start: number;
+  end: number;
+}
+
+export type Row = BlockRow | GapRow;
+
+/**
+ * Gom segment chồng giờ thành cụm, rồi trộn với các khoảng trống theo thứ tự
+ * thời gian. Không dùng `position: absolute` nữa — block dưới sẽ bấm được.
+ *
+ * `gaps` lấy thẳng từ `coverageOfDay()` nên đã bỏ sẵn phần tương lai của
+ * ngày hôm nay và các khoảng ngắn hơn 30 phút.
+ */
+export function elasticRows(segments: Segment[], gaps: Gap[]): Row[] {
+  const sorted = [...segments].sort((a, b) => a.start - b.start || a.lane - b.lane);
+
+  const clusters: Segment[][] = [];
+  let reach = -Infinity;
+  for (const s of sorted) {
+    if (s.start < reach && clusters.length > 0) clusters[clusters.length - 1].push(s);
+    else clusters.push([s]);
+    reach = Math.max(reach, s.end);
+  }
+
+  const blockRows: BlockRow[] = clusters.map((blocks) => ({
+    kind: 'blocks',
+    key: `b${blocks[0].start}-${blocks[0].activity.id}`,
+    start: blocks[0].start,
+    // Chiều cao hàng = block cao nhất trong nhóm.
+    height: Math.max(...blocks.map((b) => blockHeight(b.end - b.start))),
+    blocks: [...blocks].sort((a, b) => a.lane - b.lane),
+  }));
+
+  const gapRows: GapRow[] = gaps.map((g) => ({
+    kind: 'gap',
+    key: `g${g.start}`,
+    start: g.start,
+    end: g.end,
+  }));
+
+  return [...blockRows, ...gapRows].sort((a, b) => a.start - b.start);
+}
+
 /** Mốc thời gian → toạ độ px trong khung 1440px. */
 export function toPx(ts: number, win: DayWindow): number {
   return ((ts - win.start) / 3_600_000) * HOUR_PX;

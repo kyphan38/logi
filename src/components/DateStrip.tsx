@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useRef } from 'react';
 
 import { addDays } from '@/lib/timeline';
+import { CATEGORY_COLOR, type Category } from '@/types/logi';
+
+/** Một đoạn của thanh mini: category + phần trăm giờ đã log của ngày đó. */
+export interface DayBar {
+  c: Category;
+  pct: number;
+}
 
 function parts(date: string) {
   const [y, m, d] = date.split('-').map(Number);
@@ -16,13 +23,14 @@ function parts(date: string) {
 export default function DateStrip({
   today,
   selected,
-  hasData,
+  bars,
   onSelect,
 }: {
   /** Ngày logic hôm nay. */
   today: string;
   selected: string;
-  hasData: ReadonlySet<string>;
+  /** date → tỉ lệ category. Thiếu key = ngày chưa log gì. */
+  bars: Record<string, DayBar[]>;
   onSelect: (date: string) => void;
 }) {
   // 7 ngày gần nhất, cũ → mới (hôm nay ở cuối).
@@ -58,17 +66,23 @@ export default function DateStrip({
             >
               <span>{dow}</span>
               <span className="text-sm font-semibold">{day}</span>
+              {/* Lướt ngang là thấy ngay ngày nào bị Work nuốt hết. */}
               <span
                 aria-hidden="true"
-                className={[
-                  'h-1 w-1 rounded-full',
-                  hasData.has(d)
-                    ? active
-                      ? 'bg-white dark:bg-zinc-900'
-                      : 'bg-blue-500'
-                    : 'bg-transparent',
-                ].join(' ')}
-              />
+                className="flex w-7 overflow-hidden rounded-full"
+                style={{ height: active ? 6 : 4 }}
+              >
+                {(bars[d] ?? []).length > 0 ? (
+                  bars[d].map((b) => (
+                    <span
+                      key={b.c}
+                      style={{ width: `${b.pct}%`, backgroundColor: CATEGORY_COLOR[b.c] }}
+                    />
+                  ))
+                ) : (
+                  <span className="w-full bg-zinc-200 dark:bg-zinc-700" />
+                )}
+              </span>
             </button>
           );
         })}
