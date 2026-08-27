@@ -166,7 +166,9 @@ ${ctx.recentActivities.length
 
 export const AUTO_COMMIT_THRESHOLD = 0.85;
 
-const MODEL = 'gemini-2.5-flash';
+// gemini-2.5-flash đã bị Google ngừng cấp cho key mới (API trả 404).
+// Bản lite nhanh hơn (~1.3s/câu) và bắt giờ kết thúc chuẩn hơn khi test 10 câu của roadmap.
+const MODEL = 'gemini-3.5-flash-lite';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 /**
