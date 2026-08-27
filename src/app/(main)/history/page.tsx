@@ -44,14 +44,15 @@ export default function HistoryPage() {
 
   const [selected, setSelected] = useState(() => logicalDate(Date.now()));
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
-  const { activities, totals, overlap, loading } = useDayActivities(selected);
+  const { activities, carriedIn, totals, overlap, loading } = useDayActivities(selected);
   const hasData = useRecentDates(addDays(today, -30));
   const { toasts, push, dismiss } = useToasts();
 
   const win = useMemo(() => dayWindow(selected), [selected]);
+  // Vẽ cả record kéo sang từ hôm trước; `totals` vẫn chỉ tính `activities`.
   const { segments, laneCount } = useMemo(
-    () => layoutDay(activities, win, nowMinute),
-    [activities, win, nowMinute],
+    () => layoutDay([...carriedIn, ...activities], win, nowMinute),
+    [carriedIn, activities, win, nowMinute],
   );
   const { trackedH, untrackedH, gaps } = useMemo(
     () => coverageOfDay(segments, win, nowMinute),
@@ -130,7 +131,7 @@ export default function HistoryPage() {
       </header>
 
       <div ref={bodyRef} className="pt-4">
-        {!loading && activities.length === 0 ? (
+        {!loading && segments.length === 0 ? (
           <p className="pb-3 text-sm text-zinc-500 dark:text-zinc-400">
             Nothing logged this day.
           </p>

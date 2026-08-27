@@ -43,6 +43,11 @@ export interface Segment {
   lane: number;
   /** true khi session tràn qua mốc 04:00 hôm sau. */
   clippedEnd: boolean;
+  /**
+   * true khi session bắt đầu trước 04:00 — tức kéo sang từ ngày logic trước
+   * (VD ngủ 22:00 → 06:00). Vẽ ở đầu timeline để ngày không bị thủng lỗ.
+   */
+  continuedFromPrevious: boolean;
 }
 
 export interface Layout {
@@ -76,7 +81,14 @@ export function layoutDay(activities: Activity[], win: DayWindow, now: number): 
     if (lane === -1) lane = lanes.length;
     lanes[lane] = Math.max(end, start + MIN_BLOCK_MS);
 
-    segments.push({ activity: a, start, end, lane, clippedEnd: rawEnd > win.end });
+    segments.push({
+      activity: a,
+      start,
+      end,
+      lane,
+      clippedEnd: rawEnd > win.end,
+      continuedFromPrevious: a.startAt < win.start,
+    });
   }
 
   return { segments, laneCount: Math.max(1, lanes.length) };

@@ -3,7 +3,7 @@
 // Chạy SERVER-SIDE ONLY. Không bao giờ gọi từ browser.
 // ============================================================
 
-import { Activity, Category } from '@/types/logi';
+import type { Activity, Category } from '@/types/logi';
 
 // ------------------------------------------------------------
 // 1. Structured output schema

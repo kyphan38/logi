@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "TZ=Asia/Ho_Chi_Minh node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./test/register.mjs --test test/*.test.ts",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "overrides": {

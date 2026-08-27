@@ -14,6 +14,7 @@ import {
   getDocFromCache,
   getDocs,
   getDocsFromCache,
+  limit as fsLimit,
   onSnapshot,
   orderBy,
   query,
@@ -25,6 +26,7 @@ import {
 
 import { db } from '@/lib/firebase-client';
 import { logicalDate, logicalWeek, findStale } from '@/lib/balance';
+import { addDays, dayWindow } from '@/lib/timeline';
 import {
   CATEGORIES,
   MAX_SESSION_MIN,
@@ -337,20 +339,39 @@ export function subscribeActive(
   );
 }
 
-/** Mọi activity của một ngày logic ("2026-08-26"). */
+/**
+ * Mọi activity của một ngày logic ("2026-08-26").
+ *
+ * Tham số thứ ba của cb là `carriedIn`: record thuộc ngày logic liền trước
+ * nhưng còn kéo dài qua mốc 04:00 (VD ngủ 22:00 → 06:00). Chúng chỉ dùng để
+ * vẽ timeline cho liền mạch — KHÔNG cộng vào tổng của ngày này, vì mọi
+ * analytics đều tính theo `logicalDate`.
+ */
 export function subscribeByDate(
   uid: string,
   date: string,
-  cb: (activities: Activity[], meta: SnapMeta) => void,
+  cb: (activities: Activity[], meta: SnapMeta, carriedIn: Activity[]) => void,
   onError?: (e: unknown) => void
 ): Unsubscribe {
-  const q = query(col(uid), where('logicalDate', '==', date), orderBy('startAt', 'asc'));
+  const winStart = dayWindow(date).start;
+  const q = query(
+    col(uid),
+    where('logicalDate', 'in', [addDays(date, -1), date]),
+    orderBy('startAt', 'asc')
+  );
   return onSnapshot(
     q,
     { includeMetadataChanges: true },
     (snap) => {
-      const list = snap.docs.map((d) => toActivity(d.id, d.data()));
-      cb(list, metaOf(snap));
+      const own: Activity[] = [];
+      const carriedIn: Activity[] = [];
+      const now = Date.now();
+      for (const d of snap.docs) {
+        const a = toActivity(d.id, d.data());
+        if (a.logicalDate === date) own.push(a);
+        else if ((a.endAt ?? now) > winStart) carriedIn.push(a);
+      }
+      cb(own, metaOf(snap), carriedIn);
     },
     (e) => onError?.(e)
   );
@@ -366,6 +387,68 @@ export async function listActive(uid: string): Promise<Activity[]> {
 /** Session active quá 15h → cần hỏi lại giờ kết thúc. KHÔNG tự xoá. */
 export async function listStale(uid: string): Promise<Activity[]> {
   return findStale(await listActive(uid));
+}
+
+/**
+ * N record gần nhất — dùng làm context cho prompt Gemini.
+ * Bỏ qua 'scheduled' (chưa xảy ra) và 'abandoned' (rác, dễ làm model đoán sai).
+ * Index: status ASC + startAt DESC.
+ */
+export async function listRecent(uid: string, n = 5): Promise<Activity[]> {
+  const q = query(
+    col(uid),
+    where('status', 'in', ['done', 'active'] satisfies ActivityStatus[]),
+    orderBy('startAt', 'desc'),
+    fsLimit(n)
+  );
+  const snap = isOffline() ? await getDocsFromCache(q) : await getDocs(q);
+  return snap.docs.map((d) => toActivity(d.id, d.data()));
+}
+
+/**
+ * Delayed start: tới giờ thì 'scheduled' → 'active'. Trả về số record đã chuyển.
+ * startAt giữ nguyên (giờ đã hẹn), nên timer vẫn là derived state đúng.
+ * Index: status ASC + startAt ASC.
+ */
+export async function promoteScheduled(uid: string, now: number = Date.now()): Promise<number> {
+  const q = query(
+    col(uid),
+    where('status', '==', 'scheduled' satisfies ActivityStatus),
+    where('startAt', '<=', now),
+    orderBy('startAt', 'asc')
+  );
+  const snap = isOffline() ? await getDocsFromCache(q) : await getDocs(q);
+  for (const d of snap.docs) {
+    const a = toActivity(d.id, d.data());
+    await updateDoc(ref(uid, a.id), {
+      status: 'active' satisfies ActivityStatus,
+      ...derive(a.startAt, null),
+      updatedAt: Date.now(),
+    });
+  }
+  return snap.docs.length;
+}
+
+/** Các session đã hẹn giờ, chưa tới lúc chạy — để hiện đếm ngược "starts in 4:32". */
+export function subscribeScheduled(
+  uid: string,
+  cb: (activities: Activity[], meta: SnapMeta) => void,
+  onError?: (e: unknown) => void
+): Unsubscribe {
+  const q = query(
+    col(uid),
+    where('status', '==', 'scheduled' satisfies ActivityStatus),
+    orderBy('startAt', 'asc')
+  );
+  return onSnapshot(
+    q,
+    { includeMetadataChanges: true },
+    (snap) => {
+      const list = snap.docs.map((d) => toActivity(d.id, d.data()));
+      cb(list, metaOf(snap));
+    },
+    (e) => onError?.(e)
+  );
 }
 
 /** Các ngày logic gần đây có dữ liệu — để chấm nhỏ dưới dải chọn ngày. */

@@ -12,6 +12,7 @@ import {
   type Gap,
   type Segment,
 } from '@/lib/timeline';
+import { shortDate } from '@/lib/datetime';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
 const GUTTER = 'ml-11'; // chừa chỗ cho cột giờ bên trái
@@ -85,13 +86,18 @@ export default function Timeline({
               key={s.activity.id}
               type="button"
               onClick={() => onSelect(s.activity)}
-              className="absolute overflow-hidden rounded-r-md border-l-4 px-2 text-left transition active:scale-[0.99]"
+              className={[
+                'absolute overflow-hidden rounded-r-md border-l-4 px-2 text-left transition active:scale-[0.99]',
+                // Kéo sang từ hôm trước → viền đứt ở trên cho biết block bị cắt đầu.
+                s.continuedFromPrevious ? 'border-t border-dashed' : '',
+              ].join(' ')}
               style={{
                 top,
                 height,
                 left: `${(s.lane * 100) / laneCount}%`,
                 width: `calc(${100 / laneCount}% - 2px)`,
                 borderLeftColor: color,
+                borderTopColor: s.continuedFromPrevious ? color : undefined,
                 backgroundColor: `${color}${abandoned ? '14' : '26'}`,
                 opacity: abandoned ? 0.7 : 1,
                 backgroundImage: abandoned
@@ -100,10 +106,16 @@ export default function Timeline({
               }}
             >
               <span className="block truncate text-[11px] font-semibold uppercase tracking-wide">
+                {s.continuedFromPrevious ? '↥ ' : ''}
                 {CATEGORY_LABEL[s.activity.category]}
                 {abandoned ? ' · abandoned' : ''}
                 {s.clippedEnd ? ' ↧' : ''}
               </span>
+              {s.continuedFromPrevious ? (
+                <span className="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                  cont. from {shortDate(s.activity.startAt)}
+                </span>
+              ) : null}
               {!compact ? (
                 <>
                   {s.activity.label ? (

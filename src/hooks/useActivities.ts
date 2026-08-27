@@ -102,6 +102,8 @@ export function useDayActivities(logicalDate: string | null) {
   const uid = user?.uid ?? null;
 
   const [activities, setActivities] = useState<Activity[]>(EMPTY);
+  /** Record của ngày trước tràn qua 04:00 — chỉ để vẽ, không tính vào tổng. */
+  const [carriedIn, setCarriedIn] = useState<Activity[]>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState<SnapMeta>(EMPTY_META);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +114,7 @@ export function useDayActivities(logicalDate: string | null) {
   if (prevKey !== key) {
     setPrevKey(key);
     setActivities(EMPTY);
+    setCarriedIn(EMPTY);
     setError(null);
     setLoading(key !== null);
   }
@@ -121,8 +124,9 @@ export function useDayActivities(logicalDate: string | null) {
     const unsub = subscribeByDate(
       uid,
       logicalDate,
-      (list, m) => {
+      (list, m, carried) => {
         setActivities(list);
+        setCarriedIn(carried);
         setMeta(m);
         setLoading(false);
         setError(null);
@@ -146,6 +150,7 @@ export function useDayActivities(logicalDate: string | null) {
 
   return {
     activities,
+    carriedIn,
     totals,
     overlap,
     loading,

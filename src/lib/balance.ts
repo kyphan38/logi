@@ -3,9 +3,10 @@
 // ============================================================
 
 import {
-  Activity, Category, CATEGORIES, DailyTargets, BASELINE_DAILY, BASELINE_WEEKLY,
-  DAY_CUTOFF_HOUR, HARD_FLOOR, TOTAL_BUDGET, PRESETS, PresetId,
+  CATEGORIES, BASELINE_DAILY, BASELINE_WEEKLY,
+  DAY_CUTOFF_HOUR, HARD_FLOOR, TOTAL_BUDGET, PRESETS,
   DEBT_CARRYOVER_RATE, DEBT_CARRYOVER_CAP,
+  type Activity, type Category, type PresetId,
 } from '@/types/logi';
 
 // ------------------------------------------------------------
