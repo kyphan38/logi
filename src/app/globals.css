@@ -24,3 +24,24 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer base {
+  /* iOS: bỏ ô sáng khi chạm, bỏ độ trễ 300ms. Trạng thái :active tự vẽ. */
+  a,
+  button,
+  select,
+  input,
+  textarea,
+  label,
+  [role='button'] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Dưới 16px là iOS Safari tự zoom khi focus vào input. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

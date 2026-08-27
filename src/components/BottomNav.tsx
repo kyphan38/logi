@@ -20,8 +20,9 @@ export default function BottomNav() {
       aria-label="Main"
       className={[
         // Mobile: thanh cố định dưới đáy.
-        'fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white/95 backdrop-blur',
-        'dark:border-zinc-800 dark:bg-zinc-950/95',
+        // Nền đục, không blur: blur trên thanh fixed làm iOS cuộn giật.
+        'fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white',
+        'dark:border-zinc-800 dark:bg-zinc-950',
         // Chừa chỗ cho home indicator của iPhone.
         'pb-[env(safe-area-inset-bottom)]',
         // Desktop: đổi thành sidebar bên trái.

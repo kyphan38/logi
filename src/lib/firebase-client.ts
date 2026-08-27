@@ -46,13 +46,14 @@ export const auth: Auth = getAuth(app);
 const globalCache = globalThis as unknown as { __logiDb?: Firestore };
 
 function createDb(): Firestore {
-  if (globalCache.__logiDb) return globalCache.__logiDb;
-
   // Server-side (SSR / build): không có IndexedDB, dùng bản mặc định.
-  if (typeof window === 'undefined') {
-    globalCache.__logiDb = getFirestore(app);
-    return globalCache.__logiDb;
-  }
+  // KHÔNG cache vào globalThis: trên server Next có thể nạp firebase/firestore
+  // thành nhiều bản sao module khác nhau, dùng chung cache sẽ khiến
+  // collection(db, ...) ném "Expected first argument ... to be FirebaseFirestore".
+  // getFirestore(app) vốn đã idempotent nên không cần cache.
+  if (typeof window === 'undefined') return getFirestore(app);
+
+  if (globalCache.__logiDb) return globalCache.__logiDb;
 
   let db: Firestore;
   try {
