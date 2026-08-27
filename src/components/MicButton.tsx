@@ -33,9 +33,12 @@ function Spinner() {
 export default function MicButton({
   onResult,
   disabled = false,
+  thinking = false,
 }: {
   onResult: (r: Recording) => void;
   disabled?: boolean;
+  /** Đang chờ /api/parse trả lời. Giữ spinner để người dùng biết máy còn nghĩ. */
+  thinking?: boolean;
 }) {
   const { state, start, stop, cancel, level, error, supported } = useRecorder();
   const [startedAt, setStartedAt] = useState(0);
@@ -43,7 +46,7 @@ export default function MicButton({
   const startYRef = useRef(0);
 
   const recording = state === 'recording';
-  const busy = state === 'requesting' || state === 'processing';
+  const busy = state === 'requesting' || state === 'processing' || thinking;
 
   const now = useTick(250, recording);
   const secs = recording && startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
@@ -141,7 +144,7 @@ export default function MicButton({
         </button>
       </div>
 
-      {state === 'processing' ? (
+      {state === 'processing' || thinking ? (
         <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
           Thinking…
         </span>

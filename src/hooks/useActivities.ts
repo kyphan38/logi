@@ -5,9 +5,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   NO_PENDING,
+  promoteScheduled,
   subscribeActive,
   subscribeByDate,
   subscribeRecentDates,
+  subscribeScheduled,
   type SnapMeta,
 } from '@/lib/activities';
 import { actualHours, overlapHours } from '@/lib/balance';
@@ -91,6 +93,78 @@ export function useActiveActivities() {
     fromCache: meta.fromCache,
     error,
   };
+}
+
+// ------------------------------------------------------------
+// Session đã hẹn giờ (Task 6)
+// ------------------------------------------------------------
+
+/** Tới giờ rồi mà app đang đóng thì không ai promote. Nên kiểm lại mỗi 30 giây. */
+const PROMOTE_EVERY_MS = 30_000;
+
+/**
+ * Các session `scheduled` chưa tới giờ, kèm luôn việc tự chuyển sang `active`.
+ *
+ * Không dùng push notification: chỉ cần app mở là promote. Chạy khi mount, khi
+ * app quay lại foreground, và mỗi 30 giây lúc có record tới hạn. `startAt` giữ
+ * nguyên giá trị đã hẹn, nên mở app muộn thì timer đã đếm sẵn — đúng nghĩa
+ * "bắt đầu lúc 22:05".
+ */
+export function useScheduledActivities() {
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+
+  const [activities, setActivities] = useState<Activity[]>(EMPTY);
+  const [meta, setMeta] = useState<SnapMeta>(EMPTY_META);
+
+  const [prevUid, setPrevUid] = useState(uid);
+  if (prevUid !== uid) {
+    setPrevUid(uid);
+    setActivities(EMPTY);
+  }
+
+  useEffect(() => {
+    if (!uid) return;
+    const unsub = subscribeScheduled(uid, (list, m) => {
+      setActivities(list);
+      setMeta(m);
+    });
+    return unsub;
+  }, [uid]);
+
+  // Hai lần promote chồng nhau sẽ ghi đè lẫn nhau. Cho chạy một lần một thôi.
+  const running = useRef(false);
+  const promote = useCallback(async () => {
+    if (!uid || running.current) return;
+    running.current = true;
+    try {
+      await promoteScheduled(uid);
+    } catch {
+      // Mất mạng thì lần sau promote. Không có gì để báo người dùng.
+    } finally {
+      running.current = false;
+    }
+  }, [uid]);
+
+  // Mount (và mỗi lần đổi user).
+  useEffect(() => {
+    void promote();
+  }, [promote]);
+
+  // Quay lại foreground — hay gặp nhất: hẹn 22:05, mở app lúc 22:30.
+  useOnForeground(() => void promote());
+
+  // Đang mở app mà tới giờ. Chỉ query khi thật sự có record quá hạn.
+  const due = activities.length > 0 ? activities[0].startAt : null;
+  useEffect(() => {
+    if (due === null) return;
+    const id = setInterval(() => {
+      if (Date.now() >= due) void promote();
+    }, PROMOTE_EVERY_MS);
+    return () => clearInterval(id);
+  }, [due, promote]);
+
+  return { activities, pendingIds: meta.pendingIds };
 }
 
 // ------------------------------------------------------------

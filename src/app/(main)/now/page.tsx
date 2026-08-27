@@ -1,23 +1,31 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import ActiveSessionCard from '@/components/ActiveSessionCard';
 import CategoryGrid from '@/components/CategoryGrid';
+import ClarifyCard from '@/components/ClarifyCard';
 import StaleSessionModal from '@/components/StaleSessionModal';
 import MicButton from '@/components/MicButton';
+import ParseConfirmCard from '@/components/ParseConfirmCard';
+import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
+import ScheduledCard from '@/components/ScheduledCard';
 import Toasts from '@/components/Toasts';
+import VoiceSheet from '@/components/VoiceSheet';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   capWait,
   useActiveActivities,
   useDayActivities,
+  useScheduledActivities,
   useTick,
   useToasts,
 } from '@/hooks/useActivities';
-import { ActivityError, startActivity, stopActivity } from '@/lib/activities';
+import { useVoice } from '@/hooks/useVoice';
+import { ActivityError, deleteActivity, startActivity, stopActivity } from '@/lib/activities';
 import { findStale, logicalDate, overlapHours } from '@/lib/balance';
-import { CATEGORIES, CATEGORY_LABEL, type Category } from '@/types/logi';
+import { roundDown } from '@/lib/datetime';
+import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
 /** "2026-08-26" → "Wednesday, Aug 26". Parse tay để không lệch múi giờ. */
 function prettyLogicalDate(d: string): string {
@@ -38,9 +46,22 @@ export default function NowPage() {
   const today = logicalDate(nowMinute);
 
   const { activities: active, loading: activeLoading, pendingIds } = useActiveActivities();
+  const { activities: scheduled, pendingIds: scheduledPending } = useScheduledActivities();
   const { totals } = useDayActivities(today);
   const { toasts, push, dismiss } = useToasts();
   const [busy, setBusy] = useState(false);
+  const [sheet, setSheet] = useState<SheetTarget | null>(null);
+
+  const voice = useVoice(uid, active, push);
+
+  // Card voice đang mở thì FAB phải nhường chỗ.
+  const voiceCardOpen = voice.pending !== null || voice.clarify !== null;
+
+  // Voice bí thì luôn phải có đường lui: mở sheet nhập tay, 1 tiếng vừa rồi.
+  const openManual = useCallback(() => {
+    const end = roundDown(Date.now(), 15);
+    setSheet({ mode: 'create', startAt: end - 3_600_000, endAt: end });
+  }, []);
 
   const nowSecond = useTick(1000, active.length > 1);
   const overlap = useMemo(
@@ -86,6 +107,30 @@ export default function NowPage() {
     }
   }
 
+  /** Huỷ session đã hẹn: xoá hẳn record, kèm Undo vì bấm nhầm thì mất luôn lịch. */
+  async function handleCancelScheduled(a: Activity) {
+    if (!uid || busy) return;
+    setBusy(true);
+    try {
+      await capWait(deleteActivity(uid, a.id), (e) => push(`Sync failed. ${(e as Error).message}`));
+      push(`${CATEGORY_LABEL[a.category]} cancelled.`, {
+        label: 'Undo',
+        run: () => {
+          void startActivity(uid, {
+            category: a.category,
+            label: a.label,
+            startAt: a.startAt,
+            status: 'scheduled',
+          }).catch((e) => push(`Could not undo. ${(e as Error).message}`));
+        },
+      });
+    } catch (e) {
+      push(`Could not cancel. ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleStop(id: string) {
     if (!uid || busy) return;
     setBusy(true);
@@ -108,7 +153,8 @@ export default function NowPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
+    // pb-20: chừa chỗ cho nút mic FAB, để nó không đè lên nút Stop của card cuối.
+    <div className="flex flex-1 flex-col gap-6 pb-20">
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Now</h1>
@@ -122,6 +168,20 @@ export default function NowPage() {
           Sign out
         </button>
       </header>
+
+      {scheduled.length > 0 ? (
+        <section className="flex flex-col gap-3" aria-label="Scheduled sessions">
+          {scheduled.map((a) => (
+            <ScheduledCard
+              key={a.id}
+              activity={a}
+              busy={busy}
+              pending={scheduledPending.has(a.id)}
+              onCancel={() => handleCancelScheduled(a)}
+            />
+          ))}
+        </section>
+      ) : null}
 
       {active.length > 0 ? (
         <section className="flex flex-col gap-3" aria-label="Running sessions">
@@ -167,14 +227,64 @@ export default function NowPage() {
         />
       ) : null}
 
-      {/* TODO(Task 3): gửi sang /api/parse. Tạm báo mime + độ dài để kiểm tra trên iPhone. */}
-      <MicButton
-        disabled={busy}
-        onResult={(r) => {
-          const kb = Math.round((r.base64.length * 3) / 4 / 1024);
-          push(`${r.mimeType} · ${(r.durationMs / 1000).toFixed(1)}s · ${kb}KB`);
-        }}
-      />
+      {/* Đang nghĩ / đang ghi → làm mờ nhẹ, vẫn đọc được, vẫn bấm được. */}
+      {voice.thinking || voice.saving ? (
+        <div
+          aria-hidden="true"
+          className="dim-in pointer-events-none fixed inset-0 z-30 bg-zinc-950/10 dark:bg-black/30"
+        />
+      ) : null}
+
+      {/* Có card voice thì giấu FAB — nếu không nó đè lên nút Confirm/Cancel. */}
+      {voiceCardOpen ? null : (
+        <MicButton
+          disabled={busy || voice.saving}
+          thinking={voice.thinking}
+          onResult={(r) => void voice.handleRecording(r, openManual)}
+        />
+      )}
+
+      {voice.clarify ? (
+        <VoiceSheet>
+          <ClarifyCard
+            question={voice.clarify.question}
+            options={voice.clarify.options}
+            transcript={voice.clarify.transcript}
+            busy={voice.thinking || voice.saving}
+            onPick={(o) => void voice.answerClarify(o, openManual)}
+            onManual={() => {
+              voice.cancelClarify();
+              openManual();
+            }}
+            onCancel={voice.cancelClarify}
+          />
+        </VoiceSheet>
+      ) : null}
+
+      {voice.pending ? (
+        <VoiceSheet>
+          <ParseConfirmCard
+            key={voice.pending.requestId}
+            cmd={voice.pending.cmd}
+            missing={voice.pending.missing}
+            active={active}
+            busy={voice.saving}
+            onConfirm={voice.confirmPending}
+            onCancel={voice.cancelPending}
+          />
+        </VoiceSheet>
+      ) : null}
+
+      {sheet && uid ? (
+        <RecordSheet
+          target={sheet}
+          uid={uid}
+          now={nowMinute}
+          onClose={() => setSheet(null)}
+          onToast={(m) => push(m)}
+          onDeleted={() => setSheet(null)}
+        />
+      ) : null}
 
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>

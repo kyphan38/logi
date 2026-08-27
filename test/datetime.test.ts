@@ -6,6 +6,7 @@ import {
   roundDown,
   formatDuration,
   shortDate,
+  countdown,
 } from '@/lib/datetime';
 import { at } from './_helpers.ts';
 
@@ -42,4 +43,19 @@ test('formatDuration hiển thị "3h 0m" / "45m" / không âm', () => {
 
 test('shortDate có ngày trong chuỗi', () => {
   assert.match(shortDate(at('2026-08-26', '12:00')), /26/);
+});
+
+test('countdown hiện mm:ss khi dưới một giờ', () => {
+  assert.equal(countdown(272_000), '4:32');
+  assert.equal(countdown(59_000), '0:59');
+});
+
+test('countdown hiện h:mm:ss khi hơn một giờ', () => {
+  assert.equal(countdown(3_872_000), '1:04:32');
+});
+
+test('countdown làm tròn lên và không âm', () => {
+  assert.equal(countdown(4_200), '0:05');
+  assert.equal(countdown(0), '0:00');
+  assert.equal(countdown(-9_000), '0:00');
 });

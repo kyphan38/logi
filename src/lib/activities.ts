@@ -31,6 +31,7 @@ import {
   CATEGORIES,
   MAX_SESSION_MIN,
   type Activity,
+  type ActivitySource,
   type ActivityStatus,
   type Category,
 } from '@/types/logi';
@@ -165,14 +166,26 @@ export async function getActivity(uid: string, id: string): Promise<Activity> {
 // Ghi
 // ------------------------------------------------------------
 
-export interface StartInput {
+/**
+ * Nguồn gốc record. Voice ghi kèm để sau còn tra lại khi Gemini parse sai:
+ * `rawText` giữ nguyên câu nói, `confidence` cho biết máy tự tin tới đâu.
+ */
+export interface Provenance {
+  source?: ActivitySource;
+  confidence?: number | null;
+  rawText?: string | null;
+}
+
+export interface StartInput extends Provenance {
   category: Category;
   label?: string | null;
   startAt?: number;
+  /** 'scheduled' = hẹn giờ trước (delayed start). Mặc định là 'active'. */
+  status?: Extract<ActivityStatus, 'active' | 'scheduled'>;
 }
 
 /**
- * Tạo session đang chạy.
+ * Tạo session đang chạy, hoặc hẹn giờ trước với `status: 'scheduled'`.
  * Chặn tạo trùng: đã có session `active` cùng category → throw 'duplicate'.
  * KHÔNG auto-stop session khác — chạy song song là hợp lệ.
  */
@@ -180,11 +193,15 @@ export async function startActivity(uid: string, input: StartInput): Promise<str
   assertCategory(input.category);
   const now = Date.now();
   const startAt = input.startAt ?? now;
-  validateTimes(startAt, null, 'active', now);
+  const status = input.status ?? 'active';
+  validateTimes(startAt, null, status, now);
 
-  const running = await listActive(uid);
-  if (running.some((a) => a.category === input.category)) {
-    throw new ActivityError('duplicate', `Already tracking ${input.category}`);
+  // Chỉ session đang chạy mới sợ trùng. Hẹn giờ trước thì không.
+  if (status === 'active') {
+    const running = await listActive(uid);
+    if (running.some((a) => a.category === input.category)) {
+      throw new ActivityError('duplicate', `Already tracking ${input.category}`);
+    }
   }
 
   const created = await addDoc(col(uid), {
@@ -193,10 +210,10 @@ export async function startActivity(uid: string, input: StartInput): Promise<str
     startAt,
     endAt: null,
     ...derive(startAt, null),
-    status: 'active' satisfies ActivityStatus,
-    source: 'manual',
-    confidence: null,
-    rawText: null,
+    status,
+    source: input.source ?? 'manual',
+    confidence: input.confidence ?? null,
+    rawText: input.rawText ?? null,
     createdAt: now,
     updatedAt: now,
   });
@@ -260,7 +277,7 @@ export async function deleteActivity(uid: string, id: string): Promise<void> {
   await deleteDoc(ref(uid, id));
 }
 
-export interface PastInput {
+export interface PastInput extends Provenance {
   category: Category;
   label?: string | null;
   startAt: number;
@@ -283,9 +300,9 @@ export async function createPastActivity(uid: string, input: PastInput): Promise
     endAt: input.endAt,
     ...derive(input.startAt, input.endAt),
     status,
-    source: 'manual',
-    confidence: null,
-    rawText: null,
+    source: input.source ?? 'manual',
+    confidence: input.confidence ?? null,
+    rawText: input.rawText ?? null,
     createdAt: now,
     updatedAt: now,
   });

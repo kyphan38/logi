@@ -54,8 +54,10 @@ test('sanitize: ngày rác → null', () => {
 });
 
 test('sanitize: lùi quá 7 ngày → clarify', () => {
-  const r = sanitizeParse(base({ startAt: new Date(NOW - 8 * 24 * H).toISOString() }), opts);
-  assert.equal(r.intent, 'clarify');
+  for (const days of [8, 10]) {
+    const r = sanitizeParse(base({ startAt: new Date(NOW - days * 24 * H).toISOString() }), opts);
+    assert.equal(r.intent, 'clarify', `${days} ngày trước phải hỏi lại`);
+  }
 });
 
 test('sanitize: xa hơn 24h trong tương lai → clarify', () => {
@@ -90,6 +92,7 @@ test('sanitize: dài hơn 15h → clarify kèm câu hỏi', () => {
 });
 
 test('sanitize: confidence ngoài [0,1] hoặc thiếu → 0', () => {
+  assert.equal(sanitizeParse(base({ confidence: 1.5 }), opts).confidence, 0);
   assert.equal(sanitizeParse(base({ confidence: 7 }), opts).confidence, 0);
   assert.equal(sanitizeParse(base({ confidence: -1 }), opts).confidence, 0);
   assert.equal(sanitizeParse(base({ confidence: undefined }), opts).confidence, 0);

@@ -34,3 +34,18 @@ export function formatDuration(ms: number): string {
 export function shortDate(ts: number): string {
   return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
+
+/**
+ * ms còn lại → "4:32", hoặc "1:04:32" khi hơn một giờ. Dùng cho đếm ngược
+ * session đã hẹn giờ.
+ *
+ * Làm tròn LÊN: còn 4.2 giây thì hiện "0:05" rồi mới về 0, chứ không nhảy sang
+ * 0:04 ngay lúc vừa hiện ra.
+ */
+export function countdown(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = String(total % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
