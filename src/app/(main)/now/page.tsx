@@ -98,9 +98,12 @@ export default function NowPage() {
   }
 
   function focusRunning(category: Category) {
+    // Chạm lại category đang chạy: không tạo trùng. Cuộn tới card + nói rõ lý do,
+    // nếu không thì cú chạm trông như bị nuốt khi card vốn đã nằm trong màn hình.
     document
       .getElementById(`session-${category}`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    push(`${CATEGORY_LABEL[category]} is already running.`);
   }
 
   return (
