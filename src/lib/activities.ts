@@ -408,6 +408,11 @@ export async function listRecent(uid: string, n = 5): Promise<Activity[]> {
 /**
  * Delayed start: tới giờ thì 'scheduled' → 'active'. Trả về số record đã chuyển.
  * startAt giữ nguyên (giờ đã hẹn), nên timer vẫn là derived state đúng.
+ *
+ * Cố ý KHÔNG chặn trùng category như startActivity: app cho phép nhiều session
+ * chạy song song, và một record đã hẹn giờ thì phải tới đúng giờ, không im lặng
+ * bỏ qua. Nếu thành hai session cùng category, người dùng tự Stop bớt.
+ *
  * Index: status ASC + startAt ASC.
  */
 export async function promoteScheduled(uid: string, now: number = Date.now()): Promise<number> {
