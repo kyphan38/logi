@@ -74,7 +74,7 @@ export type DailyTargets = Record<Category, number[]>;
 export const BASELINE_DAILY: DailyTargets = {
   //      CN   T2   T3   T4   T5   T6   T7
   sleep: [7.0, 6.5, 6.5, 6.5, 6.5, 6.5, 7.0], // 46.5
-  work: [0.0, 8.0, 9.5, 8.0, 9.5, 8.0, 0.0],  // 43  (T3/T5 +1.5h commute)
+  work: [0.0, 9.0, 10.5, 9.0, 10.5, 9.0, 0.0], // 48  (T3/T5 +1.5h commute)
   learn: [8.0, 3.0, 3.0, 3.0, 3.0, 3.0, 8.0], // 31
   fitness: [0.0, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5], // 9  (6 ngày, nghỉ CN)
   leisure: [1.75, 0.5, 0.5, 0.5, 0.5, 0.5, 1.75], // 6
@@ -86,13 +86,13 @@ export function weeklyTotal(daily: number[]): number {
 
 export const BASELINE_WEEKLY: Record<Category, number> = {
   sleep: weeklyTotal(BASELINE_DAILY.sleep),     // 46.5
-  work: weeklyTotal(BASELINE_DAILY.work),       // 43
+  work: weeklyTotal(BASELINE_DAILY.work),       // 48
   learn: weeklyTotal(BASELINE_DAILY.learn),     // 31
   fitness: weeklyTotal(BASELINE_DAILY.fitness), // 9
   leisure: weeklyTotal(BASELINE_DAILY.leisure), // 6
 };
 
-/** 135.5h - tổng ngân sách. Zero-sum: mọi preset phải khớp con số này. */
+/** 140.5h - tổng ngân sách. Zero-sum: mọi preset phải khớp con số này. */
 export const TOTAL_BUDGET = Object.values(BASELINE_WEEKLY).reduce((a, b) => a + b, 0);
 
 // ------------------------------------------------------------
@@ -106,7 +106,7 @@ export const HARD_FLOOR: Partial<Record<Category, number>> = {
 
 // ------------------------------------------------------------
 // Preset - Sleep cố định 46.5h ở mọi mode.
-// 4 category còn lại chia nhau đúng 89h.
+// 4 category còn lại chia nhau đúng 94h.
 // ------------------------------------------------------------
 
 export type PresetId = 'normal' | 'crunch' | 'deep_learn' | 'recovery';
@@ -123,25 +123,25 @@ export const PRESETS: Record<PresetId, Preset> = {
     id: 'normal',
     label: 'Normal',
     hint: 'Tuần tiêu chuẩn',
-    weekly: { sleep: 46.5, work: 43, learn: 31, fitness: 9, leisure: 6 },
+    weekly: { sleep: 46.5, work: 48, learn: 31, fitness: 9, leisure: 6 },
   },
   crunch: {
     id: 'crunch',
     label: 'Crunch',
     hint: 'Deadline / OT - ghi nợ Learn',
-    weekly: { sleep: 46.5, work: 57, learn: 19, fitness: 6, leisure: 7 },
+    weekly: { sleep: 46.5, work: 62, learn: 19, fitness: 6, leisure: 7 },
   },
   deep_learn: {
     id: 'deep_learn',
     label: 'Deep Learn',
     hint: 'Ôn thi / cày chứng chỉ',
-    weekly: { sleep: 46.5, work: 40, learn: 40, fitness: 6, leisure: 3 },
+    weekly: { sleep: 46.5, work: 45, learn: 40, fitness: 6, leisure: 3 },
   },
   recovery: {
     id: 'recovery',
     label: 'Recovery',
     hint: 'Sau crunch - trả nợ sức khoẻ',
-    weekly: { sleep: 46.5, work: 40, learn: 22, fitness: 12, leisure: 15 },
+    weekly: { sleep: 46.5, work: 45, learn: 22, fitness: 12, leisure: 15 },
   },
 };
 

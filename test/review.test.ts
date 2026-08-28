@@ -89,7 +89,7 @@ test('đúng tối Chủ nhật → isPartial true, target hôm đó được pr
 // Màn 1 - số liệu
 // ------------------------------------------------------------
 
-test('review tuần đã xong: Work expected đúng 43h, không phải 30.7h', () => {
+test('review tuần đã xong: Work expected đúng 48h, không phải 34.3h', () => {
   const s = buildReview({
     week: W35,
     activities: [],
@@ -98,8 +98,8 @@ test('review tuần đã xong: Work expected đúng 43h, không phải 30.7h', (
     now: at('2026-08-31', '10:00'),
   });
   const work = s.rows.find((x) => x.category === 'work')!;
-  assert.equal(r1(work.expected), 43);
-  assert.notEqual(r1(work.expected), 30.7);
+  assert.equal(r1(work.expected), 48);
+  assert.notEqual(r1(work.expected), 34.3);
 });
 
 test('title có số tuần và khoảng ngày', () => {
@@ -238,7 +238,7 @@ test('có nợ → nêu rõ số giờ cộng thêm (50% theo DEBT_CARRYOVER_RAT
 test('weekly của plan giữ nguyên tổng ngân sách', () => {
   const p = planNextWeek(W35, 'deep_learn', { learn: 6 });
   const total = Object.values(p.weekly).reduce((a, b) => a + b, 0);
-  assert.equal(r1(total), 135.5);
+  assert.equal(r1(total), 140.5);
 });
 
 test('tuần đã qua → chỉ xem, không cho đặt preset', () => {
