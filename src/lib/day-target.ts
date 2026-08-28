@@ -9,7 +9,6 @@
 // tức là giữ nguyên hình dạng tuần của baseline rồi scale theo target thực tế.
 // Hàm thuần, không đụng React → test bằng `node --test`.
 // ---------------------------------------------------------------------------
-import { dayProgress } from '@/lib/balance';
 import { BASELINE_DAILY, BASELINE_WEEKLY, CATEGORIES, type Category } from '@/types/logi';
 
 /**
@@ -67,10 +66,6 @@ export function daySummary(
   return lines;
 }
 
-/** Target hôm nay đã pro-rate. Ngày khác thì `progress` = 1. */
-export function progressFor(selected: string, today: string, now: number): number {
-  return selected === today ? dayProgress(now) : 1;
-}
 
 // ---------------------------------------------------------------------------
 // Hình dạng một ô gauge ở màn History (Stage 4.6 Task 4).

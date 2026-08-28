@@ -39,19 +39,13 @@ export default function InsightPanel({ activities, range, weekTargets, now }: Pr
     <section className="flex flex-col gap-3">
       <h2 className="text-[13px] font-medium text-ink-soft">Worth noting</h2>
 
-      {!gate.ok ? (
-        <Blocked reason={gate.reason ?? ''} hint={gate.hint} />
-      ) : state === 'idle' ? (
-        <button
-          type="button"
-          onClick={() => run()}
-          className="flex w-full flex-col items-start gap-0.5 rounded-md border border-line-strong bg-surface-1 px-4 py-3 text-left transition active:scale-[0.99]"
-        >
-          <span className="text-sm font-medium text-ink">✦ Analyse this period</span>
-          <span className="text-[13px] text-ink-muted">
-            {rangeLabel(range)} · {dayWord(range)}
-          </span>
-        </button>
+      {!gate.ok || state === 'idle' ? (
+        <Analyse
+          range={range}
+          reason={gate.ok ? null : (gate.reason ?? '')}
+          hint={gate.ok ? undefined : gate.hint}
+          onRun={() => run()}
+        />
       ) : state === 'loading' ? (
         <Loading />
       ) : state === 'error' ? (
@@ -87,11 +81,52 @@ function dayWord(range: Range): string {
 
 // ------------------------------------------------------------
 
-function Blocked({ reason, hint }: { reason: string; hint?: string }) {
+/**
+ * Nút mở phân tích. Bị chặn thì nút VẪN hiện, chỉ mờ đi và kèm lý do.
+ *
+ * Trước đây gate chặn là nút biến mất, chỉ còn một khung đứt nét - người dùng
+ * tưởng app hỏng chứ không biết là còn tính năng này. Nút mờ nói được hai điều
+ * cùng lúc: có thứ để bấm, và vì sao chưa bấm được.
+ */
+function Analyse({
+  range,
+  reason,
+  hint,
+  onRun,
+}: {
+  range: Range;
+  /** null = mở được. Khác null = lý do bị chặn. */
+  reason: string | null;
+  hint?: string;
+  onRun: () => void;
+}) {
+  const blocked = reason !== null;
+
   return (
-    <div className="flex flex-col gap-1 rounded-md border border-dashed border-line-strong px-4 py-4">
-      <p className="text-[13px] text-ink-soft">{reason}</p>
-      {hint && <p className="text-[13px] text-ink-muted">{hint}</p>}
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={onRun}
+        disabled={blocked}
+        className={[
+          'flex w-full flex-col items-start gap-0.5 rounded-md border px-4 py-3 text-left transition',
+          blocked
+            ? 'cursor-not-allowed border-dashed border-line-strong opacity-50'
+            : 'border-line-strong bg-surface-1 active:scale-[0.99]',
+        ].join(' ')}
+      >
+        <span className="text-sm font-medium text-ink">✦ Analyse this period</span>
+        <span className="text-[13px] text-ink-muted">
+          {rangeLabel(range)} · {dayWord(range)}
+        </span>
+      </button>
+
+      {blocked && (
+        <div className="flex flex-col gap-0.5 px-1">
+          <p className="text-[13px] text-ink-soft">{reason}</p>
+          {hint && <p className="text-[13px] text-ink-muted">{hint}</p>}
+        </div>
+      )}
     </div>
   );
 }

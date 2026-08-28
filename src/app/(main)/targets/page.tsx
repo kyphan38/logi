@@ -96,7 +96,13 @@ function TargetsView() {
   const suggested: PresetId | null =
     raw !== null && (PRESET_ORDER as readonly string[]).includes(raw) ? (raw as PresetId) : null;
 
+  /** Có gợi ý, và nó khác preset đang dùng → còn việc để làm. */
+  const suggestPending = suggested !== null && suggested !== target?.preset;
+
   const [busy, setBusy] = useState(false);
+  // Khối preset gấp lại theo mặc định. Tự mở khi vào từ `?suggest=` - deep link
+  // mà đáp xuống một khối đang đóng thì coi như không dẫn tới đâu.
+  const [presetOpen, setPresetOpen] = useState(suggested !== null);
   const [confirm, setConfirm] = useState<PresetId | null>(null);
   const [draft, setDraft] = useState<Weekly | null>(null);
   const [keepStreak, setKeepStreak] = useState(false);
@@ -203,28 +209,62 @@ function TargetsView() {
             />
           )}
 
+          {/*
+            Bốn card preset chiếm gần hết màn hình cho một thứ đổi vài tuần
+            một lần. Gấp lại thành một dòng "Mode · Normal"; mở ra khi cần.
+          */}
           <section className="mb-6">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Preset
-            </h2>
-            <div className="flex flex-col gap-2">
-              {PRESET_ORDER.map((id) => (
-                <PresetCard
-                  key={id}
-                  id={id}
-                  selected={target?.preset === id && !dirty}
-                  suggested={suggested === id && target?.preset !== id}
-                  // Nợ quá 20h thì không được vay thêm nữa.
-                  lockedReason={
-                    id === 'crunch' && crunchLocked
-                      ? `Locked - ${h(debtTotal)} of debt outstanding`
-                      : null
-                  }
-                  disabled={locked || busy}
-                  onSelect={() => setConfirm(id)}
-                />
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => setPresetOpen((v) => !v)}
+              aria-expanded={presetOpen}
+              className="flex w-full items-center justify-between rounded-md border border-zinc-200 px-4 py-3 text-left transition active:scale-[0.99] dark:border-zinc-800"
+            >
+              <span className="min-w-0">
+                <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Mode
+                </span>
+                <span className="ml-2 font-medium text-zinc-900 dark:text-zinc-100">
+                  {target?.preset && !dirty ? PRESETS[target.preset].label : 'Custom'}
+                </span>
+                {suggestPending && (
+                  <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
+                    · Suggested: {PRESETS[suggested!].label}
+                  </span>
+                )}
+              </span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+                className={`h-4 w-4 shrink-0 text-zinc-400 transition ${presetOpen ? 'rotate-180' : ''}`}
+              >
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {presetOpen && (
+              <div className="mt-2 flex flex-col gap-2">
+                {PRESET_ORDER.map((id) => (
+                  <PresetCard
+                    key={id}
+                    id={id}
+                    selected={target?.preset === id && !dirty}
+                    suggested={suggested === id && target?.preset !== id}
+                    // Nợ quá 20h thì không được vay thêm nữa.
+                    lockedReason={
+                      id === 'crunch' && crunchLocked
+                        ? `Locked - ${h(debtTotal)} of debt outstanding`
+                        : null
+                    }
+                    disabled={locked || busy}
+                    onSelect={() => setConfirm(id)}
+                  />
+                ))}
+              </div>
+            )}
           </section>
 
           {weekly && (

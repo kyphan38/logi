@@ -15,8 +15,8 @@ import {
 } from '@/hooks/useActivities';
 import { actualHours, logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
 import { roundDown } from '@/lib/datetime';
-import { addDays, coverageOfDay, dayWindow, layoutDay } from '@/lib/timeline';
-import { daySummary, gaugeShape, progressFor, type DayLine } from '@/lib/day-target';
+import { coverageOfDay, dayWindow, layoutDay } from '@/lib/timeline';
+import { daySummary, gaugeShape, type DayLine } from '@/lib/day-target';
 import { useWeekTarget } from '@/hooks/useTargets';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
@@ -57,20 +57,15 @@ export default function HistoryPage() {
   const win = useMemo(() => dayWindow(selected), [selected]);
 
   // --- Day strip -----------------------------------------------------------
-  // Dải 7 ngày có thể vắt qua hai tuần logic. Dùng MỘT query cho mỗi tuần
-  // (index `logicalWeek` đã có từ Stage 1) rồi gom nhóm ở client - không bao
-  // giờ 7 query. Đổi tuần mới query lại.
-  const stripWeeks = useMemo(() => {
-    const first = logicalWeek(dayWindow(addDays(today, -6)).start);
-    const last = logicalWeek(dayWindow(today).start);
-    return { first, last: last === first ? null : last };
-  }, [today]);
-  const weekA = useWeekActivities(stripWeeks.first);
-  const weekB = useWeekActivities(stripWeeks.last);
+  // Strip vẽ đúng tuần lịch (2 → CN) chứa ngày đang chọn, mà tuần lịch trùng
+  // khít với tuần logic - nên MỘT query là đủ (index `logicalWeek` có từ Stage
+  // 1). Bản cũ vẽ 7 ngày gần nhất, vắt qua hai tuần nên phải query hai lần.
+  const selectedWeek = useMemo(() => logicalWeek(win.start), [win]);
+  const strip = useWeekActivities(selectedWeek);
 
   const dayBars = useMemo(() => {
     const byDate = new Map<string, Activity[]>();
-    for (const a of [...weekA.activities, ...weekB.activities]) {
+    for (const a of strip.activities) {
       const d = logicalDate(a.startAt);
       const list = byDate.get(d);
       if (list) list.push(a);
@@ -86,9 +81,9 @@ export default function HistoryPage() {
       out[d] = CATEGORIES.filter((c) => h[c] > 0).map((c) => ({ c, pct: (h[c] / sum) * 100 }));
     }
     return out;
-  }, [weekA.activities, weekB.activities, nowMinute]);
+  }, [strip.activities, nowMinute]);
   // Target của đúng tuần đang xem - tuần cũ có thể khác tuần này.
-  const { target: weekTarget } = useWeekTarget(logicalWeek(win.start));
+  const { target: weekTarget } = useWeekTarget(selectedWeek);
   // Vẽ cả record kéo sang từ hôm trước; `totals` vẫn chỉ tính `activities`.
   const { segments } = useMemo(
     () => layoutDay([...carriedIn, ...activities], win, nowMinute),
@@ -99,17 +94,15 @@ export default function HistoryPage() {
     [segments, win, nowMinute],
   );
 
-  // Đối chiếu với target của đúng ngày trong tuần đó. Hôm nay thì pro-rate -
-  // 10 giờ sáng mà so với target cả ngày thì cái gì cũng "thiếu".
+  // Đối chiếu với target CẢ NGÀY của đúng ngày trong tuần đó - kể cả hôm nay.
+  //
+  // Trước đây hôm nay được pro-rate theo giờ, nên con số target tự bò lên suốt
+  // ngày: 9 giờ sáng thấy `0.0/0.4`, 10 giờ tối thấy `0.0/1.5`. Cùng một ô mà
+  // đọc hai lần ra hai nghĩa thì không ai tin nó nữa. Giờ mẫu số đứng yên, chỉ
+  // tử số chạy.
   const summary = useMemo(
-    () =>
-      daySummary(
-        totals,
-        weekTarget?.weekly ?? null,
-        logicalWeekday(win.start),
-        progressFor(selected, today, nowMinute),
-      ),
-    [totals, weekTarget, win, selected, today, nowMinute],
+    () => daySummary(totals, weekTarget?.weekly ?? null, logicalWeekday(win.start)),
+    [totals, weekTarget, win],
   );
 
   // Bố cục co giãn đã bỏ khoảng đêm trống, nên không cần tự cuộn tới 06:00

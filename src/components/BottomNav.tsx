@@ -38,7 +38,10 @@ export default function BottomNav() {
             href={tab.href}
             aria-current={active ? 'page' : undefined}
             className={[
-              'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition',
+              // `relative`: gạch active bên dưới neo vào ĐÚNG tab này. Thiếu nó
+              // thì nó neo vào <nav> (ancestor duy nhất có position), nên mỗi
+              // tab một độ cao khác nhau.
+              'relative flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition',
               'md:h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:rounded-lg md:px-3 md:text-sm',
               active
                 ? 'text-blue-600 md:bg-blue-50 dark:text-blue-400 dark:md:bg-blue-950/40'
@@ -59,7 +62,7 @@ export default function BottomNav() {
             <span
               aria-hidden="true"
               className={[
-                'absolute bottom-[env(safe-area-inset-bottom)] h-0.5 w-10 rounded-full md:hidden',
+                'absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full md:hidden',
                 active ? 'bg-blue-600 dark:bg-blue-400' : 'bg-transparent',
               ].join(' ')}
             />

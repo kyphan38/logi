@@ -70,10 +70,33 @@ describe('planVoice - field bắt buộc', () => {
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['startAt', 'endAt']);
   });
 
-  it('log_past đủ mốc giờ → ghi luôn', () => {
+  // Ghi vào QUÁ KHỨ thì không bao giờ tự lưu - xem ghi chú trong voice-plan.ts.
+  // "I read for two hours last night": model buộc phải đoán giờ, đoán xong mà
+  // commit im lặng thì lịch sử có record giả.
+  it('log_past đủ mốc giờ + confidence tuyệt đối → vẫn phải Confirm', () => {
     const p = planVoice(
-      cmd({ intent: 'log_past', startAt: NOW - 3_600_000, endAt: NOW }), { active: [] });
-    assert.equal(p.kind, 'commit');
+      cmd({ intent: 'log_past', startAt: NOW - 7_200_000, endAt: NOW, confidence: 1 }),
+      { active: [] },
+    );
+    assert.equal(p.kind, 'confirm');
+    // Card mở ra với giờ đã điền sẵn - không bắt gõ lại từ đầu.
+    assert.deepEqual(p.kind === 'confirm' ? p.missing : null, []);
+    assert.equal(p.cmd.startAt, NOW - 7_200_000);
+  });
+
+  // Câu nói rõ giờ cũng đi qua Confirm, nhưng chỉ tốn một cú chạm.
+  it('log_past nói rõ "8 AM to 11 AM" → confirm chứ không phải manual', () => {
+    const p = planVoice(
+      cmd({
+        intent: 'log_past',
+        category: 'work',
+        startAt: at('2026-08-26', '08:00'),
+        endAt: at('2026-08-26', '11:00'),
+      }),
+      { active: [] },
+    );
+    assert.equal(p.kind, 'confirm');
+    assert.equal(p.cmd.category, 'work');
   });
 
   it('confidence cao vẫn thua field thiếu - thiếu là phải hỏi', () => {

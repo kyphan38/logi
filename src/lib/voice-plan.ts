@@ -80,6 +80,18 @@ export function planVoice(cmd: ParsedCommand, ctx: PlanContext): VoicePlan {
 
   const missing = missingOf(next);
   if (missing.length > 0) return { kind: 'confirm', cmd: next, missing };
+
+  // Ghi vào QUÁ KHỨ thì luôn phải bấm Confirm, dù model có chắc tới đâu.
+  //
+  // "I read for two hours last night" nói ĐỘ DÀI chứ không nói GIỜ. Model vẫn
+  // phải trả về startAt/endAt nên nó đoán - và đoán xong thì commit im lặng,
+  // lịch sử có một record giờ giả mà người dùng không hề biết. Câu nói rõ giờ
+  // ("from 8 AM to 11 AM") cũng đi qua đây, nhưng chỉ tốn một cú chạm: card đã
+  // điền sẵn, sửa được trước khi lưu.
+  //
+  // start/stop/edit KHÔNG bị chặn - chúng sửa hiện tại, sai thì thấy ngay.
+  if (next.intent === 'log_past') return { kind: 'confirm', cmd: next, missing: [] };
+
   if (next.confidence >= AUTO_COMMIT_THRESHOLD) return { kind: 'commit', cmd: next };
   return { kind: 'confirm', cmd: next, missing: [] };
 }

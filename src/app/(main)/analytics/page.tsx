@@ -10,6 +10,7 @@ import Heatmap from '@/components/Heatmap';
 import InsightPanel from '@/components/InsightPanel';
 import RangePicker from '@/components/RangePicker';
 import StackedDays from '@/components/StackedDays';
+import TodayCard from '@/components/TodayCard';
 import { useTick } from '@/hooks/useActivities';
 import { fetchAllTime, useExportNudge } from '@/hooks/useBackup';
 import { useRangeData } from '@/hooks/useRangeData';
@@ -105,6 +106,9 @@ export default function AnalyticsPage() {
         <>
           {/* Coverage đứng TRƯỚC mọi chart: log được 40% thời gian thì các con
               số bên dưới không nói lên điều gì, phải biết trước khi đọc. */}
+          {/* Hôm nay đứng trước - câu hỏi hay gặp nhất là "giờ tôi đang thế nào". */}
+          <TodayCard activities={activities} range={range} weekTargets={weekTargets} now={now} />
+
           <CoverageNote coverage={view.coverage} overlap={view.overlap} />
 
           <section className="flex flex-col gap-3">
