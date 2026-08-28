@@ -8,9 +8,10 @@ import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity, type Category } from '@/
 // -----------------------------------------------------------------------------
 // logi - Thanh ngang "hôm nay" trên màn Now (Stage 4.6)
 //
-// Cùng dữ liệu với Timeline của History, nhưng nằm ngang và cao 20px: trục là
+// Cùng dữ liệu với Timeline của History, nhưng nằm ngang và cao 24px: trục là
 // khoảng đã trôi qua của ngày logic (04:00 → bây giờ), block là record, khoảng
-// trống là chưa log. Dưới thanh là mốc giờ bắt đầu + việc.
+// trống là chưa log. Trong block là số giờ; dưới thanh là mốc bắt đầu + việc,
+// kèm giờ kết thúc khi sau đó không có gì được log.
 //
 // Không có scroll, không bấm được - đây là ảnh chụp nhanh, muốn sửa thì sang
 // History.
@@ -28,14 +29,37 @@ const FLIP_PCT = 76;
 /** Block hẹp quá thì vẫn phải thấy được. */
 const MIN_BLOCK_PCT = 0.8;
 
+/**
+ * Chữ trong block chỉ vẽ khi block đủ rộng. Ước lượng theo màn hẹp nhất
+ * (~330px): mỗi ký tự 10px ăn chừng 1.6% bề ngang, cộng 3% cho padding hai
+ * bên. Thà không hiện còn hơn hiện một nửa chữ.
+ */
+const fitsInside = (text: string, widthPct: number) => widthPct >= text.length * 1.6 + 3;
+
+/**
+ * Chữ trên nền màu category. Năm màu đều là tông giữa nên không có một màu chữ
+ * nào đúng cho cả năm: amber/emerald sáng → chữ đen, còn lại → chữ trắng.
+ * Luminance thô (bỏ gamma) là đủ để chia hai nhóm.
+ */
+function inkOn(hex: string): string {
+  const v = (i: number) => parseInt(hex.slice(i, i + 2), 16) / 255;
+  const l = 0.2126 * v(1) + 0.7152 * v(3) + 0.0722 * v(5);
+  return l > 0.5 ? '#1a1a1a' : '#ffffff';
+}
+
 interface Block {
   key: string;
   category: Category;
   label: string;
+  duration: string;
   lane: number;
   left: number;
   width: number;
   start: number;
+  /** Số giờ nằm vừa trong block hay phải xuống dưới thanh. */
+  showInside: boolean;
+  /** Giờ dừng - chỉ đặt khi sau block không còn gì được log. */
+  stoppedAt: number | null;
   abandoned: boolean;
 }
 
@@ -60,19 +84,30 @@ export default function TodayStrip({
     const pct = (ts: number) => ((ts - win.start) / span) * 100;
 
     const { segments, laneCount } = layoutDay([...carriedIn, ...activities], win, now);
-    const { trackedH } = coverageOfDay(segments, win, now);
+    const { trackedH, gaps } = coverageOfDay(segments, win, now);
+
+    // Mỗi khoảng trống bắt đầu tại đúng lúc ngừng log. Bỏ khoảng đầu ngày (nó
+    // bắt đầu từ 04:00, không phải từ một record nào).
+    const stops = gaps.filter((g) => g.start > win.start).map((g) => g.start);
+    const stopAt = (ts: number) => stops.find((s) => Math.abs(s - ts) < 60_000) ?? null;
 
     const blocks: Block[] = segments.map((s) => {
       const left = Math.min(100, Math.max(0, pct(s.start)));
       const right = Math.min(100, pct(Math.min(s.end, end)));
+      const width = Math.min(100 - left, Math.max(MIN_BLOCK_PCT, right - left));
+      const duration = formatDuration(s.end - s.start);
       return {
         key: s.activity.id,
         category: s.activity.category,
         label: s.activity.label?.trim() || CATEGORY_LABEL[s.activity.category],
+        duration,
         lane: s.lane,
         left,
-        width: Math.min(100 - left, Math.max(MIN_BLOCK_PCT, right - left)),
+        width,
         start: s.start,
+        // Chồng lane → mỗi lane chỉ còn 12px, nhét chữ vào là bẹp.
+        showInside: laneCount === 1 && fitsInside(duration, width),
+        stoppedAt: stopAt(s.end),
         abandoned: s.activity.status === 'abandoned',
       };
     });
@@ -88,7 +123,14 @@ export default function TodayStrip({
       ticks.push(b);
     }
 
-    return { blocks, ticks, laneCount, trackedMs: trackedH * 3_600_000, span };
+    return {
+      blocks,
+      ticks,
+      laneCount,
+      trackedMs: trackedH * 3_600_000,
+      span,
+      hasStop: ticks.some((t) => t.stoppedAt !== null),
+    };
   }, [today, activities, carriedIn, now]);
 
   if (view.blocks.length === 0) return null;
@@ -106,44 +148,61 @@ export default function TodayStrip({
       </div>
 
       <div
-        className="relative h-5 w-full overflow-hidden rounded-md bg-surface-2"
+        className="relative h-6 w-full overflow-hidden rounded-md bg-surface-2"
         role="img"
         aria-label={`${logged} logged out of ${elapsed} elapsed today`}
       >
         {view.blocks.map((b) => (
           <span
             key={b.key}
-            className="absolute rounded-[3px]"
+            className="absolute flex items-center justify-center overflow-hidden rounded-[3px]"
             style={{
               left: `${b.left}%`,
               width: `${b.width}%`,
-              // Hai session chồng giờ → chia đôi chiều cao, khỏi đè lên nhau.
               top: `${(b.lane / view.laneCount) * 100}%`,
               height: `${100 / view.laneCount}%`,
               backgroundColor: CATEGORY_COLOR[b.category],
               opacity: b.abandoned ? 0.35 : 1,
             }}
-          />
+          >
+            {b.showInside ? (
+              <span
+                className="truncate px-1 text-[10px] leading-none font-medium tabular-nums"
+                style={{ color: inkOn(CATEGORY_COLOR[b.category]) }}
+              >
+                {b.duration}
+              </span>
+            ) : null}
+          </span>
         ))}
       </div>
 
       {/* Mốc giờ + việc. Cao cố định để thanh phía trên không nhảy. */}
-      <div className="relative h-7">
+      <div className={`relative ${view.hasStop ? 'h-10' : 'h-7'}`}>
         {view.ticks.map((t) => {
           const flip = t.left > FLIP_PCT;
           return (
             <span
               key={t.key}
-              className={`absolute top-0 flex max-w-[84px] flex-col ${
+              className={`absolute top-0 flex max-w-[92px] flex-col ${
                 flip ? 'items-end text-right' : 'items-start'
               }`}
               style={flip ? { right: `${100 - t.left}%` } : { left: `${t.left}%` }}
             >
               <span className="h-1 w-px bg-line" aria-hidden="true" />
               <span className="mt-0.5 text-[10px] tabular-nums text-ink-muted">
+                {/* Block hẹp không chứa nổi số giờ → để nó ở đây, đừng mất. */}
                 {hhmm(t.start)}
+                {t.showInside ? '' : ` · ${t.duration}`}
               </span>
               <span className="w-full truncate text-[10px] text-ink-soft">{t.label}</span>
+              {/* Giờ dừng: chỉ hiện khi sau đó không log gì nữa - nếu có việc
+                  kế tiếp thì giờ bắt đầu của nó đã nói rồi. */}
+              {t.stoppedAt !== null ? (
+                <span className="text-[10px] tabular-nums text-ink-muted">
+                  → {hhmm(t.stoppedAt)}
+                </span>
+              ) : null}
             </span>
           );
         })}
