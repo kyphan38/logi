@@ -30,7 +30,7 @@ export default function AnalyticsPage() {
   // Ngày logic đổi lúc 04:00 nên phút là đủ mịn; giây chỉ làm chart nháy.
   const now = useTick(60_000, true);
 
-  const [range, setRange] = useState<Range>(() => buildRange('this_week', Date.now()));
+  const [range, setRange] = useState<Range>(() => buildRange('today', Date.now()));
   const [exporting, setExporting] = useState(false);
   const { activities, weekTargets, lateWeeks, loading, error, reload } = useRangeData(range);
 
