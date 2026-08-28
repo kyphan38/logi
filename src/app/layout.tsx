@@ -36,7 +36,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* `overscroll-none`: chặn kiểu nảy cao su của iOS, vì nó kéo cả
+          thanh cố định trôi theo. Chỗ cuộn thật nằm trong AppShell. */}
+      <body className="flex min-h-dvh flex-col overscroll-none">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

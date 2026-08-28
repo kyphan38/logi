@@ -21,12 +21,18 @@ function OfflineBanner() {
 
 export default function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-full flex-1 flex-col md:pl-[180px]">
+    // h-dvh: khung cao đúng bằng màn hình. Tài liệu không bao giờ dài hơn
+    // viewport -> trang không tự cuộn -> thanh công cụ Safari không thu/nhả ->
+    // thanh tab đứng yên. Mọi thứ cuộn bên trong <main>.
+    <div className="flex h-dvh min-h-0 flex-col md:pl-[180px]">
       <OfflineBanner />
-      {/* pb-20 chừa chỗ cho bottom nav; md thì nav nằm bên trái nên bỏ. */}
-      {/* content-width: mọi màn hình giới hạn 720px và căn giữa. Trước đây chỉ
-          Targets căn giữa còn Now/History kéo full width - nhìn không nhất quán. */}
-      <main className="content-width flex flex-1 flex-col px-5 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-6 md:pb-6">
+      {/* Đây là NƠI DUY NHẤT cuộn được. Nav là anh em phía dưới, không phải
+          `fixed` nữa, nên nó nằm đúng một chỗ dù trang dài hay ngắn.
+          content-width: mọi màn hình giới hạn 720px và căn giữa. */}
+      <main
+        id="app-scroll"
+        className="content-width flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain px-5 pb-6 pt-6"
+      >
         {children}
       </main>
       <BottomNav />

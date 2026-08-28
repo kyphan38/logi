@@ -110,7 +110,7 @@ export default function HistoryPage() {
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    window.scrollTo({ top: 0 });
+    document.getElementById('app-scroll')?.scrollTo({ top: 0 });
   }, [selected]);
 
   return (
@@ -264,8 +264,21 @@ function Gauge({ line }: { line: DayLine }) {
         </div>
       )}
 
-      <p className="mt-1 truncate text-[11px] tabular-nums text-ink">
-        {h(actual)}
+      {/* Con số cũng nói luôn tình trạng so với kế hoạch, khỏi phải nhìn kỹ
+          thanh: chưa log gì → xám; vượt kế hoạch → hổ phách (đúng màu vạch ở
+          mép thanh); còn thiếu → chữ thường. Không có đỏ. */}
+      <p className="mt-1 truncate text-[11px] tabular-nums">
+        <span
+          className={
+            actual <= 0
+              ? 'text-ink-muted'
+              : over
+                ? 'font-medium text-amber-600 dark:text-amber-500'
+                : 'text-ink'
+          }
+        >
+          {h(actual)}
+        </span>
         <span className="text-ink-muted">/{noTarget ? '-' : h(target)}</span>
       </p>
     </div>

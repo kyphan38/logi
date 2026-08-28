@@ -13,6 +13,7 @@ import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
 import Toasts from '@/components/Toasts';
+import TodayStrip from '@/components/TodayStrip';
 import VoiceSheet from '@/components/VoiceSheet';
 import WeeklyReview from '@/components/WeeklyReview';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,7 +34,7 @@ import { ActivityError, deleteActivity, startActivity, stopActivity } from '@/li
 import { findStale, logicalDate, overlapHours } from '@/lib/balance';
 import { pickBalance } from '@/lib/banner';
 import { roundDown } from '@/lib/datetime';
-import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
+import { CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
 /** "2026-08-26" → "Wednesday, Aug 26". Parse tay để không lệch múi giờ. */
 function prettyLogicalDate(d: string): string {
@@ -59,7 +60,7 @@ export default function NowPage() {
 
   const { activities: active, loading: activeLoading, pendingIds } = useActiveActivities();
   const { activities: scheduled, pendingIds: scheduledPending } = useScheduledActivities();
-  const { activities: todayActivities, totals } = useDayActivities(today);
+  const { activities: todayActivities, carriedIn: todayCarriedIn } = useDayActivities(today);
   const { toasts, push, dismiss } = useToasts();
 
   // Chuyển tuần. Không có cron nên nó phải bám vào lúc người dùng mở app.
@@ -111,14 +112,6 @@ export default function NowPage() {
   // cập nhật khi mount, khi app quay lại foreground (useTick bắt 'focus'),
   // và ngay khi người dùng xử lý xong từng cái.
   const stale = useMemo(() => findStale(active, nowMinute), [active, nowMinute]);
-
-  const todayLine = useMemo(
-    () =>
-      CATEGORIES.filter((c) => (totals[c] ?? 0) > 0)
-        .map((c) => `${CATEGORY_LABEL[c]} ${(totals[c] ?? 0).toFixed(1)}h`)
-        .join(' · '),
-    [totals]
-  );
 
   async function handleStart(category: Category, minutesAgo: number) {
     if (!uid || busy) return;
@@ -315,8 +308,13 @@ export default function NowPage() {
         onFocusRunning={focusRunning}
       />
 
-      {todayLine ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Today: {todayLine}</p>
+      {todayActivities.length > 0 || todayCarriedIn.length > 0 ? (
+        <TodayStrip
+          today={today}
+          activities={todayActivities}
+          carriedIn={todayCarriedIn}
+          now={nowMinute}
+        />
       ) : !activeLoading && active.length === 0 ? (
         <p className="text-sm text-zinc-400 dark:text-zinc-500">
           Nothing tracked yet. Tap a category to start.

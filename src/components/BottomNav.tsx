@@ -20,14 +20,17 @@ export default function BottomNav() {
     <nav
       aria-label="Main"
       className={[
-        // Mobile: thanh cố định dưới đáy.
-        // Nền đục, không blur: blur trên thanh fixed làm iOS cuộn giật.
-        'fixed inset-x-0 bottom-0 z-40 flex border-t border-zinc-200 bg-white',
+        // Mobile: thanh nằm cuối cột, KHÔNG `fixed`. `fixed` bám đáy của
+        // layout viewport - trên iOS Safari chỗ đó nằm dưới thanh công cụ khi
+        // trang cuộn được, nên Analytics (trang dài) tụt xuống còn 3 tab ngắn
+        // thì không. Là con của flex column thì cả 4 tab giống hệt nhau.
+        // Nền đục, không blur: blur làm iOS cuộn giật.
+        'z-40 flex shrink-0 border-t border-zinc-200 bg-white',
         'dark:border-zinc-800 dark:bg-zinc-950',
         // Chừa chỗ cho home indicator của iPhone.
         'pb-[env(safe-area-inset-bottom)]',
         // Desktop: đổi thành sidebar bên trái.
-        'md:inset-x-auto md:inset-y-0 md:left-0 md:w-[180px] md:flex-col md:gap-1 md:border-r md:border-t-0 md:p-3 md:pb-3',
+        'md:fixed md:inset-y-0 md:left-0 md:w-[180px] md:flex-col md:gap-1 md:border-r md:border-t-0 md:p-3 md:pb-3',
       ].join(' ')}
     >
       {TABS.map((tab) => {

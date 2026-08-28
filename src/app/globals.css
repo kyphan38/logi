@@ -172,14 +172,4 @@ body {
   width: 100%;
   max-width: var(--content-max);
   margin-inline: auto;
-
-  /* Lưới an toàn: một phần tử lỡ rộng hơn màn hình cũng KHÔNG kéo cả trang
-     trượt ngang.
-     - `clip` chứ không `hidden`: `hidden` biến đây thành scroll container và
-       làm hỏng `position: sticky` của header History.
-     - Đặt ở <main>, KHÔNG đặt ở <body>: iOS Safari có lỗi lâu năm - hễ body
-       (hoặc html) có overflow thì mọi con `position: fixed` tụt xuống thành
-       absolute và cuộn theo trang. Đó là lý do thanh tab dưới đáy chạy lung
-       tung. <main> là anh em với <nav>, nên nav không dính gì tới clip này. */
-  overflow-x: clip;
 }

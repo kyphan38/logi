@@ -70,22 +70,16 @@ export default function RecordSheet({
   const [failure, setFailure] = useState<string | null>(null);
 
   // Sheet mở thì khoá cuộn trang nền - cuộn lan ra sau lưng rất khó chịu.
-  // KHÔNG dùng `overflow: hidden` trên body: iOS Safari hễ body có overflow là
-  // mọi con `position: fixed` (thanh tab dưới đáy) tụt thành absolute và trôi
-  // theo trang. Cách an toàn: ghim body bằng `position: fixed` + nhớ chỗ cuộn,
-  // đóng sheet thì cuộn trả về đúng chỗ cũ.
+  // Khoá đúng <main> (chỗ duy nhất cuộn được), KHÔNG đụng vào body: body có
+  // overflow là iOS Safari làm hỏng mọi con `position: fixed`, kể cả sheet này.
+  // Khoá bằng overflow trên một thẻ thường thì vị trí cuộn vẫn giữ nguyên.
   useEffect(() => {
-    const y = window.scrollY;
-    const body = document.body;
-    const prev = { position: body.style.position, top: body.style.top, width: body.style.width };
-    body.style.position = 'fixed';
-    body.style.top = `-${y}px`;
-    body.style.width = '100%';
+    const scroller = document.getElementById('app-scroll');
+    if (!scroller) return;
+    const prev = scroller.style.overflowY;
+    scroller.style.overflowY = 'hidden';
     return () => {
-      body.style.position = prev.position;
-      body.style.top = prev.top;
-      body.style.width = prev.width;
-      window.scrollTo(0, y);
+      scroller.style.overflowY = prev;
     };
   }, []);
 
