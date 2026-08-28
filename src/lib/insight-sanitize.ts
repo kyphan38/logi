@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi — Lọc kết quả model trước khi cho ra màn hình (Stage 7 Task 4 + 8)
+// logi - Lọc kết quả model trước khi cho ra màn hình (Stage 7 Task 4 + 8)
 //
 // Đây là lớp bảo vệ chính. Model viết trôi chảy nên một con số bịa sẽ trông
 // y hệt một con số thật; người đọc không có cách nào phát hiện. Vì vậy:
@@ -19,7 +19,7 @@ export type Severity = 'info' | 'notable' | 'important';
 export interface Observation {
   title: string;
   body: string;
-  /** Tên chỉ số trong digest — tap vào để xem số gốc. */
+  /** Tên chỉ số trong digest - tap vào để xem số gốc. */
   metric: string;
   severity: Severity;
 }
@@ -35,7 +35,7 @@ export interface InsightResult {
 export const NOTHING_NOTABLE = 'Nothing notable in this period.';
 
 export const MAX_OBSERVATIONS = 4;
-/** Sai số khi đối chiếu số: 0.15 — đủ cho làm tròn, không đủ để bịa. */
+/** Sai số khi đối chiếu số: 0.15 - đủ cho làm tròn, không đủ để bịa. */
 export const NUMBER_TOLERANCE = 0.15;
 
 const MAX_TITLE = 80;
@@ -193,7 +193,7 @@ export function numbersCheckOut(body: string, allowed: Allowed): boolean {
   }
   text = text.replace(/\b\d{1,2}:\d{2}\b/g, ' ');
 
-  // 2. "1h20m" — chấp nhận cả cách đọc theo giờ lẫn theo phút
+  // 2. "1h20m" - chấp nhận cả cách đọc theo giờ lẫn theo phút
   const spans = [...text.matchAll(/\b(\d+)\s?h\s?(\d+)\s?m\b/gi)];
   for (const s of spans) {
     const h = Number(s[1]);
@@ -216,7 +216,7 @@ export function numbersCheckOut(body: string, allowed: Allowed): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Tra ngược chỉ số về digest — để UI hiện số gốc
+// Tra ngược chỉ số về digest - để UI hiện số gốc
 // ---------------------------------------------------------------------------
 
 export interface MetricHit {
@@ -276,7 +276,7 @@ function cleanSentence(v: unknown, allowed: Allowed, checkNumbers: boolean): str
 
 /**
  * @param raw    JSON model trả về, chưa tin được gì cả
- * @param digest bản digest ĐÃ gửi đi — mọi con số phải khớp với nó
+ * @param digest bản digest ĐÃ gửi đi - mọi con số phải khớp với nó
  */
 export function sanitizeInsight(raw: unknown, digest: Digest): InsightResult {
   const allowed = allowedValues(digest);
@@ -308,7 +308,7 @@ export function sanitizeInsight(raw: unknown, digest: Digest): InsightResult {
   }
 
   // Gợi ý là câu hành động, có thể nhắc giờ trong lịch sinh hoạt (20:30) chứ
-  // không phải số đo — nên không soi số ở đây, chỉ soi từ ngữ.
+  // không phải số đo - nên không soi số ở đây, chỉ soi từ ngữ.
   let suggestion: InsightResult['suggestion'] = null;
   const sug = o.suggestion as Record<string, unknown> | null | undefined;
   if (sug && typeof sug === 'object') {

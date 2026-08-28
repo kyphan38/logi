@@ -64,7 +64,7 @@ function spyRepo(before: Activity = act({ id: 'x1', startAt: NOW - H })) {
   return { repo, calls, names, first };
 }
 
-describe('applyVoice — mỗi intent gọi đúng hàm', () => {
+describe('applyVoice - mỗi intent gọi đúng hàm', () => {
   it('start → startActivity, kèm nguồn "voice"', async () => {
     const s = spyRepo();
     const w = await applyVoice(UID, cmd({ intent: 'start', label: 'devops' }), s.repo);
@@ -151,7 +151,7 @@ describe('applyVoice — mỗi intent gọi đúng hàm', () => {
   });
 });
 
-describe('applyVoice — Undo trả lại nguyên trạng', () => {
+describe('applyVoice - Undo trả lại nguyên trạng', () => {
   it('undo của start / log_past là xoá record vừa tạo', async () => {
     const s = spyRepo();
     const w = await applyVoice(UID, cmd({ intent: 'start' }), s.repo);
@@ -196,7 +196,7 @@ describe('applyVoice — Undo trả lại nguyên trạng', () => {
   });
 });
 
-describe('once — requestId trùng chỉ ghi một lần', () => {
+describe('once - requestId trùng chỉ ghi một lần', () => {
   it('gọi lại cùng requestId thì bỏ qua', async () => {
     const s = spyRepo();
     const once = createOnce();

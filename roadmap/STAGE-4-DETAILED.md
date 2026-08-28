@@ -1,7 +1,7 @@
-# STAGE 4 — Targets & Balance
+# STAGE 4 - Targets & Balance
 
 > Plan này viết cho một AI coding agent thực thi. Làm đúng thứ tự task.
-> Sau mỗi task có mục **Verify** — phải pass mới đi tiếp.
+> Sau mỗi task có mục **Verify** - phải pass mới đi tiếp.
 > Nếu gặp mâu thuẫn hoặc thiếu thông tin, **DỪNG và hỏi người dùng**, không tự đoán.
 
 ---
@@ -12,7 +12,7 @@ Stage 3 đã xong: voice → `/api/parse` → confirmation card → ghi qua `act
 Clarify, voice edit, delayed start đều chạy.
 
 Stage 4 biến dữ liệu thô thành **đánh giá cân bằng**, kèm cơ chế chống tự lừa mình.
-Đây là stage làm cho app có ý nghĩa — không có nó thì app chỉ là sổ ghi chép.
+Đây là stage làm cho app có ý nghĩa - không có nó thì app chỉ là sổ ghi chép.
 
 Toàn bộ công thức đã có sẵn trong `src/lib/balance.ts` và đã được kiểm chứng.
 **Agent không viết lại công thức nào.** Việc của Stage 4 là ghép chúng vào UI và
@@ -25,32 +25,32 @@ Firestore cho đúng.
 
 ---
 
-## PHẦN A — Carry-over
+## PHẦN A - Carry-over
 
-### A1 — Kiểm thử voice (chưa xong)
+### A1 - Kiểm thử voice (chưa xong)
 Stage 3 Task 9 chưa chạy: 10 câu voice + 20 mục kiểm tra trên iPhone.
 
 Không chặn Stage 4, nhưng phải làm sớm. Nếu có câu sai, chỉ chỉnh
-`buildSystemPrompt()` trong `gemini-parse.ts` — **không đổi model**.
+`buildSystemPrompt()` trong `gemini-parse.ts` - **không đổi model**.
 
 Đây là ngoại lệ duy nhất được phép sửa `gemini-parse.ts`: nội dung prompt, không
 phải schema hay logic.
 
-### A2 — Câu hỏi còn treo
+### A2 - Câu hỏi còn treo
 Báo cáo Phần A của Stage 3 kết thúc bằng *"Có một chỗ mình cần bạn quyết trước khi
 làm Phần B"* nhưng câu hỏi bị mất. Agent xác nhận lại: còn quyết định nào chưa được
 duyệt không?
 
 ---
 
-## PHẦN B — Targets
+## PHẦN B - Targets
 
-### Task 1 — Repository cho target & debt
+### Task 1 - Repository cho target & debt
 
 Tạo `src/lib/targets.ts`.
 
 Đường dẫn Firestore:
-- `users/{uid}/weekTargets/{week}` — VD `2026-W35`
+- `users/{uid}/weekTargets/{week}` - VD `2026-W35`
 - `users/{uid}/meta/debt`
 - `users/{uid}/meta/rollover`
 
@@ -88,7 +88,7 @@ client lẫn rules.
 
 ---
 
-### Task 2 — Rollover — PHẦN QUAN TRỌNG NHẤT STAGE NÀY
+### Task 2 - Rollover - PHẦN QUAN TRỌNG NHẤT STAGE NÀY
 
 Không có server cron. Việc chuyển tuần chạy ở client lúc mở app. Vì vậy nó
 **bắt buộc phải idempotent**.
@@ -133,7 +133,7 @@ gần nhau là chạy rollover hai lần.
 
 #### Bỏ app nhiều tuần
 Nghỉ 3 tuần không mở app → phải xử lý **từng tuần một theo thứ tự**, không nhảy
-thẳng. Tuần nào không có `weekTarget` (không dùng app) thì bỏ qua, không ghi nợ —
+thẳng. Tuần nào không có `weekTarget` (không dùng app) thì bỏ qua, không ghi nợ -
 không có kế hoạch thì không có gì để nợ.
 
 Giới hạn: xử lý tối đa 8 tuần lùi lại. Xa hơn thì chỉ set cột mốc và bỏ qua.
@@ -149,7 +149,7 @@ Agent không được đổi cách tính này.
 #### Gọi khi nào
 - Màn hình Now mount
 - App quay lại foreground
-- Không cần interval — tuần không đổi giữa chừng
+- Không cần interval - tuần không đổi giữa chừng
 
 **Verify**: viết test cho hàm rollover thuần (tách phần logic khỏi Firestore như
 Task 8 Stage 3 đã làm với `applyVoice`). Ca bắt buộc:
@@ -160,14 +160,14 @@ Task 8 Stage 3 đã làm với `applyVoice`). Ca bắt buộc:
 
 ---
 
-### Task 3 — Màn hình Targets
+### Task 3 - Màn hình Targets
 
 Thêm tab thứ 4 vào bottom nav: **Now · History · Targets · Analytics**.
 (Analytics vẫn là placeholder tới Stage 5.)
 
 `src/app/(main)/targets/page.tsx`
 
-#### Phần 1 — Preset
+#### Phần 1 - Preset
 4 card xếp dọc, card đang chọn có viền đậm:
 
 ```
@@ -179,7 +179,7 @@ Thêm tab thứ 4 vào bottom nav: **Now · History · Targets · Analytics**.
 ```
 
 Nợ > 20h (`DEBT_LOCK_THRESHOLD`) → card **Crunch** bị khoá, hiện lý do:
-`"Locked — 24h of debt outstanding"`.
+`"Locked - 24h of debt outstanding"`.
 
 Chọn preset → confirm sheet hiện rõ thay đổi:
 ```
@@ -196,8 +196,8 @@ Leisure  6h →  7h
 Phải hiện phần nợ phát sinh. Đổi preset mà không thấy giá phải trả thì cơ chế
 chống tự lừa mình vô nghĩa.
 
-#### Phần 2 — Tuỳ chỉnh
-5 slider. **Sleep khoá cứng**, hiện dạng readonly `46.5h — fixed`.
+#### Phần 2 - Tuỳ chỉnh
+5 slider. **Sleep khoá cứng**, hiện dạng readonly `46.5h - fixed`.
 
 Kéo một slider:
 1. Gọi `rebalance(weekly, category, newValue)`
@@ -208,10 +208,10 @@ Kéo một slider:
 Slider chạm sàn (`HARD_FLOOR`) → thanh đổi màu đỏ nhạt + nhãn `"floor"`.
 Không cho kéo xuống dưới.
 
-Dưới cùng hiện tổng: `135.5 / 135.5h ✓` — cho thấy rõ đây là ngân sách zero-sum,
+Dưới cùng hiện tổng: `135.5 / 135.5h ✓` - cho thấy rõ đây là ngân sách zero-sum,
 không thêm được, chỉ đổi chỗ.
 
-#### Phần 3 — Nợ
+#### Phần 3 - Nợ
 ```
 Debt
 Learn    12.0h      (6.0h applied this week)
@@ -219,7 +219,7 @@ Fitness   3.0h      (1.5h applied this week)
 ```
 Không nợ gì → ẩn hẳn phần này.
 
-#### Phần 4 — Streak
+#### Phần 4 - Streak
 `crunchStreak(listRecentWeekTargets(6))` trả `shouldPrompt: true` →
 ```
 Crunch: 4 of the last 6 weeks.
@@ -236,21 +236,21 @@ tương ứng. Không sửa `BASELINE_DAILY` trong `logi.ts`.
 
 ---
 
-### Task 4 — Khoá tuần
+### Task 4 - Khoá tuần
 
 21:00 Chủ nhật (giờ logic) → `lockWeek()`.
 
 Không có cron, nên khoá **lười**: kiểm tra khi mở app, nếu tuần đang xem đã qua
 mốc 21:00 CN thì khoá. Rollover ở Task 2 cũng khoá hồi tố tuần trước.
 
-`firestore.rules` đã chặn update khi `lockedAt != null` — không cần sửa rules.
+`firestore.rules` đã chặn update khi `lockedAt != null` - không cần sửa rules.
 
 Sửa target vào thứ Sáu, thứ Bảy hoặc Chủ nhật → `lateChange: true`.
 Stage 5 sẽ dùng cờ này để gắn dấu ⚠ trên chart. Stage 4 chỉ cần ghi đúng.
 
 ---
 
-### Task 5 — Balance banner
+### Task 5 - Balance banner
 
 `src/components/BalanceBanner.tsx`, đặt ở màn hình Now, dưới các session đang chạy.
 
@@ -273,7 +273,7 @@ Dùng `formatDeviation()` đã có sẵn. Nêu số, không dạy đời:
 Đúng: `Work: 46.2h / 40.1h (+15%)`
 Sai: `Bạn đang làm việc quá nhiều rồi`
 
-Màu: vượt → hổ phách, thiếu → xanh dương nhạt. **Không dùng đỏ** — đỏ dành cho lỗi
+Màu: vượt → hổ phách, thiếu → xanh dương nhạt. **Không dùng đỏ** - đỏ dành cho lỗi
 hệ thống, không dành cho hành vi của người dùng.
 
 Tap banner → sang màn hình Targets.
@@ -283,11 +283,11 @@ Thêm `useWeekActivities(logicalWeek)` vào `useActivities.ts`, query theo
 `logicalWeek` (index đã có từ Stage 1).
 
 #### Chỗ dễ sai nhất
-`deviations()` gọi `expectedHours()` — hàm này pro-rate **theo lịch**, cộng dồn
+`deviations()` gọi `expectedHours()` - hàm này pro-rate **theo lịch**, cộng dồn
 target của từng ngày đã qua.
 
 **Tuyệt đối không** tự tính `weekly × ngày/7`. Đã kiểm chứng: thứ Tư 20:41, Work
-expected là 23.1h theo lịch nhưng 18.4h nếu chia đều. Lệch gần 5h — đủ để app báo
+expected là 23.1h theo lịch nhưng 18.4h nếu chia đều. Lệch gần 5h - đủ để app báo
 động sai mỗi thứ Tư và bạn mất tin tưởng vào nó.
 
 **Verify**: seed một tuần dữ liệu giả, đối chiếu số trên banner với kết quả gọi
@@ -295,7 +295,7 @@ trực tiếp `deviations()` trong test.
 
 ---
 
-### Task 6 — Nhắc trong app
+### Task 6 - Nhắc trong app
 
 `src/components/ReminderBanner.tsx` + `src/hooks/useReminders.ts`
 
@@ -313,7 +313,7 @@ trực tiếp `deviations()` trong test.
 - Chỉ hiện khi đã qua mốc giờ **và** điều kiện đúng
 - Dismiss → không hiện lại **trong ngày logic đó**
 - Lưu dismiss trong `localStorage` với key `reminder:{type}:{logicalDate}`
-  (mỗi thiết bị riêng — chấp nhận được, đỡ tốn write Firestore)
+  (mỗi thiết bị riêng - chấp nhận được, đỡ tốn write Firestore)
 - Tối đa **một** reminder cùng lúc. Đụng Balance banner thì reminder thắng
   (nó có hành động cụ thể hơn).
 
@@ -323,11 +323,11 @@ tác nhiều bước thì không ai dùng.
 
 ---
 
-### Task 7 — Test
+### Task 7 - Test
 
 Thêm vào bộ `node --test`:
 
-`test/rollover.test.ts` — phần logic thuần, bơm repo giả:
+`test/rollover.test.ts` - phần logic thuần, bơm repo giả:
 - chạy hai lần → nợ cộng một lần
 - nhảy 3 tuần → xử lý đúng thứ tự
 - lần đầu → không ghi nợ
@@ -349,7 +349,7 @@ Tách logic thuần khỏi Firestore như Stage 3 đã làm với `voice-plan.ts
 
 ---
 
-### Task 8 — Kiểm thử tay
+### Task 8 - Kiểm thử tay
 
 | # | Làm | Mong đợi |
 |---|---|---|
@@ -369,11 +369,11 @@ Tách logic thuần khỏi Firestore như Stage 3 đã làm với `voice-plan.ts
 | 14 | Sau 20:45 chưa log Learn | Reminder hiện, `[Start Learn]` chạy |
 | 15 | Dismiss reminder, mở lại app | Không hiện lại trong ngày |
 
-Test 6 và 7 là hai bài quan trọng nhất — chúng chứng minh rollover idempotent.
+Test 6 và 7 là hai bài quan trọng nhất - chúng chứng minh rollover idempotent.
 
 ---
 
-## Definition of Done — Stage 4
+## Definition of Done - Stage 4
 
 - [ ] A1: 10 câu voice + 20 mục Stage 3 đã test trên iPhone
 - [ ] A2: câu hỏi treo của agent đã được trả lời

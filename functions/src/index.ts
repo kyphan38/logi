@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
-// logi functions — Push nhắc theo lịch (Stage 6 Task 2)
+// logi functions - Push nhắc theo lịch (Stage 6 Task 2)
 //
 // Chạy 15 phút một lần. Mỗi lần: xem có ai bật push không, có đang trong cửa
 // sổ nhắc không, đã nhắc loại đó hôm nay chưa. Chỉ khi cả ba đều đúng mới đọc
-// activity — nếu không, một lần chạy chỉ tốn một read.
+// activity - nếu không, một lần chạy chỉ tốn một read.
 //
 // 96 lần chạy/ngày × 1 read = ~100 read/ngày. Phần đọc activity chỉ xảy ra ở
 // vài lần chạy quanh 06:15, 20:45 và 19:00 Chủ nhật.
@@ -35,7 +35,7 @@ interface Candidate {
   mark: number;
 }
 
-/** Ứng viên theo mốc giờ GIẢM DẦN — nhắc mới nhất thắng, giống `pickReminder()`. */
+/** Ứng viên theo mốc giờ GIẢM DẦN - nhắc mới nhất thắng, giống `pickReminder()`. */
 function candidates(now: number): Candidate[] {
   const today = logicalDate(now);
   const list: Candidate[] = [

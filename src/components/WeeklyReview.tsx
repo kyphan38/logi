@@ -1,10 +1,10 @@
 'use client';
 
 // ------------------------------------------------------------
-// logi — Weekly Review (Stage 6 Task 1)
+// logi - Weekly Review (Stage 6 Task 1)
 //
 // Ba màn, vuốt ngang. Dùng scroll-snap của CSS, không thêm thư viện.
-// Màn 1 dùng lại BalanceBars của Stage 5 — không vẽ lại chart thứ hai.
+// Màn 1 dùng lại BalanceBars của Stage 5 - không vẽ lại chart thứ hai.
 // ------------------------------------------------------------
 
 import { useMemo, useRef, useState } from 'react';
@@ -33,7 +33,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
   const uid = user?.uid ?? null;
   const { summary, activities, weekTargets, now, debt, canSetNext, loading } = useReviewData(week);
 
-  // Màn 2 mở ra là chạy luôn — người dùng không phải bấm thêm nút nào.
+  // Màn 2 mở ra là chạy luôn - người dùng không phải bấm thêm nút nào.
   // `weekRange` chốt theo `week`, không theo đồng hồ, để digest không đổi.
   const range = useMemo(() => weekRange(week), [week]);
   const insight = useInsight({ activities, range, weekTargets, now, auto: true });
@@ -186,7 +186,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
                 </p>
                 {debt.crunchLocked && (
                   <p className="text-[13px] text-ink-muted">
-                    Crunch is locked — debt is over the limit.
+                    Crunch is locked - debt is over the limit.
                   </p>
                 )}
               </>

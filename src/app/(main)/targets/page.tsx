@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// logi — Màn hình Targets (Stage 4, Task 3)
+// logi - Màn hình Targets (Stage 4, Task 3)
 //
 // Ngân sách zero-sum: một tuần có đúng 135.5h. Không thêm được giờ,
 // chỉ đổi chỗ. Mọi thứ trên màn hình này phải làm điều đó hiện rõ.
@@ -65,7 +65,7 @@ function summary(weekly: Weekly): string {
 }
 
 /**
- * `useSearchParams` khiến cây con phải render ở client, nên bọc Suspense —
+ * `useSearchParams` khiến cây con phải render ở client, nên bọc Suspense -
  * đây là yêu cầu của Next khi build bản tĩnh, không phải cho đẹp.
  */
 export default function TargetsPage() {
@@ -89,7 +89,7 @@ function TargetsView() {
   const { streak } = useCrunchStreak(target?.preset ?? null);
   const { toasts, push, dismiss } = useToasts();
 
-  // `/targets?suggest=crunch` — Stage 7 chỉ TÔ SÁNG thẻ, không bao giờ tự áp.
+  // `/targets?suggest=crunch` - Stage 7 chỉ TÔ SÁNG thẻ, không bao giờ tự áp.
   // Người dùng vẫn phải bấm và xác nhận như mọi lần đổi preset khác.
   const params = useSearchParams();
   const raw = params.get('suggest');
@@ -217,7 +217,7 @@ function TargetsView() {
                   // Nợ quá 20h thì không được vay thêm nữa.
                   lockedReason={
                     id === 'crunch' && crunchLocked
-                      ? `Locked — ${h(debtTotal)} of debt outstanding`
+                      ? `Locked - ${h(debtTotal)} of debt outstanding`
                       : null
                   }
                   disabled={locked || busy}
@@ -235,7 +235,7 @@ function TargetsView() {
 
               <div className="mb-3 flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-900">
                 <span className="text-zinc-600 dark:text-zinc-400">Sleep</span>
-                <span className="font-medium text-zinc-500">{h(weekly.sleep)} — fixed</span>
+                <span className="font-medium text-zinc-500">{h(weekly.sleep)} - fixed</span>
               </div>
 
               {ADJUSTABLE.map((c) => (
@@ -368,7 +368,7 @@ function Slider({
   onChange: (v: number) => void;
 }) {
   const floor = HARD_FLOOR[category] ?? 0;
-  // Chạm sàn thì báo rõ, và `min` chặn luôn — không kéo xuống được nữa.
+  // Chạm sàn thì báo rõ, và `min` chặn luôn - không kéo xuống được nữa.
   const atFloor = value <= floor + 0.05 && floor > 0;
   const max = 70;
 

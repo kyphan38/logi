@@ -1,7 +1,7 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Coverage & overlap (Stage 5 Task 6)
+// logi - Coverage & overlap (Stage 5 Task 6)
 //
 // Đặt TRƯỚC các chart, không phải sau. Nếu chỉ log 40% thời gian thì "Learn
 // thiếu 12h" là câu vô nghĩa: có thể đã học nhưng quên bấm. Người đọc cần biết

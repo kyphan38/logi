@@ -10,7 +10,7 @@ export type SessionUser = {
 
 /**
  * Đọc session cookie và trả về user, hoặc null nếu không hợp lệ.
- * Nuốt mọi lỗi — người gọi chỉ cần biết có user hay không.
+ * Nuốt mọi lỗi - người gọi chỉ cần biết có user hay không.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
   try {

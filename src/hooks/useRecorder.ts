@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// logi — Ghi âm cho voice logging
+// logi - Ghi âm cho voice logging
 //
 // Audio KHÔNG được lưu ở bất kỳ đâu: blob chỉ sống trong biến local,
 // đổi sang base64 rồi gán null. Không disk, không Storage, không log.
@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 
 import { pickAudioMime } from '@/lib/gemini-parse';
 
-/** Giữ nút quá lâu thì tự dừng — 30s mp4 ~400KB, thừa sức cho một câu nói. */
+/** Giữ nút quá lâu thì tự dừng - 30s mp4 ~400KB, thừa sức cho một câu nói. */
 const MAX_MS = 30_000;
 /** Chạm nhầm rồi nhả ra ngay → bỏ, đừng tốn một lượt gọi Gemini. */
 const MIN_MS = 400;
@@ -22,7 +22,7 @@ export type RecorderState = 'idle' | 'requesting' | 'recording' | 'processing';
 
 export interface Recording {
   base64: string;
-  /** Đã cắt bỏ phần `;codecs=...` — Gemini chỉ nhận mime gốc. */
+  /** Đã cắt bỏ phần `;codecs=...` - Gemini chỉ nhận mime gốc. */
   mimeType: string;
   durationMs: number;
 }
@@ -41,7 +41,7 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-/** Khả năng ghi âm chỉ biết được ở client — dùng store ngoài để SSR không lệch. */
+/** Khả năng ghi âm chỉ biết được ở client - dùng store ngoài để SSR không lệch. */
 const NO_CHANGE = () => () => {};
 const readSupported = () =>
   typeof MediaRecorder !== 'undefined' &&
@@ -173,7 +173,7 @@ export function useRecorder() {
         const waiter = waiterRef.current;
         waiterRef.current = null;
         if (waiter) waiter(r);
-        else pendingRef.current = r; // tự dừng ở 30s — giữ lại cho stop() sau
+        else pendingRef.current = r; // tự dừng ở 30s - giữ lại cho stop() sau
         if (aliveRef.current) setState('idle');
       };
 
@@ -198,7 +198,7 @@ export function useRecorder() {
 
   /**
    * PHẢI gọi thẳng từ sự kiện chạm. `getUserMedia` nằm ngay đầu hàm,
-   * không có `await` nào trước nó — Safari coi đó là mất user gesture.
+   * không có `await` nào trước nó - Safari coi đó là mất user gesture.
    */
   const start = useCallback(async () => {
     if (recRef.current) return;
@@ -237,7 +237,7 @@ export function useRecorder() {
 
     streamRef.current = stream;
 
-    // iOS WebKit không hỗ trợ audio/webm — pickAudioMime() trả audio/mp4 ở đó.
+    // iOS WebKit không hỗ trợ audio/webm - pickAudioMime() trả audio/mp4 ở đó.
     const picked = pickAudioMime();
     let rec: MediaRecorder;
     try {

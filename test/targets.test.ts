@@ -94,7 +94,7 @@ test('rebalance: kéo Work lên thì các category khác tự giảm, tổng gi�
 });
 
 test('rebalance: không đẩy category nào xuống dưới HARD_FLOOR', () => {
-  // Kéo Work lên rất cao — phần bù phải dừng ở sàn, không âm.
+  // Kéo Work lên rất cao - phần bù phải dừng ở sàn, không âm.
   const out = rebalance(PRESETS.normal.weekly, 'work', 90);
   for (const c of CATEGORIES) {
     assert.ok(out[c] >= (HARD_FLOOR[c] ?? 0) - 0.001, `${c} = ${out[c]} thủng sàn`);
@@ -161,7 +161,7 @@ test('previewSwitch: về Normal thì không phát sinh nợ mới', () => {
 
 test('previewSwitch: nợ tính theo BASELINE, không theo tuần hiện tại', () => {
   // Đang ở Crunch rồi đổi sang Crunch: `from` không đổi nhưng nợ vẫn
-  // là phần cắt so với Normal — nếu tính theo `from` thì nợ sẽ ra 0 sai.
+  // là phần cắt so với Normal - nếu tính theo `from` thì nợ sẽ ra 0 sai.
   const rows = previewSwitch(PRESETS.crunch.weekly, 'crunch', {});
   const learn = rows.find((r) => r.category === 'learn')!;
   assert.ok(learn.debt > 0);

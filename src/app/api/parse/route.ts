@@ -107,7 +107,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   // Context giúp Gemini hiểu "stop that" / "same as before".
-  // Firestore lỗi thì vẫn parse tiếp với context rỗng — đừng làm mất câu nói.
+  // Firestore lỗi thì vẫn parse tiếp với context rỗng - đừng làm mất câu nói.
   let active: Awaited<ReturnType<typeof listActiveForPrompt>> = [];
   let recent: Awaited<ReturnType<typeof listRecentForPrompt>> = [];
   try {

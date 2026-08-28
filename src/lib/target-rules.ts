@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Luật thuần của Targets.
+// logi - Luật thuần của Targets.
 //
 // Tách khỏi `targets.ts` vì file đó import Firestore. Ở đây không có
 // I/O nào, nên `node --test` chạy thẳng được.
@@ -32,7 +32,7 @@ export function assertValid(weekly: Weekly): void {
   if (!check.ok) throw new TargetError('invalid', check.errors.join(' '));
 }
 
-/** Nợ phát sinh nếu đổi sang preset này — để confirm sheet nêu rõ giá phải trả. */
+/** Nợ phát sinh nếu đổi sang preset này - để confirm sheet nêu rõ giá phải trả. */
 export function previewSwitch(
   from: Weekly,
   toPreset: PresetId,

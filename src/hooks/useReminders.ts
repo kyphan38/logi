@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// logi — Nhắc trong app. Không push notification.
+// logi - Nhắc trong app. Không push notification.
 //
 // Kiểm tra lúc mount, lúc quay lại foreground, và mỗi 60 giây.
 // ============================================================
@@ -16,11 +16,11 @@ const PREFIX = 'reminder:';
 const EMPTY: ReadonlySet<string> = new Set();
 
 /**
- * Dismiss lưu ở `localStorage` — mỗi thiết bị riêng. Chấp nhận được:
+ * Dismiss lưu ở `localStorage` - mỗi thiết bị riêng. Chấp nhận được:
  * đổi lấy việc không tốn write Firestore cho một thứ chỉ sống trong ngày.
  *
  * Đọc hết một lượt thay vì tra từng key, để `dismissed` là state React
- * thật — hook không phải tự ép render lại bằng biến đếm giả.
+ * thật - hook không phải tự ép render lại bằng biến đếm giả.
  */
 function readAll(): ReadonlySet<string> {
   if (typeof window === 'undefined') return EMPTY;

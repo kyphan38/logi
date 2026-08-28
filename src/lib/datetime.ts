@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi — Helper cho <input type="datetime-local"> và hiển thị thời lượng
+// logi - Helper cho <input type="datetime-local"> và hiển thị thời lượng
 // ---------------------------------------------------------------------------
 
 /** ts → "YYYY-MM-DDTHH:mm" (giờ địa phương, đúng thứ input datetime-local cần). */
@@ -30,7 +30,7 @@ export function formatDuration(ms: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-/** ts → "Aug 25" — dùng cho toast đổi ngày. */
+/** ts → "Aug 25" - dùng cho toast đổi ngày. */
 export function shortDate(ts: number): string {
   return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
 }

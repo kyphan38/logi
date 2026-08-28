@@ -1,7 +1,7 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Bộ lọc khoảng thời gian cho Analytics (Stage 5 Task 1)
+// logi - Bộ lọc khoảng thời gian cho Analytics (Stage 5 Task 1)
 //
 // Toàn bộ số học nằm ở `@/lib/range`. Component này chỉ là bàn phím bấm.
 // ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ export default function RangePicker({ value, onChange, now }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Cuộn ngang chỉ ở hàng chip — phần chart bên dưới không bao giờ cuộn ngang.
+      {/* Cuộn ngang chỉ ở hàng chip - phần chart bên dưới không bao giờ cuộn ngang.
           -mx-5/px-5 khớp với padding của AppShell, để chip chạm sát mép khi cuộn. */}
       <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {CHIPS.map((kind) => (
@@ -172,7 +172,7 @@ function DateField({
       <input
         type="date"
         value={value}
-        // Ngày mai chưa xảy ra — cho chọn thì chart sẽ báo thiếu mà không có cách nào bù.
+        // Ngày mai chưa xảy ra - cho chọn thì chart sẽ báo thiếu mà không có cách nào bù.
         max={max}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-sm border border-line bg-surface-0 px-2 py-1.5 text-ink"

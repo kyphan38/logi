@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Data model & targets
+// logi - Data model & targets
 // ============================================================
 
 export const CATEGORIES = ['learn', 'work', 'fitness', 'sleep', 'leisure'] as const;
@@ -36,9 +36,9 @@ export interface Activity {
   endAt: number | null;     // null khi đang chạy
   durationMin: number | null; // denormalize khi stop → khỏi tính lại lúc query
 
-  /** "2026-08-26" — ngày logic, mốc cắt 04:00. Field query chính. */
+  /** "2026-08-26" - ngày logic, mốc cắt 04:00. Field query chính. */
   logicalDate: string;
-  /** "2026-W35" — tuần ISO của logicalDate. Field query chính cho analytics. */
+  /** "2026-W35" - tuần ISO của logicalDate. Field query chính cho analytics. */
   logicalWeek: string;
 
   status: ActivityStatus;
@@ -92,11 +92,11 @@ export const BASELINE_WEEKLY: Record<Category, number> = {
   leisure: weeklyTotal(BASELINE_DAILY.leisure), // 6
 };
 
-/** 135.5h — tổng ngân sách. Zero-sum: mọi preset phải khớp con số này. */
+/** 135.5h - tổng ngân sách. Zero-sum: mọi preset phải khớp con số này. */
 export const TOTAL_BUDGET = Object.values(BASELINE_WEEKLY).reduce((a, b) => a + b, 0);
 
 // ------------------------------------------------------------
-// Sàn không thương lượng — chặn việc tự hạ chuẩn khi crunch
+// Sàn không thương lượng - chặn việc tự hạ chuẩn khi crunch
 // ------------------------------------------------------------
 
 export const HARD_FLOOR: Partial<Record<Category, number>> = {
@@ -105,7 +105,7 @@ export const HARD_FLOOR: Partial<Record<Category, number>> = {
 };
 
 // ------------------------------------------------------------
-// Preset — Sleep cố định 46.5h ở mọi mode.
+// Preset - Sleep cố định 46.5h ở mọi mode.
 // 4 category còn lại chia nhau đúng 89h.
 // ------------------------------------------------------------
 
@@ -128,7 +128,7 @@ export const PRESETS: Record<PresetId, Preset> = {
   crunch: {
     id: 'crunch',
     label: 'Crunch',
-    hint: 'Deadline / OT — ghi nợ Learn',
+    hint: 'Deadline / OT - ghi nợ Learn',
     weekly: { sleep: 46.5, work: 57, learn: 19, fitness: 6, leisure: 7 },
   },
   deep_learn: {
@@ -140,7 +140,7 @@ export const PRESETS: Record<PresetId, Preset> = {
   recovery: {
     id: 'recovery',
     label: 'Recovery',
-    hint: 'Sau crunch — trả nợ sức khoẻ',
+    hint: 'Sau crunch - trả nợ sức khoẻ',
     weekly: { sleep: 46.5, work: 40, learn: 22, fitness: 12, leisure: 15 },
   },
 };

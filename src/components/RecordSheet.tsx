@@ -69,7 +69,7 @@ export default function RecordSheet({
   const [confirming, setConfirming] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
-  // Sheet mở thì khoá cuộn trang nền — cuộn lan ra sau lưng rất khó chịu.
+  // Sheet mở thì khoá cuộn trang nền - cuộn lan ra sau lưng rất khó chịu.
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -128,7 +128,7 @@ export default function RecordSheet({
   }, [start, end, endRequired, now]);
 
   const valid = !errors.start && !errors.end;
-  const duration = start !== null && end !== null ? formatDuration(end - start) : '—';
+  const duration = start !== null && end !== null ? formatDuration(end - start) : '-';
 
   async function save() {
     if (!valid || busy || start === null) return;

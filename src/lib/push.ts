@@ -1,10 +1,10 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Push notification (Stage 6 Task 2)
+// logi - Push notification (Stage 6 Task 2)
 //
 // Nhắc 06:15 / 20:45 / 19:00 CN hiện ở màn khoá, kể cả khi app đã đóng.
-// Nhắc trong app của Stage 4 GIỮ NGUYÊN làm dự phòng — push có thể bị chặn,
+// Nhắc trong app của Stage 4 GIỮ NGUYÊN làm dự phòng - push có thể bị chặn,
 // hết hạn token, hoặc người dùng chưa cài lên màn hình chính.
 //
 // Token nằm ở `users/{uid}/meta/fcm`. File này là nơi duy nhất ghi doc đó.
@@ -22,7 +22,7 @@ export type PushState = 'unsupported' | 'default' | 'granted' | 'denied';
 /**
  * iOS chỉ cho phép push khi app đã được Add to Home Screen và đang chạy
  * standalone. Mở trong tab Safari thì `Notification` có tồn tại nhưng
- * `requestPermission()` sẽ luôn trả về 'denied' — hỏi lúc đó chỉ làm người
+ * `requestPermission()` sẽ luôn trả về 'denied' - hỏi lúc đó chỉ làm người
  * dùng mất quyền vĩnh viễn, nên phải chặn từ trước.
  */
 export function isStandalone(): boolean {
@@ -63,7 +63,7 @@ export async function enablePush(uid: string): Promise<string> {
   }
 
   // Đăng ký SW của mình rồi đưa cho FCM dùng, thay vì để nó tự tìm
-  // `/firebase-messaging-sw.js` — app chỉ có một service worker duy nhất.
+  // `/firebase-messaging-sw.js` - app chỉ có một service worker duy nhất.
   const registration = await navigator.serviceWorker.register(SW_URL, { scope: '/' });
   await navigator.serviceWorker.ready;
 

@@ -3,7 +3,7 @@
 import { useElapsed } from '@/hooks/useActivities';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
-/** 2:41:07 — luôn derive từ số giây, không cộng dồn. */
+/** 2:41:07 - luôn derive từ số giây, không cộng dồn. */
 function hms(totalSec: number): string {
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);

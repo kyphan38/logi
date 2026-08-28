@@ -1,10 +1,10 @@
-# STAGE 4.6 — Design polish
+# STAGE 4.6 - Design polish
 
-> Gộp chung với Stage 4.5 (History redesign) — làm cùng một lượt, vì cả hai đều
+> Gộp chung với Stage 4.5 (History redesign) - làm cùng một lượt, vì cả hai đều
 > đụng vào màn hình History.
 >
 > Plan này viết cho một AI coding agent thực thi.
-> Sau mỗi task có mục **Verify** — phải pass mới đi tiếp.
+> Sau mỗi task có mục **Verify** - phải pass mới đi tiếp.
 
 ---
 
@@ -23,7 +23,7 @@ Stage này sửa hình thức + vài bug nhỏ. **Không đụng vào logic nghi
 
 ---
 
-## Task 1 — Design tokens
+## Task 1 - Design tokens
 
 Tạo `src/styles/tokens.css` (hoặc mở rộng `globals.css`). Mọi component dùng token,
 không hardcode màu.
@@ -52,8 +52,8 @@ Nguyên tắc: **bớt viền, thêm nền.** Card dùng nền khác biệt thay
 ### Màu category
 Giữ nguyên `CATEGORY_COLOR` trong `logi.ts` làm màu gốc. Thêm cho mỗi category
 2 biến thể dẫn xuất:
-- `tint` — nền block timeline (alpha ~0.12)
-- `ink` — chữ trên nền tint (đủ tương phản, ratio ≥ 4.5)
+- `tint` - nền block timeline (alpha ~0.12)
+- `ink` - chữ trên nền tint (đủ tương phản, ratio ≥ 4.5)
 
 **Không sửa `logi.ts`.** Đặt bảng dẫn xuất trong file CSS/TS mới.
 
@@ -64,11 +64,11 @@ Giữ nguyên `CATEGORY_COLOR` trong `logi.ts` làm màu gốc. Thêm cho mỗi 
   Hiện số và nhãn cùng cỡ nên không phân biệt được cái nào quan trọng.
 
 ### Verify
-`grep -rn "#[0-9a-fA-F]\{6\}" src/components src/app` — chỉ còn trong file token.
+`grep -rn "#[0-9a-fA-F]\{6\}" src/components src/app` - chỉ còn trong file token.
 
 ---
 
-## Task 2 — Nút mic to hơn
+## Task 2 - Nút mic to hơn
 
 Bạn dùng voice thường xuyên, nút hiện quá nhỏ trên điện thoại.
 
@@ -82,15 +82,15 @@ Bạn dùng voice thường xuyên, nút hiện quá nhỏ trên điện thoại
 | Bóng | nổi rõ hơn, để tách khỏi nội dung phía sau |
 
 Lúc đang ghi phình lên **76px** với vòng đỏ. Đảm bảo không đè lên nút Stop của
-session card — nếu đụng, đẩy padding-bottom của danh sách session.
+session card - nếu đụng, đẩy padding-bottom của danh sách session.
 
 **Verify**: trên iPhone, ngón cái với tới nút mà không phải đổi tư thế cầm máy.
 
 ---
 
-## Task 3 — Nút category ở màn Now
+## Task 3 - Nút category ở màn Now
 
-Hiện mỗi nút một viền màu pastel khác nhau, cạnh nhau — đây chính là thứ làm app
+Hiện mỗi nút một viền màu pastel khác nhau, cạnh nhau - đây chính là thứ làm app
 trông "phèn". Không có nút nào nổi hơn nút nào, và 5 màu viền cạnh nhau gây nhiễu.
 
 Sửa:
@@ -105,7 +105,7 @@ kéo dài ~700px trông rất kỳ.
 
 ---
 
-## Task 4 — Summary gauge ở History
+## Task 4 - Summary gauge ở History
 
 Thay dòng chữ `Learn 0.0 / 3.2Work 0.3 / 7.3…` bằng 5 thanh gauge nhỏ.
 
@@ -113,7 +113,7 @@ Thay dòng chữ `Learn 0.0 / 3.2Work 0.3 / 7.3…` bằng 5 thanh gauge nhỏ.
 Grid 5 cột đều nhau, gap 8px. Mỗi ô từ trên xuống:
 1. Nhãn category, 11px, `--text-secondary`
 2. Thanh cao **6px**, `--radius-full`, track `--surface-0`
-3. Số `1.0/3.2` — phần actual `--text-primary`, phần `/target` `--text-muted`,
+3. Số `1.0/3.2` - phần actual `--text-primary`, phần `/target` `--text-muted`,
    `tabular-nums`
 
 ### Quy tắc thanh
@@ -122,24 +122,24 @@ fill = min(1, actual / target)
 màu  = CATEGORY_COLOR[c]
 ```
 - `actual > target` → thanh đầy + **vạch hổ phách 3px ở mép phải** báo vượt
-- `target === 0` (VD Fitness ngày Chủ nhật) → không vẽ thanh, số hiện `0.0/—`
+- `target === 0` (VD Fitness ngày Chủ nhật) → không vẽ thanh, số hiện `0.0/-`
 - `actual === 0 && target === 0` → cả ô làm mờ đi
 
 ### Bỏ hẳn
-- Thanh ngang mảnh full-width dưới dòng summary — hiện 100% cam vì chỉ có Work
+- Thanh ngang mảnh full-width dưới dòng summary - hiện 100% cam vì chỉ có Work
   được log, không mang thông tin gì.
 - Dòng `Tracked … · Untracked … · Overlap …`. Overlap chuyển thành dòng phụ nhỏ,
   chỉ hiện khi `> 0`.
 
 ### Ở 375px
-5 cột × ~66px. Nhãn `Fitness` và `Leisure` sẽ chật — dùng `font-size: 10px` và
+5 cột × ~66px. Nhãn `Fitness` và `Leisure` sẽ chật - dùng `font-size: 10px` và
 `letter-spacing: -0.01em` cho nhãn, không viết tắt.
 
 **Verify**: đọc được ở 320px, không tràn ngang, không xuống dòng nhãn.
 
 ---
 
-## Task 5 — Timeline block
+## Task 5 - Timeline block
 
 Áp dụng cùng lúc với Stage 4.5 Task 2 (timeline co giãn).
 
@@ -158,11 +158,11 @@ luôn là thao tác nhầm.
 - Timeline: hiện với chiều cao tối thiểu + nhãn `0m` màu `--text-muted`
 - `stopActivity`: nếu `endAt - startAt < 60s` → hiện confirm
   `"Less than a minute. Save anyway?"` với lựa chọn `[Discard] [Save]`
-- **Không** tự động chặn — có thể người dùng thật sự muốn ghi
+- **Không** tự động chặn - có thể người dùng thật sự muốn ghi
 
 ---
 
-## Task 6 — Chuyển Targets sang tiếng Anh
+## Task 6 - Chuyển Targets sang tiếng Anh
 
 Toàn bộ giao diện là tiếng Anh. Màn Targets đang lẫn tiếng Việt.
 
@@ -172,7 +172,7 @@ Toàn bộ giao diện là tiếng Anh. Màn Targets đang lẫn tiếng Việt.
 | Card | Tiêu đề | Mô tả |
 |---|---|---|
 | 1 | `Normal` | `Standard week` |
-| 2 | `Crunch` | `Deadline or OT — adds Learn debt` |
+| 2 | `Crunch` | `Deadline or OT - adds Learn debt` |
 | 3 | `Deep Learn` | `Certification or exam push` |
 | 4 | `Recovery` | `Post-crunch reset` |
 
@@ -180,10 +180,10 @@ Dòng số giữ nguyên định dạng gọn: `L31 · W43 · F9 · Le6`
 
 **Custom**
 - Nhãn mục: `CUSTOM`
-- `Sleep` → `46.5h — fixed`
+- `Sleep` → `46.5h - fixed`
 - Chạm sàn → `floor`
 - `Total` → `135.5 / 135.5h ✓`
-- Vượt ngân sách → `Over by 3.0h — reduce another category`
+- Vượt ngân sách → `Over by 3.0h - reduce another category`
 - Còn thừa → `3.0h unallocated`
 
 **Sheet đổi preset**
@@ -201,7 +201,7 @@ Leisure   6h →  7h
 **Nợ**
 - Tiêu đề mục: `DEBT`
 - Dòng: `Learn  12.0h` + `6.0h applied this week`
-- Crunch bị khoá: `Locked — 24h of debt outstanding`
+- Crunch bị khoá: `Locked - 24h of debt outstanding`
 
 **Tuần khoá**: `This week is closed.`
 
@@ -209,15 +209,15 @@ Leisure   6h →  7h
 `Reset your baseline, or is this something to fix?` + `[ Reset baseline ] [ Keep as is ]`
 
 ### Verify
-`grep -rnP "[\x{00C0}-\x{1EF9}]" src/` — không còn tiếng Việt trong chuỗi hiển thị.
+`grep -rnP "[\x{00C0}-\x{1EF9}]" src/` - không còn tiếng Việt trong chuỗi hiển thị.
 (Comment trong code thì để tiếng Việt cũng được.)
 
 ---
 
-## Task 7 — Sửa banner ở màn Now
+## Task 7 - Sửa banner ở màn Now
 
 Banner hiện ghi `Work: 0.4h / 31.0h (-99%)`. Con số 31.0h là **expected tính tới
-thời điểm hiện tại trong tuần**, nhưng đọc lên tưởng target Work là 31h — trong khi
+thời điểm hiện tại trong tuần**, nhưng đọc lên tưởng target Work là 31h - trong khi
 màn Targets ghi 40h. Gây hiểu nhầm.
 
 ### Sửa cách viết
@@ -239,20 +239,20 @@ Thay bằng dòng nhạt: `Not enough logged this week to compare.`
 
 ---
 
-## Task 8 — Sửa bug hiển thị
+## Task 8 - Sửa bug hiển thị
 
-1. **Dòng summary dính chữ**: `Learn 0.0 / 3.2Work 0.3 / 7.3` — thiếu dấu phân cách.
+1. **Dòng summary dính chữ**: `Learn 0.0 / 3.2Work 0.3 / 7.3` - thiếu dấu phân cách.
    Task 4 thay bằng gauge nên tự hết, nhưng kiểm tra xem còn chỗ nào nối chuỗi kiểu
    này không.
 2. **Desktop**: mọi màn hình bọc `max-width: 720px; margin: 0 auto`. Hiện Targets
-   căn giữa còn Now/History kéo full width — không nhất quán.
+   căn giữa còn Now/History kéo full width - không nhất quán.
 3. **Sidebar desktop** rộng 220px nhưng nội dung ít; giảm còn 180px.
 4. `-webkit-tap-highlight-color: transparent` + trạng thái `:active` tự định nghĩa
    cho mọi phần tử bấm được.
 
 ---
 
-## Task 9 — Kiểm thử
+## Task 9 - Kiểm thử
 
 | # | Kiểm tra | Mong đợi |
 |---|---|---|
@@ -261,7 +261,7 @@ Thay bằng dòng nhạt: `Not enough logged this week to compare.`
 | 3 | Nút category ở Now | Viền xám, chấm màu, không viền pastel |
 | 4 | Gauge ở History | 5 thanh, đọc được ở 320px |
 | 5 | Category vượt target | Thanh đầy + vạch hổ phách |
-| 6 | Chủ nhật, Fitness target 0 | Không vẽ thanh, hiện `0.0/—` |
+| 6 | Chủ nhật, Fitness target 0 | Không vẽ thanh, hiện `0.0/-` |
 | 7 | Block timeline | Bo 12px, không hiện Label |
 | 8 | Sửa record | Label vẫn sửa được trong RecordSheet |
 | 9 | Màn Targets | Toàn tiếng Anh |
@@ -290,7 +290,7 @@ Thay bằng dòng nhạt: `Not enough logged this week to compare.`
 ## Quy tắc cho agent
 
 **Không được:**
-- Đổi bất kỳ công thức hay luồng dữ liệu nào — đây là stage hình thức
+- Đổi bất kỳ công thức hay luồng dữ liệu nào - đây là stage hình thức
 - Sửa `logi.ts` / `balance.ts` / `gemini-parse.ts`
 - Xoá field `label` khỏi DB hay khỏi `RecordSheet` (chỉ ẩn ở timeline)
 - Tự chặn record 0 phút (chỉ hỏi lại)

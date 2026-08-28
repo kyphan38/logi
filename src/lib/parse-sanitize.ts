@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Lọc kết quả Gemini trước khi trả cho client.
+// logi - Lọc kết quả Gemini trước khi trả cho client.
 // LLM có thể bịa: category lạ, ngày năm 1970, session dài 40h,
 // hay id không tồn tại. Client tin server, nên server phải sạch.
 // Thuần logic, không chạm Firestore → test được bằng node --test.
@@ -36,7 +36,7 @@ const INTENTS: readonly Intent[] = [
 
 const MAX_TEXT = 200;
 const HOUR = 3_600_000;
-/** Khớp `MAX_BACKDATE_MS` trong activities.ts — quá 7 ngày thì validateTimes cũng chặn. */
+/** Khớp `MAX_BACKDATE_MS` trong activities.ts - quá 7 ngày thì validateTimes cũng chặn. */
 const MAX_BACKDATE_MS = 7 * 24 * HOUR;
 const MAX_FUTURE_MS = 24 * HOUR;
 const MAX_SPAN_MS = MAX_SESSION_MIN * 60_000; // 15h

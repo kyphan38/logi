@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi — Target của MỘT ngày (Stage 4.5)
+// logi - Target của MỘT ngày (Stage 4.5)
 //
 // `expectedHours()` trong balance.ts cộng dồn cả tuần đã trôi qua. History chỉ
 // cần lát cắt một ngày. File này giữ đúng công thức đó, không đổi đi:
@@ -44,7 +44,7 @@ export interface DayLine {
  * Dòng tóm tắt: `Learn 1.5 / 3.0 · Work 9.5 / 9.5`.
  *
  * @param progress phần ngày đã trôi qua, 0..1. Ngày đã qua truyền 1; ngày hôm
- *   nay truyền `dayProgress(now)` — 10 giờ sáng mà so với target cả ngày thì
+ *   nay truyền `dayProgress(now)` - 10 giờ sáng mà so với target cả ngày thì
  *   cái gì cũng "thiếu".
  */
 export function daySummary(
@@ -77,11 +77,11 @@ export function progressFor(selected: string, today: string, now: number): numbe
 // Tách ra khỏi component để test được bằng `node --test`.
 // ---------------------------------------------------------------------------
 export interface GaugeShape {
-  /** 0..1 — phần thanh được tô. Không bao giờ quá 1. */
+  /** 0..1 - phần thanh được tô. Không bao giờ quá 1. */
   fill: number;
   /** Vượt target → thanh đầy + vạch hổ phách ở mép phải. */
   over: boolean;
-  /** Không có target (VD Fitness ngày Chủ nhật) → không vẽ thanh, số là `0.0/—`. */
+  /** Không có target (VD Fitness ngày Chủ nhật) → không vẽ thanh, số là `0.0/-`. */
   noTarget: boolean;
   /** Không target mà cũng chẳng log gì → ô này không mang tin, làm mờ đi. */
   dim: boolean;

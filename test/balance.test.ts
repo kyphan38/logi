@@ -79,7 +79,7 @@ test('overlapHours: session đang chạy tính tới now', () => {
   assert.equal(overlapHours([a, b], now), 1);
 });
 
-// --- Stale session (mục 14 — bạn chưa test tay được) ------------------
+// --- Stale session (mục 14 - bạn chưa test tay được) ------------------
 
 test('findStale: active quá 15h là stale', () => {
   const now = at('2026-08-27', '02:00');

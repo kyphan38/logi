@@ -141,7 +141,7 @@ test('sổ nợ đi kèm file all-time và đọc lại được', () => {
   assert.deepEqual(file!.debt, { learn: 6 });
 });
 
-test('file không có debt vẫn đọc được — bản export cũ', () => {
+test('file không có debt vẫn đọc được - bản export cũ', () => {
   const { file } = parseBackup(sample());
   assert.equal(file!.debt, undefined);
 });
@@ -161,7 +161,7 @@ test('preview đếm đúng record, tuần và khoảng ngày', () => {
 });
 
 // ------------------------------------------------------------
-// Kế hoạch khôi phục — CHỈ THÊM
+// Kế hoạch khôi phục - CHỈ THÊM
 // ------------------------------------------------------------
 
 const file2 = (): BackupFile => parseBackup(sample()).file!;

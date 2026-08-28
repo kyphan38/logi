@@ -1,7 +1,7 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Settings (Stage 6 Task 2)
+// logi - Settings (Stage 6 Task 2)
 //
 // Chỉ hai thứ: bật push, và đường vào trang khôi phục. Không phải màn hình
 // dùng hằng ngày nên không có trong thanh điều hướng.
@@ -74,7 +74,7 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-1">
           <h2 className="text-sm font-medium text-ink">Reminders on the lock screen</h2>
           <p className="text-[13px] text-ink-muted">
-            06:15 and 20:45 study checks, plus the Sunday wrap-up — even when the
+            06:15 and 20:45 study checks, plus the Sunday wrap-up - even when the
             app is closed. In-app reminders keep working either way.
           </p>
         </div>
@@ -140,7 +140,7 @@ export default function SettingsPage() {
 // ---------------------------------------------------------------------------
 // Nhận xét AI đã lưu (Stage 7 Task 8)
 //
-// Insight là suy diễn về đời sống riêng, nên phải xoá được — và xoá thật,
+// Insight là suy diễn về đời sống riêng, nên phải xoá được - và xoá thật,
 // không phải ẩn đi. Record gốc không đụng tới.
 // ---------------------------------------------------------------------------
 
@@ -177,7 +177,7 @@ function InsightData({ uid }: { uid: string | null }) {
       <h2 className="text-sm font-medium text-ink">Saved insights</h2>
       <p className="text-[13px] text-ink-muted">
         Notes written by the analysis on the Analytics screen. Your records stay
-        untouched — only the notes go.
+        untouched - only the notes go.
       </p>
 
       {count === null ? (

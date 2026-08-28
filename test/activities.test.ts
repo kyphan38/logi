@@ -91,7 +91,7 @@ test('hẹn giờ quá 7 ngày → coi như đã bỏ', () => {
   assert.equal(isStaleScheduled(scheduled(NOW - SCHEDULED_MAX_AGE_MS - 1), NOW), true);
 });
 
-test('vừa đúng 7 ngày thì chưa bỏ — biên phải rõ ràng', () => {
+test('vừa đúng 7 ngày thì chưa bỏ - biên phải rõ ràng', () => {
   assert.equal(isStaleScheduled(scheduled(NOW - SCHEDULED_MAX_AGE_MS), NOW), false);
 });
 
@@ -103,7 +103,7 @@ test('hẹn cho tuần sau không bị dọn', () => {
   assert.equal(isStaleScheduled(scheduled(NOW + 6 * 24 * H), NOW), false);
 });
 
-test('chỉ dọn record scheduled — session đã done không đụng tới', () => {
+test('chỉ dọn record scheduled - session đã done không đụng tới', () => {
   const old = act({ id: 'd', startAt: NOW - 30 * 24 * H, endAt: NOW - 29 * 24 * H });
   assert.equal(isStaleScheduled(old, NOW), false);
 });

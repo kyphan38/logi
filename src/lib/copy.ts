@@ -18,7 +18,7 @@ import {
 /** Thay cho PRESETS[id].hint khi hiển thị. */
 export const PRESET_HINT: Record<PresetId, string> = {
   normal: 'Standard week',
-  crunch: 'Deadline or OT — adds Learn debt',
+  crunch: 'Deadline or OT - adds Learn debt',
   deep_learn: 'Certification or exam push',
   recovery: 'Post-crunch reset',
 };
@@ -35,7 +35,7 @@ export function budgetMessages(weekly: Record<Category, number>): string[] {
   if (Math.abs(diff) > 0.1) {
     out.push(
       diff > 0
-        ? `Over by ${diff.toFixed(1)}h — reduce another category`
+        ? `Over by ${diff.toFixed(1)}h - reduce another category`
         : `${(-diff).toFixed(1)}h unallocated`,
     );
   }

@@ -23,7 +23,7 @@ function full(from: string, to: string): Range {
 const rows = (csv: string) => csv.replace(BOM, '').split('\r\n');
 
 // ---------------------------------------------------------------------------
-// Escape — RFC 4180
+// Escape - RFC 4180
 // ---------------------------------------------------------------------------
 
 test('label chứa dấu phẩy được bọc trong dấu nháy', () => {

@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Activity repository
+// logi - Activity repository
 // MỌI thao tác Firestore với activity đi qua file này.
 // Không component nào được gọi thẳng addDoc / updateDoc / deleteDoc.
 // Path: users/{uid}/activities/{id}
@@ -68,7 +68,7 @@ export class ActivityError extends Error {
 }
 
 // ------------------------------------------------------------
-// Field dẫn xuất — HÀM DUY NHẤT
+// Field dẫn xuất - HÀM DUY NHẤT
 // Mọi đường ghi bắt buộc đi qua đây.
 // logicalDate / logicalWeek LUÔN tính từ startAt, không bao giờ từ endAt.
 // ------------------------------------------------------------
@@ -82,7 +82,7 @@ export function derive(startAt: number, endAt: number | null) {
 }
 
 // ------------------------------------------------------------
-// Validation phía client — báo lỗi dễ hiểu trước khi rules ném
+// Validation phía client - báo lỗi dễ hiểu trước khi rules ném
 // permission-denied khó hiểu.
 // ------------------------------------------------------------
 
@@ -189,7 +189,7 @@ export interface StartInput extends Provenance {
 /**
  * Tạo session đang chạy, hoặc hẹn giờ trước với `status: 'scheduled'`.
  * Chặn tạo trùng: đã có session `active` cùng category → throw 'duplicate'.
- * KHÔNG auto-stop session khác — chạy song song là hợp lệ.
+ * KHÔNG auto-stop session khác - chạy song song là hợp lệ.
  */
 export async function startActivity(uid: string, input: StartInput): Promise<string> {
   assertCategory(input.category);
@@ -238,7 +238,7 @@ export async function stopActivity(uid: string, id: string, endAt?: number): Pro
 
 /**
  * Sửa activity.
- * LUÔN chạy lại derive() khi patch đụng tới startAt / endAt — quên bước này là
+ * LUÔN chạy lại derive() khi patch đụng tới startAt / endAt - quên bước này là
  * lỗi âm thầm: record vẫn hiện ở History nhưng biến mất khỏi thống kê tuần.
  */
 export async function updateActivity(
@@ -318,7 +318,7 @@ export async function createPastActivity(uid: string, input: PastInput): Promise
 export interface SnapMeta {
   hasPendingWrites: boolean;
   fromCache: boolean;
-  /** Id của các record còn nằm trong hàng đợi ghi — để chấm pending trên card. */
+  /** Id của các record còn nằm trong hàng đợi ghi - để chấm pending trên card. */
   pendingIds: ReadonlySet<string>;
 }
 
@@ -363,7 +363,7 @@ export function subscribeActive(
  *
  * Tham số thứ ba của cb là `carriedIn`: record thuộc ngày logic liền trước
  * nhưng còn kéo dài qua mốc 04:00 (VD ngủ 22:00 → 06:00). Chúng chỉ dùng để
- * vẽ timeline cho liền mạch — KHÔNG cộng vào tổng của ngày này, vì mọi
+ * vẽ timeline cho liền mạch - KHÔNG cộng vào tổng của ngày này, vì mọi
  * analytics đều tính theo `logicalDate`.
  */
 export function subscribeByDate(
@@ -424,7 +424,7 @@ export function subscribeByWeek(
 /**
  * Nghe cả một KHOẢNG cho Analytics (Stage 5).
  *
- * MỘT query cho cả khoảng — không bao giờ query từng ngày. `queryPlan()` chọn
+ * MỘT query cho cả khoảng - không bao giờ query từng ngày. `queryPlan()` chọn
  * cách rẻ hơn:
  *   ≤ 4 tuần → `logicalWeek in [...]`, trùng cache với History/Now
  *   dài hơn  → range trên `logicalDate` (index `logicalDate ASC + startAt ASC`)
@@ -505,7 +505,7 @@ export async function listStale(uid: string): Promise<Activity[]> {
 }
 
 /**
- * N record gần nhất — dùng làm context cho prompt Gemini.
+ * N record gần nhất - dùng làm context cho prompt Gemini.
  * Bỏ qua 'scheduled' (chưa xảy ra) và 'abandoned' (rác, dễ làm model đoán sai).
  * Index: status ASC + startAt DESC.
  */
@@ -527,7 +527,7 @@ export async function listRecent(uid: string, n = 5): Promise<Activity[]> {
  */
 export const SCHEDULED_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** `scheduled` mà đã quá hạn — chỉ là phép so sánh, tách ra để test được. */
+/** `scheduled` mà đã quá hạn - chỉ là phép so sánh, tách ra để test được. */
 export function isStaleScheduled(a: Activity, now: number = Date.now()): boolean {
   return a.status === 'scheduled' && now - a.startAt > SCHEDULED_MAX_AGE_MS;
 }
@@ -587,7 +587,7 @@ export async function promoteScheduled(uid: string, now: number = Date.now()): P
   return snap.docs.length;
 }
 
-/** Các session đã hẹn giờ, chưa tới lúc chạy — để hiện đếm ngược "starts in 4:32". */
+/** Các session đã hẹn giờ, chưa tới lúc chạy - để hiện đếm ngược "starts in 4:32". */
 export function subscribeScheduled(
   uid: string,
   cb: (activities: Activity[], meta: SnapMeta) => void,
@@ -609,7 +609,7 @@ export function subscribeScheduled(
   );
 }
 
-/** Các ngày logic gần đây có dữ liệu — để chấm nhỏ dưới dải chọn ngày. */
+/** Các ngày logic gần đây có dữ liệu - để chấm nhỏ dưới dải chọn ngày. */
 export function subscribeRecentDates(
   uid: string,
   sinceDate: string,
@@ -631,7 +631,7 @@ export function subscribeRecentDates(
 /**
  * Toàn bộ record, cho bản export "All time".
  *
- * Đọc một lần, không listener. Tốn đúng N read — sau một năm khoảng 2–3 nghìn,
+ * Đọc một lần, không listener. Tốn đúng N read - sau một năm khoảng 2–3 nghìn,
  * vẫn dưới hạn 50k/ngày của free tier, và người dùng chỉ bấm export mỗi tháng.
  */
 export async function listAll(uid: string): Promise<Activity[]> {
@@ -640,7 +640,7 @@ export async function listAll(uid: string): Promise<Activity[]> {
   return snap.docs.map((d) => toActivity(d.id, d.data()));
 }
 
-/** Record cũ nhất — để biết dữ liệu đã tích được bao lâu. Đọc đúng 1 doc. */
+/** Record cũ nhất - để biết dữ liệu đã tích được bao lâu. Đọc đúng 1 doc. */
 export async function firstActivityDate(uid: string): Promise<string | null> {
   const q = query(col(uid), orderBy('startAt', 'asc'), fsLimit(1));
   const snap = await getDocs(q);

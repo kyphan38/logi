@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Voice → JSON qua Gemini Flash (audio input native)
+// logi - Voice → JSON qua Gemini Flash (audio input native)
 // Chạy SERVER-SIDE ONLY. Không bao giờ gọi từ browser.
 // ============================================================
 
@@ -101,9 +101,9 @@ export function buildSystemPrompt(ctx: {
 CURRENT TIME: ${ctx.nowISO} (${ctx.weekday}), timezone Asia/Ho_Chi_Minh (+07:00).
 All timestamps you emit MUST be ISO 8601 with the +07:00 offset.
 
-CATEGORIES — map every activity to exactly one:
+CATEGORIES - map every activity to exactly one:
 - learn     : studying, reading, courses, certs, researching technology, side projects for skill
-- work      : the user's DevOps job, meetings, on-call, OT. ALSO the commute — "driving to work"
+- work      : the user's DevOps job, meetings, on-call, OT. ALSO the commute - "driving to work"
               or "heading to the office" STARTS work; work ends when they get home.
 - fitness   : gym, running, workout, sports, stretching, physio
 - sleep     : night sleep and naps
@@ -111,7 +111,7 @@ CATEGORIES — map every activity to exactly one:
 
 If an activity fits none, pick the nearest and drop confidence below 0.7.
 
-USER'S TYPICAL SCHEDULE — use this to resolve ambiguous times:
+USER'S TYPICAL SCHEDULE - use this to resolve ambiguous times:
 - 04:30 wake, self-study until 06:00–06:30
 - 08:00–17:00 work Mon–Fri. Tue & Thu in office (45 min commute each way)
 - 18:00–19:30 workout
@@ -125,7 +125,7 @@ TIME RESOLUTION RULES:
    "I went out at 10" on a weekday evening → 10 PM (leisure), confidence ~0.75.
    Only ask when both readings are genuinely plausible.
 2. Relative phrasing: "11 minutes ago", "in 15 mins", "since 2", "for the last hour"
-   — resolve against CURRENT TIME.
+   - resolve against CURRENT TIME.
 3. "This morning", "last night", "yesterday" → resolve to the concrete date.
 4. Ranges: "from 8 AM to 11 AM" → intent=log_past with both startAt and endAt.
 5. Future start: "start sleep in 5 mins" → intent=schedule, startAt = now + 5 min.
@@ -140,11 +140,11 @@ STOP AND EDIT:
 - "no, that was learning", "change it to 9 AM", "it was two hours" → intent=edit,
   targetActivityId = the most recent activity, and emit only the fields that change.
 
-CONFIDENCE — this drives whether the user must confirm, so be honest:
+CONFIDENCE - this drives whether the user must confirm, so be honest:
   0.95+  explicit category and explicit time
   0.85   clear activity, time inferred from schedule with no real ambiguity
   0.70   category inferred from an unusual phrasing
-  <0.60  guessing — prefer intent=clarify instead
+  <0.60  guessing - prefer intent=clarify instead
 
 Ask at most ONE clarifying question, and only about the single most ambiguous field.
 Never ask about something the schedule already settles.
@@ -172,7 +172,7 @@ const MODEL = 'gemini-3.5-flash-lite';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 /**
- * Audio đi thẳng vào Gemini — không qua bước speech-to-text riêng.
+ * Audio đi thẳng vào Gemini - không qua bước speech-to-text riêng.
  * Một lần gọi thay vì hai, và model nghe trực tiếp sẽ parse tốt hơn
  * là parse lại từ một transcript đã sai.
  * Audio KHÔNG được lưu ở bất kỳ đâu sau khi request kết thúc.
@@ -210,7 +210,7 @@ export async function parseAudio(
   return JSON.parse(text) as ParseResult;
 }
 
-/** Sửa nhanh bằng giọng nói — gửi lại record vừa tạo, nhận về patch. */
+/** Sửa nhanh bằng giọng nói - gửi lại record vừa tạo, nhận về patch. */
 export async function parseTextCorrection(
   utterance: string,
   systemPrompt: string,

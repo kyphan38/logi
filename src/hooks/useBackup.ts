@@ -1,7 +1,7 @@
 'use client';
 
 // ------------------------------------------------------------
-// logi — Backup (Stage 6 Task 3)
+// logi - Backup (Stage 6 Task 3)
 //
 // Firestore free tier KHÔNG có backup tự động. Sau một năm ghi chép, dữ liệu
 // này không tạo lại được. Hook ở đây lo hai việc: lấy toàn bộ dữ liệu để

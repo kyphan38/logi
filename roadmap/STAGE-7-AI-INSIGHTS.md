@@ -1,10 +1,10 @@
-# STAGE 7 — AI Insights
+# STAGE 7 - AI Insights
 
 > Phụ thuộc **Stage 5** (range picker, `expectedForRange`, `coverageForRange`).
 > Có thể làm trước hoặc sau Stage 6.
 >
 > Plan này viết cho một AI coding agent thực thi.
-> Sau mỗi task có mục **Verify** — phải pass mới đi tiếp.
+> Sau mỗi task có mục **Verify** - phải pass mới đi tiếp.
 
 ---
 
@@ -18,7 +18,7 @@ Người dùng muốn hỏi AI: *"Nhìn lại 3 ngày qua / tuần qua, tôi đa
 > **Code tính toán. AI chỉ diễn giải và chọn cái đáng nói.**
 
 LLM **không bao giờ** nhìn thấy record thô và **không bao giờ** làm phép tính.
-Ném vài trăm record cho LLM rồi bảo "phân tích đi" thì nó sẽ bịa số — và bịa một
+Ném vài trăm record cho LLM rồi bảo "phân tích đi" thì nó sẽ bịa số - và bịa một
 cách trôi chảy nên người đọc không phát hiện.
 
 Luồng đúng:
@@ -43,7 +43,7 @@ activities thô
 
 ---
 
-## Task 1 — Tính chỉ số (deterministic)
+## Task 1 - Tính chỉ số (deterministic)
 
 Tạo `src/lib/signals.ts`. Thuần logic, không đụng Firestore, test được bằng
 `node --test`.
@@ -59,11 +59,11 @@ export function computeSignals(
 ```
 
 Chỉ số chia thành **7 nhóm**: một nhóm chung, **năm nhóm cho năm category**, và một
-nhóm liên hệ chéo. Mỗi category được phân tích ở cùng độ sâu — không ưu ái cái nào.
+nhóm liên hệ chéo. Mỗi category được phân tích ở cùng độ sâu - không ưu ái cái nào.
 
 ---
 
-### Nhóm A — Chung (mọi category)
+### Nhóm A - Chung (mọi category)
 | Chỉ số | Cách tính |
 |---|---|
 | `hoursByCategory` | `actualHours()` của `balance.ts` |
@@ -82,7 +82,7 @@ hẳn 2 lần × 1h, dù tổng giờ như nhau.
 
 ---
 
-### Nhóm B — Sleep
+### Nhóm B - Sleep
 | Chỉ số | Cách tính |
 |---|---|
 | `medianBedtime` | Trung vị `startAt` của session Sleep > 4h |
@@ -94,12 +94,12 @@ hẳn 2 lần × 1h, dù tổng giờ như nhau.
 | `napCount` / `napHours` | Session Sleep ≤ 4h |
 
 `bedtimeSpreadMin` quan trọng không kém tổng giờ ngủ. Giờ dậy của người dùng cố định
-04:30, nên giờ **đi ngủ** dao động mới là thứ quyết định mệt hay không — ngủ đủ 6.5h
+04:30, nên giờ **đi ngủ** dao động mới là thứ quyết định mệt hay không - ngủ đủ 6.5h
 mỗi đêm nhưng lúc 22:00 lúc 01:00 thì cơ thể vẫn như lệch múi giờ.
 
 ---
 
-### Nhóm C — Work
+### Nhóm C - Work
 | Chỉ số | Cách tính |
 |---|---|
 | `otHours` | Giờ Work **ngoài** 08:00–17:00, thứ Hai–thứ Sáu |
@@ -112,7 +112,7 @@ mỗi đêm nhưng lúc 22:00 lúc 01:00 thì cơ thể vẫn như lệch múi g
 
 ---
 
-### Nhóm D — Learn
+### Nhóm D - Learn
 
 Đây là category quan trọng nhất của toàn dự án: pain point gốc là *OT cuối tuần
 nuốt mất thời gian học*. Phân tích ở độ sâu cao nhất.
@@ -136,7 +136,7 @@ không biết đường nào hỏng.
 
 ---
 
-### Nhóm E — Fitness
+### Nhóm E - Fitness
 | Chỉ số | Cách tính |
 |---|---|
 | `fitnessSessions` | Số buổi |
@@ -151,7 +151,7 @@ không biết đường nào hỏng.
 
 ---
 
-### Nhóm F — Leisure
+### Nhóm F - Leisure
 | Chỉ số | Cách tính |
 |---|---|
 | `leisureHours` | Tổng giờ |
@@ -160,13 +160,13 @@ không biết đường nào hỏng.
 | `longestLeisureBlock` | Block dài nhất |
 | `weekdayLeisureHours` / `weekendLeisureHours` | Tách ngày thường và cuối tuần |
 
-`leisureNightsDelayingSleep` là chỉ số Leisure có giá trị nhất — nó bắt được đúng
+`leisureNightsDelayingSleep` là chỉ số Leisure có giá trị nhất - nó bắt được đúng
 kiểu "xem phim tới 1 giờ sáng rồi hôm sau dậy không nổi", thứ mà tổng giờ Leisure
 không bao giờ cho thấy.
 
 ---
 
-### Nhóm G — Liên hệ chéo (chỉ mô tả, không kết luận nhân quả)
+### Nhóm G - Liên hệ chéo (chỉ mô tả, không kết luận nhân quả)
 | Chỉ số | Cách tính |
 |---|---|
 | `learnOnHighWorkDays` | Learn trung bình ở ngày Work > 9h |
@@ -186,14 +186,14 @@ Test với dữ liệu dựng sẵn, đối chiếu từng chỉ số bằng tay
 
 ---
 
-## Task 2 — Digest
+## Task 2 - Digest
 
-`src/lib/digest.ts` — chuyển `Signals` thành JSON gọn cho prompt.
+`src/lib/digest.ts` - chuyển `Signals` thành JSON gọn cho prompt.
 
 - Làm tròn 1 chữ số thập phân
 - Giờ dạng `HH:MM` theo giờ địa phương
 - Bỏ chỉ số `null` hoặc `sampleSize < 3`
-- Giữ ít nhất 3 chỉ số của mỗi category, kể cả khi category đó không có gì bất thường —
+- Giữ ít nhất 3 chỉ số của mỗi category, kể cả khi category đó không có gì bất thường -
   AI cần thấy đủ 5 để so sánh, không chỉ thấy cái đang lệch
 - Kèm `rangeLabel`, `dayCount`, `preset` của tuần
 - **Mục tiêu: dưới 1200 token.** Digest phình to là dấu hiệu đang tuồn dữ liệu thô
@@ -210,7 +210,7 @@ Không đạt → **không gọi API**. Hiện lý do kèm gợi ý cải thiệ
 
 ---
 
-## Task 3 — API route
+## Task 3 - API route
 
 `src/app/api/insight/route.ts`
 
@@ -230,7 +230,7 @@ bấm liên tục.
 
 ---
 
-## Task 4 — Schema & prompt
+## Task 4 - Schema & prompt
 
 Thêm vào `src/lib/gemini-parse.ts` **hoặc** file mới `src/lib/gemini-insight.ts`
 (khuyến nghị file mới, để `gemini-parse.ts` chỉ lo việc parse).
@@ -242,7 +242,7 @@ Thêm vào `src/lib/gemini-parse.ts` **hoặc** file mới `src/lib/gemini-insig
     {
       title: string,        // ≤ 8 từ
       body: string,         // 1–2 câu, phải chứa số lấy từ digest
-      metric: string,       // tên chỉ số trong digest — để đối chiếu
+      metric: string,       // tên chỉ số trong digest - để đối chiếu
       severity: 'info' | 'notable' | 'important'
     }
   ],
@@ -254,7 +254,7 @@ Thêm vào `src/lib/gemini-parse.ts` **hoặc** file mới `src/lib/gemini-insig
 }
 ```
 
-`preset` cho phép nối thẳng vào màn Targets — bấm một nút là áp dụng.
+`preset` cho phép nối thẳng vào màn Targets - bấm một nút là áp dụng.
 
 ### System prompt (tiếng Anh, model output tiếng Anh)
 
@@ -267,7 +267,7 @@ self-study until 06:30; work 08:00–17:00 Mon–Fri, in office Tue and Thu
 study again 20:30–22:00; sleep at 22:00. Weekends are meant for study
 but often get taken by unplanned work OT.
 
-RULES — these are absolute:
+RULES - these are absolute:
 1. Every number you write must appear in the digest. Never compute,
    estimate, or infer a number that is not there.
 2. Never claim causation. Say "alongside" or "on days when", never
@@ -281,14 +281,14 @@ RULES — these are absolute:
    Raw totals are already visible in the charts.
 7. If a correlation signal is present, note its sample size and that
    it is only an association.
-8. Suggestion must be one concrete, small action. Not "sleep more" —
+8. Suggestion must be one concrete, small action. Not "sleep more" -
    something like "protect the 20:30 study block on Tue and Thu".
 9. If something is going well, say so in `positive`. One sentence.
 
 Write in English. Be brief. No preamble, no closing summary.
 ```
 
-### Sanitize — bắt buộc
+### Sanitize - bắt buộc
 
 Trước khi trả về client:
 - Trích mọi số trong `body`, đối chiếu với giá trị trong digest (sai số 0.15).
@@ -302,7 +302,7 @@ Trước khi trả về client:
 
 ---
 
-## Task 5 — Giao diện
+## Task 5 - Giao diện
 
 Đặt ở màn Analytics, **dưới** các chart. Chart trả lời "cái gì", phần này trả lời
 "nên để ý gì".
@@ -314,7 +314,7 @@ Trước khi trả về client:
 │     Aug 21 – Aug 27 · 7 days │
 └──────────────────────────────┘
 ```
-Dùng đúng range đang chọn ở Stage 5 — không có picker riêng.
+Dùng đúng range đang chọn ở Stage 5 - không có picker riêng.
 
 ### Kết quả
 ```
@@ -345,7 +345,7 @@ Try: protect the 20:30 block on Tue and Thu.
 
 ---
 
-## Task 6 — Cache & chi phí
+## Task 6 - Cache & chi phí
 
 Lưu `users/{uid}/insights/{id}`:
 ```
@@ -368,7 +368,7 @@ Ghi lại con số thật vào README sau một tuần dùng.
 
 ---
 
-## Task 7 — Nối vào Weekly Review
+## Task 7 - Nối vào Weekly Review
 
 Stage 6 Task 1, màn 2 (*"Điều đáng chú ý"*) hiện dùng luật cứng: `weekendConflict`
 → deviation lớn nhất → coverage → streak.
@@ -376,14 +376,14 @@ Stage 6 Task 1, màn 2 (*"Điều đáng chú ý"*) hiện dùng luật cứng: 
 Nâng cấp: dùng luôn AI insight của tuần đó.
 - Chạy phân tích khi mở Weekly Review, cache lại
 - Không đủ dữ liệu hoặc lỗi → **quay về luật cứng**, không để màn trống
-- Màn 3 (chọn preset tuần sau) dùng gợi ý `preset` làm lựa chọn được đánh dấu sẵn —
+- Màn 3 (chọn preset tuần sau) dùng gợi ý `preset` làm lựa chọn được đánh dấu sẵn -
   nhưng người dùng vẫn phải tự bấm
 
 Nếu Stage 6 chưa làm thì bỏ qua task này, quay lại sau.
 
 ---
 
-## Task 8 — Giới hạn & an toàn
+## Task 8 - Giới hạn & an toàn
 
 Đây là dữ liệu sinh hoạt cá nhân. Vài ràng buộc:
 
@@ -400,9 +400,9 @@ Nếu Stage 6 chưa làm thì bỏ qua task này, quay lại sau.
 
 ---
 
-## Task 9 — Test
+## Task 9 - Test
 
-`test/signals.test.ts` — mỗi nhóm ít nhất 2 ca
+`test/signals.test.ts` - mỗi nhóm ít nhất 2 ca
 - **B Sleep**: `medianBedtime` với 5 đêm khác giờ; `bedtimeSpreadMin`;
   session ngủ vắt qua nửa đêm gán đúng đêm; nap ≤ 4h không tính vào đêm
 - **C Work**: `otHours` chỉ tính ngoài 08:00–17:00 T2–T6; `weekendWorkHours`
@@ -428,7 +428,7 @@ Nếu Stage 6 chưa làm thì bỏ qua task này, quay lại sau.
 
 ---
 
-## Task 10 — Kiểm thử tay
+## Task 10 - Kiểm thử tay
 
 | # | Kiểm tra | Mong đợi |
 |---|---|---|

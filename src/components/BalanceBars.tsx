@@ -1,7 +1,7 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Balance bars (Stage 5 Task 3)
+// logi - Balance bars (Stage 5 Task 3)
 //
 // Chart chính. Trả lời hai câu hỏi trong một hình:
 //   "Tôi đã sống bao nhiêu giờ cho mỗi việc?"  → chiều dài thanh
@@ -22,7 +22,7 @@ interface Props {
 
 export default function BalanceBars({ rows, showDeviation = true }: Props) {
   // MỘT thang đo cho cả 5 thanh. Mỗi thanh một thang thì Fitness 3h sẽ trông
-  // dài bằng Sleep 46h — hình đẹp nhưng nói dối.
+  // dài bằng Sleep 46h - hình đẹp nhưng nói dối.
   const max = Math.max(1, ...rows.map((r) => Math.max(r.actual, r.expected)));
 
   return (

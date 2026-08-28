@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // ============================================================
-// logi — Firestore Security Rules
+// logi - Firestore Security Rules
 // App cá nhân một người dùng: allowlist theo UID + ownership theo path.
 // Giữ nguyên pattern users/{uid}/... của COGI/MESI.
 // ============================================================
@@ -37,7 +37,7 @@ service cloud.firestore {
         allow create, update: if isOwner(uid) && validActivity(request.resource.data);
       }
 
-      // weekTargets/{week} — VD "2026-W35"
+      // weekTargets/{week} - VD "2026-W35"
       match /weekTargets/{week} {
         allow read: if isOwner(uid);
         // Tuần đã đóng sổ (21:00 CN) thì không sửa được nữa
@@ -52,7 +52,7 @@ service cloud.firestore {
         allow read, write: if isOwner(uid);
       }
 
-      // insights/{from_to} — nhận xét AI đã sinh, cache theo digestHash
+      // insights/{from_to} - nhận xét AI đã sinh, cache theo digestHash
       match /insights/{insightId} {
         allow read, write: if isOwner(uid);
       }

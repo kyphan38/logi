@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi — Export CSV / JSON (Stage 5 Task 7)
+// logi - Export CSV / JSON (Stage 5 Task 7)
 //
 // Dữ liệu là của người dùng. Xuất được ra file nghĩa là không bị khoá vào app.
 //
@@ -8,7 +8,7 @@
 import type { Range } from '@/lib/range';
 import type { Activity, Category } from '@/types/logi';
 
-/** Thứ tự cột là hợp đồng — đổi thứ tự sẽ làm hỏng script của người khác. */
+/** Thứ tự cột là hợp đồng - đổi thứ tự sẽ làm hỏng script của người khác. */
 export const CSV_COLUMNS = [
   'id',
   'category',
@@ -72,7 +72,7 @@ export function toCsv(activities: Activity[]): string {
         csvField(a.category),
         csvField(a.label),
         csvField(isoWithOffset(a.startAt)),
-        // Session đang chạy chưa có kết thúc — để trống chứ không bịa ra `now`.
+        // Session đang chạy chưa có kết thúc - để trống chứ không bịa ra `now`.
         csvField(a.endAt === null ? '' : isoWithOffset(a.endAt)),
         csvField(a.durationMin),
         csvField(a.logicalDate),

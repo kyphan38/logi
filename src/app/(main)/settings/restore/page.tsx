@@ -1,7 +1,7 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Khôi phục từ file backup (Stage 6 Task 3)
+// logi - Khôi phục từ file backup (Stage 6 Task 3)
 //
 // Trang ẩn: không có trong thanh điều hướng, phải gõ /settings/restore. Đây là
 // việc làm một lần khi có sự cố, không phải việc hằng ngày, và một nút "import"
@@ -81,7 +81,7 @@ export default function RestorePage() {
       setLoaded(null);
       setWord('');
     } catch {
-      setError('Restore failed. Nothing was deleted — you can try again.');
+      setError('Restore failed. Nothing was deleted - you can try again.');
     } finally {
       setBusy(false);
     }
@@ -94,7 +94,7 @@ export default function RestorePage() {
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Restore</h1>
         <p className="text-[13px] text-ink-muted">
-          Load a JSON backup. Only missing records are added — nothing is
+          Load a JSON backup. Only missing records are added - nothing is
           overwritten or deleted.
         </p>
         <Link href="/settings" className="text-[13px] text-ink-soft underline">

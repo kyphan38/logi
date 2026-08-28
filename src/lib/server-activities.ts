@@ -1,7 +1,7 @@
 import 'server-only';
 
 // ============================================================
-// logi — Đọc activity bằng Admin SDK, chỉ để dựng context cho prompt.
+// logi - Đọc activity bằng Admin SDK, chỉ để dựng context cho prompt.
 // CHỈ ĐỌC. Mọi đường ghi vẫn đi qua src/lib/activities.ts ở client,
 // nơi có validateTimes / derive / assertCategory.
 // ============================================================
@@ -35,7 +35,7 @@ export async function listActiveForPrompt(uid: string): Promise<PromptActivity[]
   return snap.docs.map(toPromptActivity);
 }
 
-/** Vài record gần nhất — để Gemini hiểu "the same as before", "that one". */
+/** Vài record gần nhất - để Gemini hiểu "the same as before", "that one". */
 export async function listRecentForPrompt(uid: string, n = 5): Promise<PromptActivity[]> {
   const snap = await col(uid)
     .where('status', 'in', ['done', 'active'])

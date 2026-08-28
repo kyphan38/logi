@@ -97,7 +97,7 @@ export default function NowPage() {
     setSheet({ mode: 'create', startAt: end - 3_600_000, endAt: end });
   }, []);
 
-  // Chồng lấn hiện theo giờ, một chữ số thập phân — mỗi bậc là 6 phút. Tick
+  // Chồng lấn hiện theo giờ, một chữ số thập phân - mỗi bậc là 6 phút. Tick
   // mỗi giây ở đây sẽ render lại CẢ trang 60 lần/phút chỉ để đổi cùng một con
   // số. Đồng hồ đếm giây nằm trong từng card (`useElapsed`), không phải ở đây.
   const overlap = useMemo(
@@ -372,7 +372,7 @@ export default function NowPage() {
         />
       ) : null}
 
-      {/* Có card voice thì giấu FAB — nếu không nó đè lên nút Confirm/Cancel. */}
+      {/* Có card voice thì giấu FAB - nếu không nó đè lên nút Confirm/Cancel. */}
       {voiceCardOpen ? null : (
         <MicButton
           disabled={busy || voice.saving}

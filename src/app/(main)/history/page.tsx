@@ -58,7 +58,7 @@ export default function HistoryPage() {
 
   // --- Day strip -----------------------------------------------------------
   // Dải 7 ngày có thể vắt qua hai tuần logic. Dùng MỘT query cho mỗi tuần
-  // (index `logicalWeek` đã có từ Stage 1) rồi gom nhóm ở client — không bao
+  // (index `logicalWeek` đã có từ Stage 1) rồi gom nhóm ở client - không bao
   // giờ 7 query. Đổi tuần mới query lại.
   const stripWeeks = useMemo(() => {
     const first = logicalWeek(dayWindow(addDays(today, -6)).start);
@@ -87,7 +87,7 @@ export default function HistoryPage() {
     }
     return out;
   }, [weekA.activities, weekB.activities, nowMinute]);
-  // Target của đúng tuần đang xem — tuần cũ có thể khác tuần này.
+  // Target của đúng tuần đang xem - tuần cũ có thể khác tuần này.
   const { target: weekTarget } = useWeekTarget(logicalWeek(win.start));
   // Vẽ cả record kéo sang từ hôm trước; `totals` vẫn chỉ tính `activities`.
   const { segments } = useMemo(
@@ -99,7 +99,7 @@ export default function HistoryPage() {
     [segments, win, nowMinute],
   );
 
-  // Đối chiếu với target của đúng ngày trong tuần đó. Hôm nay thì pro-rate —
+  // Đối chiếu với target của đúng ngày trong tuần đó. Hôm nay thì pro-rate -
   // 10 giờ sáng mà so với target cả ngày thì cái gì cũng "thiếu".
   const summary = useMemo(
     () =>
@@ -195,7 +195,7 @@ export default function HistoryPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Dòng tóm tắt — `Learn 1.5 / 3.0 · Work 9.5 / 9.5`
+// Dòng tóm tắt - `Learn 1.5 / 3.0 · Work 9.5 / 9.5`
 //
 // Chưa có weekTarget cho tuần đó (dữ liệu cũ) → quay về dòng cũ.
 // ---------------------------------------------------------------------------
@@ -273,7 +273,7 @@ function Gauge({ line }: { line: DayLine }) {
 
       <p className="mt-1 truncate text-[11px] tabular-nums text-ink">
         {h(actual)}
-        <span className="text-ink-muted">/{noTarget ? '—' : h(target)}</span>
+        <span className="text-ink-muted">/{noTarget ? '-' : h(target)}</span>
       </p>
     </div>
   );

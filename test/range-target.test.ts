@@ -33,7 +33,7 @@ test('T2→T6 preset Normal → Work 43h, KHÔNG phải 30.7h (chia đều)', ()
   const range = full(MON, FRI);
   const exp = expectedForRange(range, map([weekOf(MON), NORMAL]), at(SUN, '12:00'));
 
-  // 8.0 + 9.5 + 8.0 + 9.5 + 8.0 — T3/T5 có thêm 1.5h commute.
+  // 8.0 + 9.5 + 8.0 + 9.5 + 8.0 - T3/T5 có thêm 1.5h commute.
   assert.equal(r1(exp.work), 43);
 
   // Cái bẫy: 43 × 5/7 = 30.7h. Nếu số này xuất hiện thì thuật toán sai.
@@ -75,7 +75,7 @@ test('khoảng vắt hai tuần khác preset → tổng bằng tổng hai phần
   for (const c of Object.keys(NORMAL) as Category[]) {
     assert.equal(r1(both[c]), r1(a[c] + b[c]), c);
   }
-  // Crunch (57h) + Normal (43h) — không phải hai lần cùng một bộ.
+  // Crunch (57h) + Normal (43h) - không phải hai lần cùng một bộ.
   assert.equal(r1(both.work), 100);
 });
 

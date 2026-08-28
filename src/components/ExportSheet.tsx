@@ -1,7 +1,7 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Sheet xuất file (Stage 5 Task 7)
+// logi - Sheet xuất file (Stage 5 Task 7)
 //
 // Tải hoàn toàn ở client bằng Blob. Không có API route: dữ liệu đã nằm sẵn
 // trong máy, gửi vòng lên server rồi tải về chỉ tốn tiền và tốn thời gian.
@@ -24,7 +24,7 @@ interface Props {
   onClose: () => void;
   /** Tải toàn bộ dữ liệu. Vắng mặt thì chỉ export khoảng đang xem. */
   loadAllTime?: () => Promise<AllTimeExport>;
-  /** Gọi sau khi file đã tạo xong — để ghi mốc "lần export gần nhất". */
+  /** Gọi sau khi file đã tạo xong - để ghi mốc "lần export gần nhất". */
   onExported?: () => void;
 }
 
@@ -49,7 +49,7 @@ export default function ExportSheet({
 
   /**
    * Chỉ tải toàn bộ khi người dùng thật sự chọn, và chỉ tải một lần.
-   * Sau một năm đây là vài nghìn document — không nên đọc sẵn cho vui.
+   * Sau một năm đây là vài nghìn document - không nên đọc sẵn cho vui.
    */
   async function pickAll() {
     setScope('all');
@@ -231,6 +231,6 @@ function save(blob: Blob, filename: string) {
     window.open(url, '_blank', 'noopener');
   }
 
-  // Thu hồi ngay là hỏng file trên Safari — nó đọc blob sau khi hàm đã chạy xong.
+  // Thu hồi ngay là hỏng file trên Safari - nó đọc blob sau khi hàm đã chạy xong.
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

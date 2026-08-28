@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Kho insight đã sinh (Stage 7 Task 6)
+// logi - Kho insight đã sinh (Stage 7 Task 6)
 // Path: users/{uid}/insights/{from_to}
 //
 // Vì sao cache: mở lại cùng một tuần mà nhận về nhận xét khác nhau thì người

@@ -9,7 +9,7 @@ import 'server-only';
 // phải theo múi giờ của máy người dùng. Server không tin nội dung đó cho việc
 // gì khác ngoài việc gửi cho Gemini và đối chiếu ngược lại chính nó.
 //
-// Digest KHÔNG được log ra đâu cả — đây là dữ liệu sinh hoạt cá nhân.
+// Digest KHÔNG được log ra đâu cả - đây là dữ liệu sinh hoạt cá nhân.
 // ============================================================
 
 import { analyseDigest } from '@/lib/gemini-insight';

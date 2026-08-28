@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi — Sinh icon PWA (Stage 6 Task 2)
+// logi - Sinh icon PWA (Stage 6 Task 2)
 //
 // Không dùng thư viện vẽ ảnh: icon chỉ là vài hình chữ nhật, viết thẳng PNG
 // bằng zlib còn nhẹ hơn kéo về một dependency chỉ để chạy một lần.

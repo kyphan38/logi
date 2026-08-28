@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Chọn MỘT dòng cho balance banner.
+// logi - Chọn MỘT dòng cho balance banner.
 //
 // File thuần, không React → test được bằng `node --test`.
 //
@@ -49,7 +49,7 @@ export function coverage(
  * `Work 0.4h · 31.0h expected by now (-99%)`
  *
  * KHÔNG dùng `formatDeviation()` của `balance.ts`: nó viết `0.4h / 31.0h`, mà
- * dấu `/` khiến 31.0h đọc lên như thể đó là target tuần của Work — trong khi
+ * dấu `/` khiến 31.0h đọc lên như thể đó là target tuần của Work - trong khi
  * màn Targets ghi 40h. `balance.ts` là file cấm sửa nên đổi cách viết ở đây.
  */
 function phrase(d: Deviation): string {
@@ -107,7 +107,7 @@ export function pickBalance(
     };
   }
 
-  // `deviations()` gọi `expectedHours()` — pro-rate THEO LỊCH, cộng dồn target
+  // `deviations()` gọi `expectedHours()` - pro-rate THEO LỊCH, cộng dồn target
   // từng ngày đã qua. Không bao giờ là `weekly × ngày/7`.
   const bad = deviations(activities, weekly, now).filter((d) => d.flag !== 'ok');
   if (bad.length === 0) return null;

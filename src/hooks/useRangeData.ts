@@ -1,7 +1,7 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Dữ liệu cho màn hình Analytics (Stage 5)
+// logi - Dữ liệu cho màn hình Analytics (Stage 5)
 //
 // Một khoảng → MỘT query activities + MỘT query weekTargets. Không bao giờ
 // lặp query theo từng ngày.
@@ -20,7 +20,7 @@ export interface RangeData {
   activities: Activity[];
   /** logicalWeek → target tuần đó. Tuần chưa có doc thì lùi về PRESETS.normal. */
   weekTargets: Map<string, Record<Category, number>>;
-  /** Tuần bị đổi target sau 21:00 CN — chart phải nói ra, không giấu. */
+  /** Tuần bị đổi target sau 21:00 CN - chart phải nói ra, không giấu. */
   lateWeeks: Set<string>;
   loading: boolean;
   error: string | null;

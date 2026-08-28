@@ -1,7 +1,7 @@
-# STAGE 2 — Core Tracking
+# STAGE 2 - Core Tracking
 
 > Plan này viết cho một AI coding agent thực thi. Làm đúng thứ tự task.
-> Sau mỗi task có mục **Verify** — phải pass mới đi tiếp.
+> Sau mỗi task có mục **Verify** - phải pass mới đi tiếp.
 > Nếu gặp mâu thuẫn hoặc thiếu thông tin, **DỪNG và hỏi người dùng**, không tự đoán.
 
 ---
@@ -11,7 +11,7 @@
 Stage 1 đã xong: project chạy, đăng nhập được, có `AuthContext`, bottom nav 3 tab,
 Firestore rules đã deploy.
 
-Stage 2 làm **ghi nhận hoạt động bằng tay** — đầy đủ và đáng tin, trước khi đụng
+Stage 2 làm **ghi nhận hoạt động bằng tay** - đầy đủ và đáng tin, trước khi đụng
 tới AI. Mọi thứ ở Stage 3 (voice) sẽ gọi lại đúng repository layer viết ở đây, nên
 tầng này phải chắc.
 
@@ -32,9 +32,9 @@ Nếu agent thấy `gemini-parse.ts` trong `src/lib/` thì cứ để yên, chư
 
 ---
 
-## Task 1 — Repository layer
+## Task 1 - Repository layer
 
-Tạo `src/lib/activities.ts` — **toàn bộ** thao tác Firestore với activity đi qua đây.
+Tạo `src/lib/activities.ts` - **toàn bộ** thao tác Firestore với activity đi qua đây.
 Không component nào được gọi thẳng `addDoc` / `updateDoc`.
 
 Đường dẫn: `users/{uid}/activities/{id}`
@@ -53,7 +53,7 @@ subscribeByDate(uid, logicalDate: string, cb): Unsubscribe
 listStale(uid): Promise<Activity[]>
 ```
 
-### Quy tắc dẫn xuất field — QUAN TRỌNG NHẤT
+### Quy tắc dẫn xuất field - QUAN TRỌNG NHẤT
 
 Có một hàm duy nhất tính các field dẫn xuất, và **mọi** đường ghi đều phải gọi nó:
 
@@ -80,9 +80,9 @@ kê tuần. Vì vậy `updateActivity` phải **luôn** chạy lại `derive()` 
 Firestore rules đã chặn ở tầng DB, nhưng client phải validate trước để báo lỗi
 dễ hiểu thay vì để rules ném `permission-denied` khó hiểu:
 
-- `endAt > startAt` — nếu không, throw `"End time must be after start time"`
-- `endAt - startAt <= 15h` — throw `"Session cannot exceed 15 hours"`
-- `startAt` không quá 7 ngày trong quá khứ — throw `"Cannot log more than 7 days back"`
+- `endAt > startAt` - nếu không, throw `"End time must be after start time"`
+- `endAt - startAt <= 15h` - throw `"Session cannot exceed 15 hours"`
+- `startAt` không quá 7 ngày trong quá khứ - throw `"Cannot log more than 7 days back"`
 - `startAt` không ở tương lai (trừ khi `status === 'scheduled'`)
 - `category` nằm trong `CATEGORIES`
 
@@ -100,7 +100,7 @@ createdAt / updatedAt: Date.now()
 `startActivity` phải kiểm tra: nếu đã có session `active` cùng `category` → throw
 `"Already tracking {category}"`. UI bắt lỗi này và hiện toast, không phải crash.
 
-Ngoài ra nút Start phải disable trong lúc request đang bay — double-tap trên mobile
+Ngoài ra nút Start phải disable trong lúc request đang bay - double-tap trên mobile
 rất dễ xảy ra.
 
 ### Verify
@@ -110,14 +110,14 @@ ngày khác → kiểm tra trong Firebase Console thấy `logicalDate` và `logi
 
 ---
 
-## Task 2 — Hook đọc dữ liệu
+## Task 2 - Hook đọc dữ liệu
 
-`src/hooks/useActivities.ts` — `'use client'`
+`src/hooks/useActivities.ts` - `'use client'`
 
 ### `useActiveActivities()`
 Bọc `subscribeActive`. Trả `{ activities, loading, hasPendingWrites }`.
 
-`hasPendingWrites` lấy từ `snapshot.metadata.hasPendingWrites` — dùng để hiện chỉ báo
+`hasPendingWrites` lấy từ `snapshot.metadata.hasPendingWrites` - dùng để hiện chỉ báo
 "đang chờ sync" khi offline. Không có nó thì lúc mất mạng người dùng không biết
 thao tác đã được ghi nhận hay chưa.
 
@@ -148,7 +148,7 @@ giá trị, không đứng im rồi mới chạy tiếp.
 
 ---
 
-## Task 3 — Màn hình Now
+## Task 3 - Màn hình Now
 
 `src/app/(main)/now/page.tsx`
 
@@ -157,10 +157,10 @@ bấm Stop.
 
 ### Bố cục từ trên xuống
 
-**1. Header** — ngày logic hôm nay + nút Sign out.
+**1. Header** - ngày logic hôm nay + nút Sign out.
 
 Hiển thị ngày logic, không phải ngày lịch. Lúc 02:00 sáng thứ Ba app phải ghi
-"Monday" — nếu hiện "Tuesday" thì người dùng sẽ tưởng app ghi sai.
+"Monday" - nếu hiện "Tuesday" thì người dùng sẽ tưởng app ghi sai.
 
 **2. Stack session đang chạy** (nếu có)
 
@@ -196,7 +196,7 @@ Grid 2 cột (hàng cuối 1 nút chiếm hết chiều ngang), mỗi ô cao ≥
 
 **4. Tổng hôm nay**
 
-Dòng gọn: `Today: Work 6.2h · Learn 1.5h · Fitness 0h` — chỉ hiện category > 0.
+Dòng gọn: `Today: Work 6.2h · Learn 1.5h · Fitness 0h` - chỉ hiện category > 0.
 
 ### Trạng thái rỗng
 Chưa có session nào → dòng chữ nhạt "Nothing tracked yet. Tap a category to start."
@@ -207,7 +207,7 @@ Bấm Work lần nữa → không tạo trùng.
 
 ---
 
-## Task 4 — Stale session recovery
+## Task 4 - Stale session recovery
 
 `src/components/StaleSessionModal.tsx`
 
@@ -218,7 +218,7 @@ Session `active` quá 15h → modal chặn (không dismiss được bằng cách
 ```
 Unfinished session
 
-WORK started Monday 8:00 AM — 19 hours ago.
+WORK started Monday 8:00 AM - 19 hours ago.
 When did you actually stop?
 
   [ 5:00 PM ]   [ 10:00 PM ]   [ Custom… ]
@@ -238,7 +238,7 @@ Sửa tay một record trong Firebase Console cho `startAt` lùi 20h và `status
 
 ---
 
-## Task 5 — Timeline view (History)
+## Task 5 - Timeline view (History)
 
 `src/app/(main)/history/page.tsx`
 
@@ -268,7 +268,7 @@ Vì cho log song song nên block chồng nhau là chuyện thường. Xếp theo
 
 Đa số ngày chỉ có 1 lane (full width). Ngày có overlap tự chia 2–3 cột.
 
-**Không** dùng `position: absolute` với `z-index` chồng lên nhau — block sẽ che nhau
+**Không** dùng `position: absolute` với `z-index` chồng lên nhau - block sẽ che nhau
 và không bấm được cái bên dưới.
 
 ### Block
@@ -290,7 +290,7 @@ Tạo 2 activity chồng thời gian nhau → hiện thành 2 cột, cả hai đ
 
 ---
 
-## Task 6 — Sửa & thêm record
+## Task 6 - Sửa & thêm record
 
 ### Bottom sheet
 Tap một block → sheet trượt lên từ dưới:
@@ -320,7 +320,7 @@ Nút `+` góc trên phải màn hình History → cùng sheet nhưng trống, `s
 
 ### Đổi ngày
 Nếu sửa `startAt` sang ngày khác, sau khi save phải hiện toast
-`"Moved to Aug 25"` — nếu không người dùng sẽ tưởng record biến mất.
+`"Moved to Aug 25"` - nếu không người dùng sẽ tưởng record biến mất.
 
 ### Verify
 Sửa một record từ 8:00 sang 23:30 hôm trước → record chuyển sang ngày đúng,
@@ -328,12 +328,12 @@ Sửa một record từ 8:00 sang 23:30 hôm trước → record chuyển sang n
 
 ---
 
-## Task 7 — Offline
+## Task 7 - Offline
 
 Persistence đã bật ở Stage 1. Stage 2 chỉ cần làm cho nó *nhìn thấy được*:
 
 - `navigator.onLine` + sự kiện `online`/`offline` → banner mảnh trên cùng:
-  `"Offline — changes will sync"`
+  `"Offline - changes will sync"`
 - `hasPendingWrites` → chấm nhỏ trên card đang chờ sync
 - Start/Stop khi offline vẫn phải chạy bình thường (Firestore tự queue)
 - **Không** chặn UI hay hiện spinner vô hạn khi mất mạng
@@ -344,7 +344,7 @@ chấm biến mất, mở Firebase Console thấy record đã lên.
 
 ---
 
-## Task 8 — Chi tiết mobile
+## Task 8 - Chi tiết mobile
 
 Những thứ dễ bỏ sót nhưng ảnh hưởng trực tiếp tới việc dùng hàng ngày:
 
@@ -359,7 +359,7 @@ Những thứ dễ bỏ sót nhưng ảnh hưởng trực tiếp tới việc d�
 
 ---
 
-## Task 9 — Kiểm thử trên iPhone 11
+## Task 9 - Kiểm thử trên iPhone 11
 
 | # | Kiểm tra | Mong đợi |
 |---|---|---|
@@ -380,12 +380,12 @@ Những thứ dễ bỏ sót nhưng ảnh hưởng trực tiếp tới việc d�
 | 15 | Ngày trống | Empty state, không crash |
 
 Test 2 và 10 là hai bài quan trọng nhất. Test 2 chứng minh timer là derived state.
-Test 10 chứng minh logical day hoạt động — nếu giấc ngủ hiện ở ngày hôm sau thì
+Test 10 chứng minh logical day hoạt động - nếu giấc ngủ hiện ở ngày hôm sau thì
 toàn bộ analytics ở Stage 5 sẽ sai.
 
 ---
 
-## Definition of Done — Stage 2
+## Definition of Done - Stage 2
 
 - [ ] `npx tsc --noEmit` sạch, `npm run build` thành công
 - [ ] Mọi thao tác Firestore đi qua `src/lib/activities.ts`

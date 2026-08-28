@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Logical time, pro-rated targets, deviation, debt
+// logi - Logical time, pro-rated targets, deviation, debt
 // ============================================================
 
 import {
@@ -54,7 +54,7 @@ export function dayProgress(now: number = Date.now()): number {
 // ------------------------------------------------------------
 
 /**
- * Session đang chạy được tính tới thời điểm now — timer là derived state,
+ * Session đang chạy được tính tới thời điểm now - timer là derived state,
  * không bao giờ là counter cộng dồn.
  */
 export function actualHours(
@@ -73,7 +73,7 @@ export function actualHours(
 
 /**
  * Tổng thời gian bị double-count do log song song (VD vừa Work vừa Learn).
- * Phải hiển thị chỉ số này — nếu không, tổng giờ/ngày vượt 24h mà không ai biết.
+ * Phải hiển thị chỉ số này - nếu không, tổng giờ/ngày vượt 24h mà không ai biết.
  * Vì lý do đó mọi chart dùng GIỜ TUYỆT ĐỐI, không dùng % của 24h.
  */
 export function overlapHours(activities: Activity[], now: number = Date.now()): number {
@@ -99,7 +99,7 @@ export function coverage(activities: Activity[], now?: number): number {
 }
 
 // ------------------------------------------------------------
-// 3. Expected — pro-rate theo LỊCH, không chia đều
+// 3. Expected - pro-rate theo LỊCH, không chia đều
 // ------------------------------------------------------------
 
 /**
@@ -133,7 +133,7 @@ export function expectedHours(
 }
 
 // ------------------------------------------------------------
-// 4. Deviation — deadband kép
+// 4. Deviation - deadband kép
 // ------------------------------------------------------------
 
 export const DEV_PCT_THRESHOLD = 0.25; // 25%
@@ -209,7 +209,7 @@ export function weekendConflict(
 }
 
 // ------------------------------------------------------------
-// 5. Zero-sum budget — chống overset
+// 5. Zero-sum budget - chống overset
 // ------------------------------------------------------------
 
 export interface BudgetCheck {
@@ -220,7 +220,7 @@ export interface BudgetCheck {
 }
 
 /**
- * Không thêm được thời gian vào một tuần — chỉ đổi chỗ nó.
+ * Không thêm được thời gian vào một tuần - chỉ đổi chỗ nó.
  * Kéo Work lên +8h thì UI BẮT BUỘC lấy 8h đó từ category khác.
  */
 export function validateTargets(weekly: Record<Category, number>): BudgetCheck {
@@ -231,7 +231,7 @@ export function validateTargets(weekly: Record<Category, number>): BudgetCheck {
     const diff = total - TOTAL_BUDGET;
     errors.push(
       diff > 0
-        ? `Vượt ngân sách ${diff.toFixed(1)}h — hãy giảm ở category khác.`
+        ? `Vượt ngân sách ${diff.toFixed(1)}h - hãy giảm ở category khác.`
         : `Còn thừa ${(-diff).toFixed(1)}h chưa phân bổ.`
     );
   }
@@ -266,7 +266,7 @@ export function rebalance(
 }
 
 // ------------------------------------------------------------
-// 6. Debt — làm cho việc cắt giảm có giá
+// 6. Debt - làm cho việc cắt giảm có giá
 // ------------------------------------------------------------
 
 /** Cuối tuần: chênh lệch so với baseline được ghi thành nợ. */
@@ -302,7 +302,7 @@ export function applyDebt(
   return { weekly: next, applied, remaining };
 }
 
-/** 4/6 tuần là Crunch thì đó không còn là crunch — đó là baseline thật. */
+/** 4/6 tuần là Crunch thì đó không còn là crunch - đó là baseline thật. */
 export function crunchStreak(history: { preset: PresetId }[]): { count: number; of: number; shouldPrompt: boolean } {
   const recent = history.slice(-6);
   const count = recent.filter((w) => w.preset === 'crunch').length;

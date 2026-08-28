@@ -1,10 +1,10 @@
 // ============================================================
-// logi — Weekly Review (Stage 6 Task 1)
+// logi - Weekly Review (Stage 6 Task 1)
 //
 // Đóng vòng lặp: nhìn lại tuần vừa rồi → chọn preset tuần tới.
 //
 // File thuần: không React, không Firestore. Test bằng `node --test`.
-// Toàn bộ số liệu đi qua range-target.ts của Stage 5 — KHÔNG tự tính lại,
+// Toàn bộ số liệu đi qua range-target.ts của Stage 5 - KHÔNG tự tính lại,
 // vì `expectedHours()` pro-rate theo tuần đang chạy, dùng cho tuần đã xong
 // sẽ ra sai (nó lấy weekday của tuần MỚI).
 // ============================================================
@@ -46,7 +46,7 @@ export const REVIEW_HOUR = 19;
 
 /**
  * Lỡ tối Chủ nhật thì thứ Hai và thứ Ba vẫn còn mở.
- * Không có cửa sổ này thì bỏ một tuần là mất luôn tuần đó — mà tuần bận
+ * Không có cửa sổ này thì bỏ một tuần là mất luôn tuần đó - mà tuần bận
  * (đúng tuần đáng review nhất) lại chính là tuần dễ quên nhất.
  */
 export const GRACE_WEEKDAY_MAX = 2; // 1 = T2, 2 = T3
@@ -57,7 +57,7 @@ function markAt(date: string, hour: number): number {
 
 /**
  * Tuần đang cần review, hoặc null.
- * `isReviewed` tra cờ trong `meta/reviews` — đã review rồi thì không hiện lại.
+ * `isReviewed` tra cờ trong `meta/reviews` - đã review rồi thì không hiện lại.
  */
 export function reviewDueWeek(
   now: number,
@@ -77,12 +77,12 @@ export function reviewDueWeek(
 }
 
 // ------------------------------------------------------------
-// Màn 1 — số liệu tuần
+// Màn 1 - số liệu tuần
 // ------------------------------------------------------------
 
 /**
  * Khoảng ngày logic của một tuần ISO.
- * `isPartial` chỉ bật khi hôm nay đúng là Chủ nhật của tuần đó và ngày chưa hết —
+ * `isPartial` chỉ bật khi hôm nay đúng là Chủ nhật của tuần đó và ngày chưa hết -
  * đúng lúc banner 19:00 kích hoạt. Nhờ vậy target Chủ nhật được pro-rate,
  * không báo thiếu 8h chỉ vì còn 5 tiếng nữa mới hết ngày.
  */
@@ -103,7 +103,7 @@ export interface ReviewInput {
   activities: Activity[];
   /** key = logicalWeek. Thiếu tuần nào thì range-target lùi về PRESETS.normal. */
   weekTargets: Map<string, Weekly>;
-  /** Lịch sử preset để tính streak — tăng dần theo tuần. */
+  /** Lịch sử preset để tính streak - tăng dần theo tuần. */
   history: { preset: PresetId }[];
   now: number;
 }
@@ -146,7 +146,7 @@ export function buildReview(input: ReviewInput): ReviewSummary {
 }
 
 // ------------------------------------------------------------
-// Màn 2 — điều đáng chú ý
+// Màn 2 - điều đáng chú ý
 // ------------------------------------------------------------
 
 export interface NoteInput {
@@ -159,7 +159,7 @@ export interface NoteInput {
   now: number;
 }
 
-/** Không có gì đáng nói cũng là một kết quả — đừng bịa ra chuyện để nói. */
+/** Không có gì đáng nói cũng là một kết quả - đừng bịa ra chuyện để nói. */
 export const BALANCED = 'A balanced week.';
 
 /**
@@ -170,7 +170,7 @@ export function pickNotes(input: NoteInput): string[] {
   const { activities, rows, coverage, weekTargets, week, history } = input;
   const out: string[] = [];
 
-  // 1. OT cuối tuần ăn vào giờ học — thứ đáng nói nhất.
+  // 1. OT cuối tuần ăn vào giờ học - thứ đáng nói nhất.
   const target = weekTargets.get(week) ?? PRESETS.normal.weekly;
   const conflict = weekendConflict(activities, target, input.now);
   if (conflict) out.push(conflict);
@@ -187,7 +187,7 @@ export function pickNotes(input: NoteInput): string[] {
     );
   }
 
-  // 3. Log quá ít thì mấy con số trên không đáng tin — phải nói ra.
+  // 3. Log quá ít thì mấy con số trên không đáng tin - phải nói ra.
   if (coverage < 0.55 && out.length < 2) {
     out.push(`Only ${Math.round(coverage * 100)}% of the week is logged.`);
   }
@@ -202,7 +202,7 @@ export function pickNotes(input: NoteInput): string[] {
 }
 
 // ------------------------------------------------------------
-// Màn 3 — tuần tới
+// Màn 3 - tuần tới
 // ------------------------------------------------------------
 
 export interface NextWeekPlan {
@@ -212,12 +212,12 @@ export interface NextWeekPlan {
   /** Nợ sẽ cộng vào target tuần sau. */
   applied: DebtBalance;
   remaining: DebtBalance;
-  /** "Carrying over: Learn +6.0h debt" — rỗng nếu không nợ gì. */
+  /** "Carrying over: Learn +6.0h debt" - rỗng nếu không nợ gì. */
   debtNote: string;
 }
 
 /**
- * Xem trước tuần kế tiếp. Thuần — chưa ghi gì cả.
+ * Xem trước tuần kế tiếp. Thuần - chưa ghi gì cả.
  * Dùng `buildWeekly()` của rollover.ts để con số y hệt cái rollover sẽ tạo,
  * không phải một phép tính thứ hai chạy song song.
  */

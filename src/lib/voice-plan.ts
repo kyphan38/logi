@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Từ ParsedCommand quyết định làm gì (chưa ghi gì cả).
+// logi - Từ ParsedCommand quyết định làm gì (chưa ghi gì cả).
 // Tách riêng khỏi voice-command.ts vì file này KHÔNG import firebase,
 // nhờ vậy `node --test` chạy thẳng được.
 // ============================================================
@@ -49,7 +49,7 @@ function missingOf(cmd: ParsedCommand): MissingField[] {
 export interface PlanContext {
   /** Session đang chạy, để đoán target cho "stop" / "edit". */
   active: Pick<Activity, 'id'>[];
-  /** Record vừa ghi xong (còn hạn) — "no, that was learning" sửa cái này. */
+  /** Record vừa ghi xong (còn hạn) - "no, that was learning" sửa cái này. */
   lastCreatedId?: string | null;
   /** Đã hỏi lại một lần rồi. Hỏi vòng hai là người dùng bỏ dùng voice. */
   asked?: boolean;

@@ -28,7 +28,7 @@ function Spinner() {
 
 /**
  * FAB giữ-để-nói, nổi phía trên bottom nav.
- * Ẩn hẳn khi trình duyệt không ghi âm được — lúc đó chỉ còn nhập tay.
+ * Ẩn hẳn khi trình duyệt không ghi âm được - lúc đó chỉ còn nhập tay.
  */
 export default function MicButton({
   onResult,
@@ -105,7 +105,7 @@ export default function MicButton({
       ) : null}
 
       <div className="pointer-events-auto relative">
-        {/* Vòng sóng — to nhỏ theo `level`, nằm dưới nút nên không chắn ngón tay. */}
+        {/* Vòng sóng - to nhỏ theo `level`, nằm dưới nút nên không chắn ngón tay. */}
         {recording ? (
           <span
             aria-hidden="true"

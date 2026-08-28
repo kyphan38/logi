@@ -1,7 +1,7 @@
-# STAGE 3 — Voice & AI
+# STAGE 3 - Voice & AI
 
 > Plan này viết cho một AI coding agent thực thi. Làm đúng thứ tự task.
-> Sau mỗi task có mục **Verify** — phải pass mới đi tiếp.
+> Sau mỗi task có mục **Verify** - phải pass mới đi tiếp.
 > Nếu gặp mâu thuẫn hoặc thiếu thông tin, **DỪNG và hỏi người dùng**, không tự đoán.
 
 ---
@@ -26,14 +26,14 @@ Không viết đường ghi thứ hai ở server. Có hai đường ghi thì `de
 
 ---
 
-## PHẦN A — Carry-over từ Stage 2
+## PHẦN A - Carry-over từ Stage 2
 
 Bốn việc phải xong **trước** khi bắt đầu phần voice.
 
-### A1 — Deploy production (BLOCKER)
+### A1 - Deploy production (BLOCKER)
 
 `getUserMedia` chỉ hoạt động trong **secure context**: HTTPS hoặc `localhost`.
-Địa chỉ LAN `http://192.168.1.29:3000` trên iPhone **không phải** secure context —
+Địa chỉ LAN `http://192.168.1.29:3000` trên iPhone **không phải** secure context -
 mic bị từ chối, không có cách lách. Trên laptop `localhost` vẫn chạy, nên lỗi này
 chỉ lộ ra khi test trên điện thoại.
 
@@ -52,7 +52,7 @@ Authorized domains nữa.
 
 Không đi tiếp khi chưa có URL HTTPS mở được trên iPhone.
 
-### A2 — Sửa lỗi sleep bị cắt mất trên timeline
+### A2 - Sửa lỗi sleep bị cắt mất trên timeline
 
 Session ngủ 22:00 → 06:00 thuộc `logicalDate` hôm trước. Timeline hiện 04:00→04:00
 nên phần 04:00–06:00 bị cắt (`clippedEnd`). Ngày hôm sau cũng không hiện vì record
@@ -70,7 +70,7 @@ Ngược lại, phần bị cắt ở cuối giữ nguyên cờ `clippedEnd` nh�
 block từ 22:00 tới 04:00 với cờ clipped. Mở timeline hôm nay thấy block 04:00–06:00
 với nhãn "cont.".
 
-### A3 — Bổ sung repository
+### A3 - Bổ sung repository
 
 Thêm vào `src/lib/activities.ts`:
 
@@ -93,11 +93,11 @@ Stage 3 dùng nó cho delayed start.
 Cần index Firestore mới: `status ASC, startAt ASC`. Deploy lại
 `firebase deploy --only firestore:indexes`.
 
-Kiểm tra `firestore.rules` đã cho `status: 'scheduled'` — có rồi, không cần sửa.
+Kiểm tra `firestore.rules` đã cho `status: 'scheduled'` - có rồi, không cần sửa.
 Nhưng rules đang yêu cầu `startAt` hợp lệ; xác nhận record scheduled với `startAt`
 tương lai không bị chặn.
 
-### A4 — Gemini API key
+### A4 - Gemini API key
 
 1. Người dùng lấy key ở https://aistudio.google.com/apikey
 2. Thêm `GEMINI_API_KEY=` vào `.env.local` và Vercel env
@@ -108,11 +108,11 @@ tương lai không bị chặn.
 
 ---
 
-## PHẦN B — Voice
+## PHẦN B - Voice
 
-### Task 1 — Ghi âm
+### Task 1 - Ghi âm
 
-`src/hooks/useRecorder.ts` — `'use client'`
+`src/hooks/useRecorder.ts` - `'use client'`
 
 ```ts
 useRecorder(): {
@@ -125,7 +125,7 @@ useRecorder(): {
 }
 ```
 
-#### Ràng buộc iOS — làm sai là hỏng
+#### Ràng buộc iOS - làm sai là hỏng
 
 **Mime type**: dùng `pickAudioMime()` đã có sẵn trong `gemini-parse.ts`. iOS WebKit
 **không hỗ trợ `audio/webm`**; gọi `MediaRecorder` với webm sẽ ném lỗi ngay. Trên
@@ -163,7 +163,7 @@ và chấm cam tắt sau khi dừng.
 
 ---
 
-### Task 2 — Nút mic
+### Task 2 - Nút mic
 
 `src/components/MicButton.tsx`
 
@@ -172,7 +172,7 @@ FAB tròn nổi phía trên bottom nav ở màn hình Now.
 **Tương tác giữ-để-nói**:
 - `pointerdown` → `start()`
 - `pointerup` / `pointercancel` → `stop()`
-- `touch-action: none` và `onContextMenu={e => e.preventDefault()}` — nếu không,
+- `touch-action: none` và `onContextMenu={e => e.preventDefault()}` - nếu không,
   iOS sẽ hiện menu copy/paste khi giữ lâu
 - Vuốt lên rồi thả → `cancel()` (huỷ, không gửi). Hiện "Release to cancel" khi đang
   ở vùng huỷ.
@@ -192,7 +192,7 @@ Có haptic thì tốt: `navigator.vibrate?.(10)` lúc bắt đầu ghi (Android;
 
 ---
 
-### Task 3 — API route parse
+### Task 3 - API route parse
 
 `src/app/api/parse/route.ts`
 
@@ -208,15 +208,15 @@ Trả:  ParseResult (đã định nghĩa trong gemini-parse.ts)
 3. **Rate limit**: tối đa 30 request / 5 phút cho mỗi uid. Dùng Map trong module scope
    (đủ cho một người dùng; serverless có thể reset nhưng không sao). Vượt → `429`.
 4. Đọc context từ Firestore bằng **Admin SDK**:
-   - `listActive` — session đang chạy
-   - `listRecent(5)` — activity gần đây
+   - `listActive` - session đang chạy
+   - `listRecent(5)` - activity gần đây
 5. `buildSystemPrompt({ nowISO, weekday, activeActivities, recentActivities })`
-   — hàm đã có sẵn trong `gemini-parse.ts`.
+   - hàm đã có sẵn trong `gemini-parse.ts`.
 6. Có `audio` → `parseAudio()`. Có `text` → `parseTextCorrection()`.
 7. **Sanitize kết quả** (xem dưới).
 8. Trả `ParseResult`.
 
-#### Sanitize — bắt buộc, không được bỏ
+#### Sanitize - bắt buộc, không được bỏ
 
 LLM có thể trả về dữ liệu vô lý. Server phải lọc trước khi trả cho client:
 
@@ -244,7 +244,7 @@ Client hiện toast + mở sheet nhập tay. **Luôn phải có đường lui.**
 
 ---
 
-### Task 4 — Confirmation card
+### Task 4 - Confirmation card
 
 `src/components/ParseConfirmCard.tsx`
 
@@ -275,7 +275,7 @@ Client hiện toast + mở sheet nhập tay. **Luôn phải có đường lui.**
 `AUTO_COMMIT_THRESHOLD` đã có sẵn trong `gemini-parse.ts`.
 
 #### Ghi dữ liệu
-Gọi hàm của `activities.ts` — **không** viết đường ghi mới:
+Gọi hàm của `activities.ts` - **không** viết đường ghi mới:
 - `intent: 'start'` → `startActivity(uid, { category, label, startAt })`
 - `intent: 'log_past'` → `createPastActivity(uid, {...})`
 - `intent: 'stop'` → `stopActivity(uid, targetActivityId, endAt)`
@@ -292,7 +292,7 @@ Mạng chậm, người dùng bấm Confirm hai lần là chuyện thường.
 
 ---
 
-### Task 5 — Clarify & voice edit
+### Task 5 - Clarify & voice edit
 
 #### Clarify
 `intent === 'clarify'` → hiện `clarifyQuestion` với `clarifyOptions` thành nút:
@@ -304,7 +304,7 @@ Did you mean 10:00 AM or 10:00 PM?
 
 Chọn xong → áp giá trị vào ParseResult → hiện confirmation card bình thường.
 **Chỉ hỏi một lần.** Trả lời xong vẫn thiếu thông tin thì mở thẳng sheet nhập tay,
-đừng hỏi vòng hai — hỏi hai lần là người dùng bỏ dùng voice.
+đừng hỏi vòng hai - hỏi hai lần là người dùng bỏ dùng voice.
 
 #### Voice edit
 Sau khi ghi xong, nói tiếp "no, that was learning" hoặc "change it to 9 AM":
@@ -317,7 +317,7 @@ Giữ `lastCreatedActivityId` trong state màn hình Now, hết hạn sau 5 phú
 
 ---
 
-### Task 6 — Delayed start
+### Task 6 - Delayed start
 
 `intent: 'schedule'` → tạo record `status: 'scheduled'`, `startAt` tương lai.
 
@@ -339,7 +339,7 @@ Gọi `promoteScheduled(uid)` khi:
 - App quay lại foreground (`visibilitychange`)
 - Mỗi 30 giây trong lúc còn record scheduled
 
-Chuyển xong thì `startAt` giữ nguyên giá trị đã đặt — timer sẽ đếm từ thời điểm đó,
+Chuyển xong thì `startAt` giữ nguyên giá trị đã đặt - timer sẽ đếm từ thời điểm đó,
 kể cả khi người dùng mở app muộn hơn. Đúng ý nghĩa "bắt đầu lúc 22:05".
 
 #### Record scheduled quá hạn
@@ -350,7 +350,7 @@ kể cả khi người dùng mở app muộn hơn. Đúng ý nghĩa "bắt đầ
 
 ---
 
-### Task 7 — Ghép vào màn hình Now
+### Task 7 - Ghép vào màn hình Now
 
 - Nút mic FAB, không che nút Stop
 - Đang xử lý → overlay mờ nhẹ, không chặn hẳn màn hình
@@ -370,11 +370,11 @@ Tổ hợp 3 và 4 là chỗ dễ hỏng: `targetActivityId` phải khớp đún
 
 ---
 
-### Task 8 — Test tự động
+### Task 8 - Test tự động
 
 Thêm vào bộ test có sẵn (`node --test`):
 
-`test/sanitize.test.ts` — hàm sanitize của Task 3:
+`test/sanitize.test.ts` - hàm sanitize của Task 3:
 - category rác → clarify
 - startAt 10 ngày trước → clarify
 - endAt trước startAt → bỏ endAt
@@ -382,7 +382,7 @@ Thêm vào bộ test có sẵn (`node --test`):
 - confidence 1.5 → 0
 - targetActivityId không tồn tại → null
 
-`test/parse-apply.test.ts` — ánh xạ ParseResult sang lời gọi repository:
+`test/parse-apply.test.ts` - ánh xạ ParseResult sang lời gọi repository:
 - mỗi intent gọi đúng hàm với đúng tham số
 - requestId trùng → chỉ ghi một lần
 - confidence 0.9 → auto-commit; 0.7 → cần confirm
@@ -391,7 +391,7 @@ Không mock Gemini API. Chỉ test phần logic thuần.
 
 ---
 
-### Task 9 — Kiểm thử trên iPhone qua HTTPS
+### Task 9 - Kiểm thử trên iPhone qua HTTPS
 
 **Bắt buộc chạy trên URL HTTPS.** Localhost không chứng minh được gì.
 
@@ -429,7 +429,7 @@ sau sẽ hỏng.
 
 ---
 
-## Definition of Done — Stage 3
+## Definition of Done - Stage 3
 
 - [ ] A1: deploy HTTPS xong, test Stage 1 + Stage 2 trên iPhone đã pass hết
 - [ ] A2: sleep vắt qua 04:00 hiện đủ ở cả hai ngày
@@ -463,7 +463,7 @@ sau sẽ hỏng.
 
 **Dừng và hỏi khi:**
 - Chưa có repo GitHub hoặc chưa có `GEMINI_API_KEY`
-- Chất lượng nhận dạng kém với giọng người dùng — có thể cần chỉnh prompt, đừng tự
+- Chất lượng nhận dạng kém với giọng người dùng - có thể cần chỉnh prompt, đừng tự
   đổi model
 - Model `gemini-2.5-flash` trong `gemini-parse.ts` không còn khả dụng
 

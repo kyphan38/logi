@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
-// logi — Target & coverage cho MỘT KHOẢNG bất kỳ (Stage 5 Task 2)
+// logi - Target & coverage cho MỘT KHOẢNG bất kỳ (Stage 5 Task 2)
 //
 // Đây là phần dễ sai nhất của Stage 5. Ba cái bẫy:
 //
-//  1. `weekly × số ngày / 7` là SAI. Target không phân bố đều — thứ Ba Work là
+//  1. `weekly × số ngày / 7` là SAI. Target không phân bố đều - thứ Ba Work là
 //     9.5h còn Chủ nhật là 0h. Thứ Hai→thứ Sáu preset Normal cho Work 43h,
 //     chia đều cho ra 30.7h. Lệch 12h, đủ để mọi kết luận thành rác.
 //  2. Mỗi tuần có target riêng. Tuần trước có thể là Crunch, tuần này Normal.
@@ -36,7 +36,7 @@ function zero(): Record<Category, number> {
  * Target kỳ vọng của cả khoảng, cộng dồn THEO LỊCH.
  *
  * @param weekTargets key = logicalWeek ("2026-W35"). Tuần không có trong map
- *   thì rơi về `PRESETS.normal` — chưa đặt target không có nghĩa là target = 0.
+ *   thì rơi về `PRESETS.normal` - chưa đặt target không có nghĩa là target = 0.
  */
 export function expectedForRange(
   range: Range,
@@ -70,7 +70,7 @@ export function expectedForRange(
 
 /**
  * Tổng số giờ THỰC của khoảng, tính theo ngày logic.
- * Ngày hôm nay chỉ tính tới `now` — phần chưa sống thì không thể log được.
+ * Ngày hôm nay chỉ tính tới `now` - phần chưa sống thì không thể log được.
  */
 export function realHoursOfRange(range: Range, now: number = Date.now()): number {
   const today = logicalDate(now);
@@ -123,7 +123,7 @@ function loggedHours(activities: Activity[], range: Range, now: number): number 
  * Phần của khoảng thực sự được log, 0..1.
  *
  * Coverage mục tiêu ~70% (kế hoạch 129.5h/168h; phần còn lại là ăn uống, đi
- * lại — không log). Dưới 55% thì mọi kết luận khác đều không đáng tin, nên
+ * lại - không log). Dưới 55% thì mọi kết luận khác đều không đáng tin, nên
  * chỉ số này phải hiện TRƯỚC các chart.
  */
 export function coverageForRange(
@@ -141,7 +141,7 @@ export function coverageForRange(
  *
  * `actualHours()` của balance.ts cộng trọn cả session; ở đây phần tràn ra ngoài
  * hai đầu khoảng phải bị cắt, nếu không thanh Sleep của khoảng một ngày sẽ dài
- * hơn 24h. Trong một category, giờ chồng nhau VẪN cộng hai lần — đó là chuyện
+ * hơn 24h. Trong một category, giờ chồng nhau VẪN cộng hai lần - đó là chuyện
  * của `overlapForRange`, không phải của thanh này.
  */
 export function actualForRange(
@@ -164,7 +164,7 @@ export function actualForRange(
 }
 
 /**
- * Giống `Deviation` của balance.ts nhưng bỏ `weeklyTarget` — một khoảng có thể
+ * Giống `Deviation` của balance.ts nhưng bỏ `weeklyTarget` - một khoảng có thể
  * vắt qua nhiều tuần với target khác nhau, nên "target tuần" không có nghĩa.
  */
 export interface RangeDeviation {

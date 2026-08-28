@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Backup & khôi phục (Stage 6 Task 3)
+// logi - Backup & khôi phục (Stage 6 Task 3)
 //
 // Sau một năm đây là dữ liệu không thể tạo lại, mà Firestore free tier
 // KHÔNG có backup tự động. File này lo hai việc:
@@ -173,7 +173,7 @@ export function previewBackup(file: BackupFile): RestorePreview {
 export interface RestorePlan {
   /** Record sẽ được thêm. */
   add: Activity[];
-  /** Đã có sẵn — bỏ qua, KHÔNG ghi đè. */
+  /** Đã có sẵn - bỏ qua, KHÔNG ghi đè. */
   skip: number;
 }
 

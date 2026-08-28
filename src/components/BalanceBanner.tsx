@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// logi — Một dòng cân bằng tuần, đặt ở màn hình Now.
+// logi - Một dòng cân bằng tuần, đặt ở màn hình Now.
 //
 // Màu: vượt → hổ phách, thiếu → xanh dương nhạt.
 // KHÔNG dùng đỏ. Đỏ để dành cho lỗi hệ thống, không dành cho
@@ -18,7 +18,7 @@ const TONE: Record<BannerLine['kind'], string> = {
   over: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200',
   under:
     'border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200',
-  // Chưa đủ dữ liệu: dòng nhạt, không khung màu — nó là ghi chú, không phải cảnh báo.
+  // Chưa đủ dữ liệu: dòng nhạt, không khung màu - nó là ghi chú, không phải cảnh báo.
   sparse: 'border-transparent bg-surface-1 text-ink-muted',
 };
 

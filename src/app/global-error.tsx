@@ -1,10 +1,10 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Lưới an toàn cuối cùng (Stage 6 Task 5)
+// logi - Lưới an toàn cuối cùng (Stage 6 Task 5)
 //
 // Chỉ chạy khi chính root layout hỏng. File này thay cả document, nên phải tự
-// khai báo <html> và <body>, và KHÔNG có global styles — viết bằng style nội
+// khai báo <html> và <body>, và KHÔNG có global styles - viết bằng style nội
 // tuyến, không dùng token Tailwind ở đây.
 // ---------------------------------------------------------------------------
 

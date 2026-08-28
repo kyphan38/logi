@@ -13,7 +13,7 @@ import { PRESETS, type Activity, type Category } from '@/types/logi';
 import { act, at } from './_helpers.ts';
 
 // Tuần 2026-W35: thứ Hai 24/08 → Chủ nhật 30/08. Chấm lúc 31/08 nên
-// không ngày nào còn dở dang — số kỳ vọng tính tay được.
+// không ngày nào còn dở dang - số kỳ vọng tính tay được.
 const MON = '2026-08-24';
 const TUE = '2026-08-25';
 const WED = '2026-08-26';
@@ -61,7 +61,7 @@ const near = (a: number | null, b: number, msg?: string) =>
   assert.ok(a !== null && Math.abs(a - b) < 0.001, `${msg ?? ''} ${a} ≠ ${b}`);
 
 // ------------------------------------------------------------
-// Nhóm A — chung
+// Nhóm A - chung
 // ------------------------------------------------------------
 
 test('A: đếm session, trung vị và block dài nhất theo từng category', () => {
@@ -104,7 +104,7 @@ test('A: không có kỳ trước thì deltaVsPrevious là null, có thì ra hi�
 });
 
 // ------------------------------------------------------------
-// Nhóm B — Sleep
+// Nhóm B - Sleep
 // ------------------------------------------------------------
 
 test('B: medianBedtime và bedtimeSpreadMin qua 5 đêm khác giờ', () => {
@@ -156,7 +156,7 @@ test('B: đêm dưới 6h vào shortNights', () => {
 });
 
 // ------------------------------------------------------------
-// Nhóm C — Work
+// Nhóm C - Work
 // ------------------------------------------------------------
 
 test('C: otHours chỉ tính phần ngoài 08:00–17:00 của thứ Hai–thứ Sáu', () => {
@@ -192,7 +192,7 @@ test('C: ngày Work dài nhất và số ngày trên 10h', () => {
 });
 
 // ------------------------------------------------------------
-// Nhóm D — Learn
+// Nhóm D - Learn
 // ------------------------------------------------------------
 
 test('D: khối sáng và khối tối tách riêng', () => {
@@ -244,7 +244,7 @@ test('D: thứ tệ nhất cho Learn chỉ hiện khi khoảng đủ 7 ngày', (
 });
 
 // ------------------------------------------------------------
-// Nhóm E — Fitness
+// Nhóm E - Fitness
 // ------------------------------------------------------------
 
 test('E: longestGapDays là số ngày cách nhau giữa hai buổi', () => {
@@ -280,7 +280,7 @@ test('E: chưa tập buổi nào thì không bịa ra khoảng cách', () => {
 });
 
 // ------------------------------------------------------------
-// Nhóm F — Leisure
+// Nhóm F - Leisure
 // ------------------------------------------------------------
 
 test('F: lateLeisureHours tính từ 22:00, gồm cả phần sau nửa đêm', () => {
@@ -312,7 +312,7 @@ test('F: tách giờ giải trí ngày thường và cuối tuần', () => {
 });
 
 // ------------------------------------------------------------
-// Nhóm G — liên hệ chéo
+// Nhóm G - liên hệ chéo
 // ------------------------------------------------------------
 
 test('G: dưới 3 mẫu thì trả null, không suy diễn', () => {

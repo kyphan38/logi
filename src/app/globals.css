@@ -6,7 +6,7 @@
    Nguyên tắc: BỚT VIỀN, THÊM NỀN. Card phân biệt bằng nền khác biệt, không
    phải bằng viền bao quanh. Màu chỉ dùng cho category, không dùng cho khung.
 
-   Màu gốc category vẫn nằm ở CATEGORY_COLOR trong logi.ts — file này chỉ
+   Màu gốc category vẫn nằm ở CATEGORY_COLOR trong logi.ts - file này chỉ
    thêm biến thể dẫn xuất (tint / ink). KHÔNG sửa logi.ts.
    =========================================================================== */
 :root {
@@ -167,7 +167,7 @@ body {
   }
 }
 
-/* ===== Bề rộng nội dung — mọi màn hình dùng chung (Task 8) ===== */
+/* ===== Bề rộng nội dung - mọi màn hình dùng chung (Task 8) ===== */
 .content-width {
   width: 100%;
   max-width: var(--content-max);

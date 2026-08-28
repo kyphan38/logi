@@ -1,7 +1,7 @@
 import 'server-only';
 
 // ============================================================
-// logi — Firebase Admin SDK
+// logi - Firebase Admin SDK
 // CHỈ chạy server-side. 'server-only' ở trên chặn file này lọt
 // vào client bundle (build sẽ fail nếu có ai import nhầm).
 // ============================================================

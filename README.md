@@ -44,7 +44,7 @@ Firestore free tier does not back up your data. Do it yourself.
 every record, all week targets, and the debt ledger. On the first Sunday of
 each month the app shows a reminder line with the days since your last export.
 
-**Restore.** Go to `/settings/restore` (hidden — there is no link to it). Pick
+**Restore.** Go to `/settings/restore` (hidden - there is no link to it). Pick
 the JSON file, read the preview, then type `RESTORE`.
 
 Restore **only adds records that are missing**, matched by `id`. It never
@@ -61,7 +61,7 @@ leaving a screen stops the reads. Counted per screen:
 | Screen | Live listeners | One-shot reads |
 |---|---|---|
 | Now | active, scheduled, today, this week, week target, review flag (6) | rollover: ~4 docs, once per week |
-| History | selected day, strip week(s), week target (3–4) | — |
+| History | selected day, strip week(s), week target (3–4) | - |
 | Targets | week target, debt (2) | last 6 week targets |
 | Analytics | one query for the whole range (1) | export nudge: 2 docs |
 
@@ -81,7 +81,7 @@ writes echoed back to listeners  ≈    90
                                  ≈ 3,000 reads/day
 ```
 
-That is 6% of the free tier. **Over 20k/day means a listener is leaking** —
+That is 6% of the free tier. **Over 20k/day means a listener is leaking** -
 check that new hooks return their unsubscribe function.
 
 Two things are expensive on purpose: an all-time export and a restore each read
@@ -95,7 +95,7 @@ than it would at home. The app does not store a time zone per record. For one
 person in one country this is fine; a trip of a few days will shift a few
 records by one day. Nothing breaks, the totals just move.
 
-**Device clock set back.** Timers never show a negative number — elapsed time is
+**Device clock set back.** Timers never show a negative number - elapsed time is
 clamped to `0:00`.
 
 **Scheduled sessions that never happened.** A `scheduled` session more than 7
@@ -107,16 +107,16 @@ promoted to `active` and show up as a session running for 240 hours.
 
 | # | Check | Result |
 |---|---|---|
-| 1 | No secret in git history | Pass — only placeholders in the roadmap docs |
-| 2 | No secret in a `NEXT_PUBLIC_*` var | Pass — Firebase web config only, public by design |
-| 3 | Firestore rules deny another user's data | Pass — every path is behind `isOwner(uid)`, catch-all denies |
-| 4 | `/api/parse` rejects a request with no session cookie | Pass — 401 before anything else runs |
-| 5 | Rate limit on `/api/parse` | Pass — 30 requests / 5 min per user |
-| 6 | Allowlist blocks other emails | Pass — `ALLOWED_USER_EMAIL`, checked on login and on every request |
+| 1 | No secret in git history | Pass - only placeholders in the roadmap docs |
+| 2 | No secret in a `NEXT_PUBLIC_*` var | Pass - Firebase web config only, public by design |
+| 3 | Firestore rules deny another user's data | Pass - every path is behind `isOwner(uid)`, catch-all denies |
+| 4 | `/api/parse` rejects a request with no session cookie | Pass - 401 before anything else runs |
+| 5 | Rate limit on `/api/parse` | Pass - 30 requests / 5 min per user |
+| 6 | Allowlist blocks other emails | Pass - `ALLOWED_USER_EMAIL`, checked on login and on every request |
 | 7 | Session cookie `httpOnly` + `secure` + `sameSite: lax` | Pass (`secure` in production only, so localhost still works) |
-| 8 | No audio written to disk or Storage | Pass — audio goes to Gemini in the request body and is never stored |
-| 9 | No personal data in production logs | Pass — logs carry error names only, never labels or transcripts |
-| 10 | Firebase Console → Authorized domains | **Manual — check this yourself in the console** |
+| 8 | No audio written to disk or Storage | Pass - audio goes to Gemini in the request body and is never stored |
+| 9 | No personal data in production logs | Pass - logs carry error names only, never labels or transcripts |
+| 10 | Firebase Console → Authorized domains | **Manual - check this yourself in the console** |
 
 Item 10 is the only one a script cannot check. Open Firebase Console → Auth →
 Settings → Authorized domains, and remove anything that is not your real domain
@@ -130,7 +130,7 @@ the confidence thresholds.
 
 Nothing has been changed yet: tuning needs real mistakes from real use, and
 guessing at them would only trade a known-good prompt for an unknown one. Keep
-a short list — sentence said → what you got → what you wanted — and revisit it
+a short list - sentence said → what you got → what you wanted - and revisit it
 every few weeks. Re-run the Stage 3 sentences after each edit.
 
 ## PWA & push notifications
@@ -145,7 +145,7 @@ What was built:
 |---|---|
 | Web manifest (`standalone`, icons, theme) | `src/app/manifest.ts` |
 | Icons, generated from code | `scripts/make-icons.mjs` → `public/icons/` |
-| Service worker — push only, **no caching** | `public/sw.js` |
+| Service worker - push only, **no caching** | `public/sw.js` |
 | Permission + FCM token, saved to `users/{uid}/meta/fcm` | `src/lib/push.ts` |
 | Turn on / turn off | `/settings` (linked from Targets) |
 | Scheduled sender, every 15 minutes | `functions/src/index.ts` |
@@ -153,7 +153,7 @@ What was built:
 The function sends **data-only** messages and the service worker draws the
 notification. Sending a `notification` payload as well would show the same
 reminder twice. One reminder type is sent once per logical day (`meta/pushLog`).
-In-app reminders from Stage 4 still run — push is the extra, not the
+In-app reminders from Stage 4 still run - push is the extra, not the
 replacement.
 
 ### Setting it up (once)
@@ -163,10 +163,10 @@ replacement.
 2. Console → Project settings → Cloud Messaging → **Web Push certificates** →
    generate a key pair. Put it in `.env.local` and in Vercel:
    `NEXT_PUBLIC_FIREBASE_VAPID_KEY=...`
-3. `firebase deploy --only firestore:indexes` — the sender needs the
+3. `firebase deploy --only firestore:indexes` - the sender needs the
    collection-group index on `meta.token`.
 4. `cd functions && npm install && cd .. && firebase deploy --only functions`
-5. On the iPhone: open the site **in Safari** (not Edge — iOS only allows this
+5. On the iPhone: open the site **in Safari** (not Edge - iOS only allows this
    from Safari), tap Share → *Add to Home Screen*. Open the app from that new
    icon, go to Settings, tap *Turn on reminders*.
 
@@ -223,8 +223,8 @@ is real. Only the 20 newest insights are kept per user.
 - Severity changes font weight only. **No red, no alarms.**
 - A suggested preset links to `/targets?suggest=…` and is only highlighted
   there. Nothing is ever applied without a tap and a confirm.
-- Extreme numbers get one flat line written by `extremeNote()` in `digest.ts` —
-  by code, not by the model — measured against your own targets, not against
+- Extreme numbers get one flat line written by `extremeNote()` in `digest.ts` -
+  by code, not by the model - measured against your own targets, not against
   medical advice.
 - The digest is never logged in production; API errors log `e.message` only.
 - Delete everything the model wrote from **Settings → Saved insights**. Your

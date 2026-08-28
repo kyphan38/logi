@@ -126,12 +126,12 @@ test('sang ngày logic mới thì nhắc lại', () => {
   const dismissed = new Set([`reminder:morning:${WED}`, `reminder:evening:${WED}`]);
   const isDismissed = (k: string) => dismissed.has(k);
   assert.equal(pick(at(WED, '06:20'), { isDismissed }), null);
-  // 03:00 hôm sau vẫn là ngày logic cũ — chưa qua mốc 04:00.
+  // 03:00 hôm sau vẫn là ngày logic cũ - chưa qua mốc 04:00.
   assert.equal(pick(at('2026-09-03', '03:00'), { isDismissed }), null);
   assert.equal(pick(at('2026-09-03', '06:20'), { isDismissed })?.type, 'morning');
 });
 
-test('02:00 vẫn là "tối nay" — nhắc tối chưa tắt', () => {
+test('02:00 vẫn là "tối nay" - nhắc tối chưa tắt', () => {
   // Ngày logic chạy tới 04:00, nên thức khuya vẫn thuộc hôm qua.
   const r = pick(at('2026-09-03', '02:00'));
   assert.equal(r?.type, 'evening');

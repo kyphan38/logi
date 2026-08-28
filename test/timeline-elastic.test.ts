@@ -122,7 +122,7 @@ test('ngày hôm nay → không tạo dòng untracked cho phần tương lai', (
   const gs = gapRows(rows);
   assert.ok(gs.length > 0);
   for (const g of gs) {
-    assert.ok(g.end <= now, `dòng untracked kết thúc lúc ${new Date(g.end)} — quá "bây giờ"`);
+    assert.ok(g.end <= now, `dòng untracked kết thúc lúc ${new Date(g.end)} - quá "bây giờ"`);
   }
   assert.equal(
     gs.some((g) => g.end === win.end),
@@ -156,7 +156,7 @@ test('ngày thưa co lại nhỏ hơn nhiều so với khung 1440px cũ', () => 
     at(DATE, '23:30')
   );
   const total = rows.reduce((sum, r) => sum + (r.kind === 'gap' ? 32 : r.height) + 8, 0);
-  assert.ok(total < 800, `6 record vẫn cao ${total}px — phải vừa một màn hình`);
+  assert.ok(total < 800, `6 record vẫn cao ${total}px - phải vừa một màn hình`);
 });
 
 test('block kéo sang từ hôm trước giữ nguyên cờ continuedFromPrevious', () => {

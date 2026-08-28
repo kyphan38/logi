@@ -175,7 +175,7 @@ test('chạy hai lần chỉ ghi nợ MỘT lần', () => {
   assert.equal(p1.debt?.learn, 6);
   assert.equal(p1.lastProcessedWeek, '2026-W36');
 
-  // Mở lại app ngay sau đó — state đã có cột mốc mới.
+  // Mở lại app ngay sau đó - state đã có cột mốc mới.
   const s1 = applyPlan(s0, p1);
   const p2 = planRollover(s1);
 
@@ -242,11 +242,11 @@ test('nghỉ 3 tuần: xử lý đủ 3 tuần, đúng thứ tự', () => {
   assert.deepEqual(p.locks, ['2026-W33', '2026-W34', '2026-W35']);
   // 3 tuần × 12h = 36h nợ. Target tuần mới trả 50% nhưng đụng trần 10h/tuần.
   assert.equal(p.creates[0].debtApplied.learn, 10);
-  assert.equal(p.debt?.learn, 26, '36h nợ − 10h trả — không tuần nào bị bỏ');
+  assert.equal(p.debt?.learn, 26, '36h nợ − 10h trả - không tuần nào bị bỏ');
   assert.equal(p.lastProcessedWeek, '2026-W36');
 });
 
-test('tuần không có kế hoạch bị bỏ qua — không nợ từ hư không', () => {
+test('tuần không có kế hoạch bị bỏ qua - không nợ từ hư không', () => {
   const p = planRollover(
     state({
       currentWeek: '2026-W36',

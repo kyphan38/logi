@@ -1,12 +1,12 @@
 // ============================================================
-// logi — Chuyển tuần (rollover) + ghép nợ vào target
+// logi - Chuyển tuần (rollover) + ghép nợ vào target
 //
 // File thuần: KHÔNG import Firestore, KHÔNG React. Test bằng `node --test`.
 // `targets.ts` chỉ làm hai việc: đọc dữ liệu vào, ghi kết quả ra.
 //
 // Không có server cron. Việc chuyển tuần chạy ở client lúc mở app, nên nó
 // bắt buộc phải idempotent: mở app hai lần sáng thứ Hai mà cộng nợ hai lần
-// thì không crash, không báo gì — chỉ là target Learn phình lên vô lý sau
+// thì không crash, không báo gì - chỉ là target Learn phình lên vô lý sau
 // vài tuần và không lần ra nguyên nhân.
 // ============================================================
 
@@ -22,7 +22,7 @@ import {
   type WeekTarget,
 } from '@/types/logi';
 
-/** Lùi xa hơn 8 tuần thì không dựng lại lịch sử nữa — chỉ đặt lại cột mốc. */
+/** Lùi xa hơn 8 tuần thì không dựng lại lịch sử nữa - chỉ đặt lại cột mốc. */
 export const MAX_ROLLOVER_WEEKS = 8;
 
 export type DebtBalance = Partial<Record<Category, number>>;
@@ -37,7 +37,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * `applyDebt()` CỘNG giờ vào target (Learn +6h) nên tổng vọt lên 141.5h.
- * Nhưng một tuần vẫn chỉ có 135.5h để phân bổ — trả nợ Learn thì phải lấy
+ * Nhưng một tuần vẫn chỉ có 135.5h để phân bổ - trả nợ Learn thì phải lấy
  * từ Work hoặc Leisure, không thể lấy từ hư không.
  *
  * Hàm này cùng ý tưởng với `rebalance()` nhưng khoá được NHIỀU category
@@ -127,7 +127,7 @@ export interface RolloverState {
 }
 
 export interface RolloverPlan {
-  /** Vì sao ra kế hoạch này — để log và để test đọc cho dễ. */
+  /** Vì sao ra kế hoạch này - để log và để test đọc cho dễ. */
   reason: 'first-run' | 'same-week' | 'processed' | 'too-far';
   /** Tuần cần đóng sổ hồi tố. */
   locks: string[];
@@ -211,7 +211,7 @@ export function planRollover(state: RolloverState): RolloverPlan {
     }
   }
 
-  // Tuần hiện tại: chỉ tạo nếu chưa có. Các tuần trống ở giữa để nguyên —
+  // Tuần hiện tại: chỉ tạo nếu chưa có. Các tuần trống ở giữa để nguyên -
   // tạo doc giả cho chúng sẽ trừ nợ 50% mỗi tuần và làm loãng crunchStreak.
   const creates: WeekTargetSeed[] = [];
   if (!targets[currentWeek]) {
@@ -234,7 +234,7 @@ export function planRollover(state: RolloverState): RolloverPlan {
   };
 }
 
-/** Áp kế hoạch lên state — dùng trong test để chạy hai lần liên tiếp. */
+/** Áp kế hoạch lên state - dùng trong test để chạy hai lần liên tiếp. */
 export function applyPlan(state: RolloverState, plan: RolloverPlan): RolloverState {
   const targets = { ...state.targets };
   for (const w of plan.locks) {

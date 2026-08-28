@@ -1,14 +1,14 @@
-# STAGE 1 — Foundation & Auth
+# STAGE 1 - Foundation & Auth
 
 > Plan này viết cho một AI coding agent thực thi. Làm đúng thứ tự task.
-> Sau mỗi task có mục **Verify** — phải pass mới đi tiếp.
+> Sau mỗi task có mục **Verify** - phải pass mới đi tiếp.
 > Nếu gặp mâu thuẫn hoặc thiếu thông tin, **DỪNG và hỏi người dùng**, không tự đoán.
 
 ---
 
 ## 0. Bối cảnh
 
-Xây `logi` — web app kiểm toán quỹ thời gian cá nhân, một người dùng duy nhất.
+Xây `logi` - web app kiểm toán quỹ thời gian cá nhân, một người dùng duy nhất.
 Mobile-first (iPhone 11, browser Edge/Safari), UI tiếng Anh.
 
 Stage 1 **chỉ** làm hạ tầng: project scaffold, Firebase, đăng nhập, app shell rỗng,
@@ -16,10 +16,10 @@ deploy. Không có tính năng nghiệp vụ nào.
 
 ### File người dùng đã có sẵn
 Nằm ở thư mục gốc hoặc thư mục tải về:
-- `logi.ts` — data model, categories, targets, presets
-- `balance.ts` — logic thời gian logic / deviation / debt
-- `gemini-parse.ts` — schema + prompt Gemini (Stage 3 mới dùng)
-- `firestore.rules` — security rules
+- `logi.ts` - data model, categories, targets, presets
+- `balance.ts` - logic thời gian logic / deviation / debt
+- `gemini-parse.ts` - schema + prompt Gemini (Stage 3 mới dùng)
+- `firestore.rules` - security rules
 - Một file credentials Firebase (xem Task 2)
 
 ### KHÔNG làm ở Stage 1
@@ -34,7 +34,7 @@ phần auth khó debug.
 
 ---
 
-## Task 1 — Scaffold project
+## Task 1 - Scaffold project
 
 ```bash
 npx create-next-app@latest logi \
@@ -95,19 +95,19 @@ Tương tự với `gemini-parse.ts`.
 
 ---
 
-## Task 2 — Xử lý file credentials
+## Task 2 - Xử lý file credentials
 
 **Đây là task nhạy cảm nhất. Đọc kỹ.**
 
 Firebase cho tải hai loại file rất khác nhau. Agent phải tự nhận diện:
 
-### Loại A — Web app config
+### Loại A - Web app config
 Nội dung có dạng `firebaseConfig` với các key: `apiKey`, `authDomain`, `projectId`,
 `storageBucket`, `messagingSenderId`, `appId`.
 
 → Các giá trị này **an toàn khi để ở client**. Map vào `NEXT_PUBLIC_*`.
 
-### Loại B — Service account JSON
+### Loại B - Service account JSON
 Nội dung có `"type": "service_account"` và `"private_key": "-----BEGIN PRIVATE KEY..."`.
 
 → Đây là **khoá admin, bỏ qua toàn bộ Security Rules**. Xử lý bắt buộc:
@@ -175,19 +175,19 @@ thư mục project (hoặc yêu cầu người dùng chuyển nó ra ngoài repo
 
 ---
 
-## Task 3 — Firebase client init
+## Task 3 - Firebase client init
 
 `src/lib/firebase-client.ts`
 
 Yêu cầu:
 - Singleton pattern qua `getApps().length ? getApp() : initializeApp(config)`.
-  Bắt buộc — Next.js hot reload sẽ khởi tạo lại nhiều lần và ném lỗi duplicate app.
+  Bắt buộc - Next.js hot reload sẽ khởi tạo lại nhiều lần và ném lỗi duplicate app.
 - Export `app`, `auth`, `db`.
 - Bật **IndexedDB persistence đa tab** qua
   `initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })`.
 - Bọc try/catch, fallback về `memoryLocalCache()` nếu browser không hỗ trợ
   (chế độ riêng tư trên iOS Safari sẽ fail ở đây).
-- Chỉ khởi tạo Firestore ở phía client — guard `typeof window !== 'undefined'`.
+- Chỉ khởi tạo Firestore ở phía client - guard `typeof window !== 'undefined'`.
 
 Lý do bật persistence: bạn dùng trên điện thoại, mạng có lúc chập chờn, Start/Stop
 phải chạy được offline và sync sau.
@@ -198,12 +198,12 @@ khi save file nhiều lần (hot reload).
 
 ---
 
-## Task 4 — Firebase Admin init
+## Task 4 - Firebase Admin init
 
 `src/lib/firebase-admin.ts`
 
 Yêu cầu:
-- `import 'server-only'` ở dòng đầu — chặn file này lọt vào client bundle.
+- `import 'server-only'` ở dòng đầu - chặn file này lọt vào client bundle.
 - Singleton qua `getApps()`.
 - `cert({ projectId, clientEmail, privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY!.replace(/\\n/g, '\n') })`.
 - Export `adminAuth` và `adminDb`.
@@ -214,11 +214,11 @@ Tạo route tạm `/api/health` gọi `adminAuth.listUsers(1)`, trả 200. Xong 
 
 ---
 
-## Task 5 — Session cookie API
+## Task 5 - Session cookie API
 
 `src/app/api/auth/session/route.ts`
 
-### `POST` — tạo session
+### `POST` - tạo session
 1. Đọc `{ idToken }` từ body.
 2. `adminAuth.verifyIdToken(idToken)`.
 3. **Kiểm tra allowlist**: `decoded.email === process.env.ALLOWED_USER_EMAIL`.
@@ -237,10 +237,10 @@ Tạo route tạm `/api/health` gọi `adminAuth.listUsers(1)`, trả 200. Xong 
 6. Trả `{ ok: true }`.
 
 **Quan trọng**: dùng `createSessionCookie`, KHÔNG lưu thẳng ID token vào cookie.
-ID token hết hạn sau 1 giờ — bạn dùng app hàng ngày, sẽ phải login lại liên tục.
+ID token hết hạn sau 1 giờ - bạn dùng app hàng ngày, sẽ phải login lại liên tục.
 Session cookie sống 14 ngày.
 
-### `DELETE` — đăng xuất
+### `DELETE` - đăng xuất
 Xoá cookie (set `maxAge: 0`). Trả `{ ok: true }`.
 
 ### Xử lý lỗi
@@ -248,7 +248,7 @@ Mọi lỗi → trả JSON `{ error: string }` với status phù hợp. Không �
 
 ---
 
-## Task 6 — Server auth helper
+## Task 6 - Server auth helper
 
 `src/lib/server-auth.ts`
 
@@ -261,9 +261,9 @@ Mọi lỗi → trả JSON `{ error: string }` với status phù hợp. Không �
 
 ---
 
-## Task 7 — AuthContext
+## Task 7 - AuthContext
 
-`src/contexts/AuthContext.tsx` — `'use client'`
+`src/contexts/AuthContext.tsx` - `'use client'`
 
 Dùng React Context thay vì HOC bọc layout, để mọi component lấy được `user` và
 `loading` mà không cần prop drilling.
@@ -284,7 +284,7 @@ Actions: `signIn()`, `signOut()`
   Authentication → Settings → Authorized domains. Lỗi này chắc chắn sẽ gặp lúc
   deploy Vercel lần đầu.
 - `auth/popup-blocked` → gợi ý cho phép popup. **Trên iOS Safari/Edge popup hay bị
-  chặn** — nếu gặp, fallback sang `signInWithRedirect` và xử lý
+  chặn** - nếu gặp, fallback sang `signInWithRedirect` và xử lý
   `getRedirectResult()` lúc mount.
 - `auth/popup-closed-by-user` → im lặng, không hiện lỗi.
 
@@ -301,7 +301,7 @@ Wrap `AuthProvider` ở `src/app/layout.tsx`.
 
 ---
 
-## Task 8 — Login view
+## Task 8 - Login view
 
 `src/components/LoginView.tsx` + `src/app/login/page.tsx`
 
@@ -316,12 +316,12 @@ Giao diện tiếng Anh toàn bộ.
 
 ---
 
-## Task 9 — App shell & routing
+## Task 9 - App shell & routing
 
 ### `src/app/page.tsx`
 Redirect: có user → `/now`, không → `/login`.
 
-### `src/app/(main)/layout.tsx` — `'use client'`
+### `src/app/(main)/layout.tsx` - `'use client'`
 - Dùng `useAuth()`. `loading` → skeleton. Không user → `router.replace('/login')`.
 - Có user → render children + `<BottomNav />`.
 
@@ -329,11 +329,11 @@ Redirect: có user → `/now`, không → `/login`.
 Bottom navigation cố định, 3 tab: **Now** / **History** / **Analytics**.
 - Chỉ hiện trên mobile; ở màn hình ≥ `md` chuyển thành sidebar trái.
 - Tab đang active highlight rõ.
-- `padding-bottom: env(safe-area-inset-bottom)` — thiếu cái này thì trên iPhone
+- `padding-bottom: env(safe-area-inset-bottom)` - thiếu cái này thì trên iPhone
   thanh nav bị home indicator che mất.
 
 ### 3 page rỗng
-`now`, `history`, `analytics` — mỗi page chỉ có tiêu đề và placeholder
+`now`, `history`, `analytics` - mỗi page chỉ có tiêu đề và placeholder
 "Coming in Stage 2". Có nút Sign out ở màn hình Now.
 
 ### Viewport
@@ -349,7 +349,7 @@ export const viewport = {
 
 ---
 
-## Task 10 — Firestore rules & indexes
+## Task 10 - Firestore rules & indexes
 
 ### Deploy rules
 ```bash
@@ -359,7 +359,7 @@ firebase init firestore    # chọn project đã có, giữ nguyên firestore.ru
 firebase deploy --only firestore:rules
 ```
 
-Không để `firebase init` ghi đè `firestore.rules` — file này đã viết sẵn.
+Không để `firebase init` ghi đè `firestore.rules` - file này đã viết sẵn.
 
 ### `firestore.indexes.json`
 Tạo composite index cho các query Stage 2 sẽ dùng:
@@ -377,7 +377,7 @@ Vào Firebase Console → Firestore → Rules, thấy rules mới. Thử đọc 
 
 ---
 
-## Task 11 — Deploy Vercel
+## Task 11 - Deploy Vercel
 
 1. Push code lên GitHub (kiểm tra lại `.env.local` KHÔNG có trong commit).
 2. Import repo vào Vercel.
@@ -400,7 +400,7 @@ Vào Firebase Console → Firestore → Rules, thấy rules mới. Thử đọc 
 
 ---
 
-## Task 12 — Kiểm thử trên thiết bị thật
+## Task 12 - Kiểm thử trên thiết bị thật
 
 Đây là bước quyết định, không được bỏ. Mở URL Vercel trên **iPhone 11, browser Edge**:
 
@@ -417,13 +417,13 @@ Vào Firebase Console → Firestore → Rules, thấy rules mới. Thử đọc 
 | 9 | Bật chế độ máy bay, mở app | Không crash, hiện trạng thái offline |
 | 10 | Xoay ngang màn hình | Layout không vỡ |
 
-Test 8 là quan trọng nhất — nó chứng minh allowlist hoạt động.
+Test 8 là quan trọng nhất - nó chứng minh allowlist hoạt động.
 Test 4 chứng minh session cookie 14 ngày hoạt động (nếu phải login lại thì
 nhiều khả năng đang lưu nhầm ID token).
 
 ---
 
-## Definition of Done — Stage 1
+## Definition of Done - Stage 1
 
 Chỉ đánh dấu hoàn thành khi **tất cả** đúng:
 
@@ -465,5 +465,5 @@ Agent trả về:
 - Bỏ qua allowlist "cho tiện test"
 - Cài thêm dependency ngoài danh sách mà không nêu lý do
 - Làm sớm tính năng của Stage 2+
-- Sửa `logi.ts` / `balance.ts` / `gemini-parse.ts` (trừ dòng import) — các con số
+- Sửa `logi.ts` / `balance.ts` / `gemini-parse.ts` (trừ dòng import) - các con số
   target và công thức trong đó đã được kiểm chứng

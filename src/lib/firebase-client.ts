@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Firebase client SDK (browser)
+// logi - Firebase client SDK (browser)
 // Singleton: Next.js hot reload sẽ nạp lại module nhiều lần.
 // ============================================================
 

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi — Chỉ số deterministic cho AI Insights (Stage 7 Task 1)
+// logi - Chỉ số deterministic cho AI Insights (Stage 7 Task 1)
 //
 // Quy tắc bất biến của Stage 7:
 //
@@ -9,7 +9,7 @@
 // đều phải sinh ra ở đây trước. Model không bao giờ nhìn thấy record thô.
 //
 // Thuần: không React, không Firestore, không Gemini. Test bằng `node --test`.
-// Không sửa `logi.ts` / `balance.ts` — chỉ dùng lại.
+// Không sửa `logi.ts` / `balance.ts` - chỉ dùng lại.
 // ---------------------------------------------------------------------------
 import { logicalDate } from '@/lib/balance';
 import { dailyTargetFor } from '@/lib/day-target';
@@ -39,7 +39,7 @@ export const HIGH_WORK_H = 9;
 // Kiểu dữ liệu
 // ---------------------------------------------------------------------------
 
-/** Nhóm A — mọi category đo cùng một bộ chỉ số, không ưu ái cái nào. */
+/** Nhóm A - mọi category đo cùng một bộ chỉ số, không ưu ái cái nào. */
 export interface CatStat {
   actual: number;
   expected: number;
@@ -137,7 +137,7 @@ export interface Signals {
   to: string;
   rangeLabel: string;
   dayCount: number;
-  /** Số ngày đã thực sự sống trong khoảng — ngày mai không thể có zeroDays. */
+  /** Số ngày đã thực sự sống trong khoảng - ngày mai không thể có zeroDays. */
   elapsedDays: number;
   preset: PresetId | null;
   coverage: number;
@@ -199,7 +199,7 @@ function minutesOfDay(ts: number): number {
 /**
  * Trục đêm: giờ trước trưa được đẩy sang ngày hôm sau.
  * 22:00 → 1320, 00:30 → 1470. Không có bước này thì trung vị của
- * [23:50, 00:10] ra 12:00 trưa — sai hoàn toàn.
+ * [23:50, 00:10] ra 12:00 trưa - sai hoàn toàn.
  */
 function nightAxis(min: number): number {
   return min < 720 ? min + 1440 : min;
@@ -211,7 +211,7 @@ interface Sess {
   /** Đã cắt. */
   start: number;
   end: number;
-  /** Nguyên bản — dùng cho giờ đi ngủ / giờ dậy. */
+  /** Nguyên bản - dùng cho giờ đi ngủ / giờ dậy. */
   rawStart: number;
   rawEnd: number;
   /** Ngày logic của thời điểm bắt đầu. */
@@ -310,7 +310,7 @@ function hoursOutsideWindow(
 // ---------------------------------------------------------------------------
 
 /**
- * @param expected    `expectedForRange()` của Stage 5 — target theo lịch
+ * @param expected    `expectedForRange()` của Stage 5 - target theo lịch
  * @param weekTargets target từng tuần; cần cho target NGÀY (`learnStreak`,
  *                    `weekendLearnTarget`) mà tổng `expected` không cho biết
  * @param previous    kỳ trước cùng độ dài (`previousRange`), có thể bỏ trống
@@ -438,7 +438,7 @@ function hoursByDay(sessions: Sess[], days: string[]): Map<string, Record<Catego
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm B — Sleep
+// Nhóm B - Sleep
 // ---------------------------------------------------------------------------
 
 interface Night {
@@ -489,7 +489,7 @@ function round0(v: number | null): number | null {
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm C — Work
+// Nhóm C - Work
 // ---------------------------------------------------------------------------
 
 const WORK_START = 8 * 60;
@@ -498,7 +498,7 @@ const LATE_WORK = 20 * 60;
 const OFFICE_START = 7 * 60 + 45;
 
 /**
- * "Làm khuya" gồm cả phần tràn qua nửa đêm — mốc cắt ngày của app là 04:00,
+ * "Làm khuya" gồm cả phần tràn qua nửa đêm - mốc cắt ngày của app là 04:00,
  * nên 00:30 vẫn là buổi tối hôm trước, không phải sáng sớm hôm sau.
  */
 const LATE_WINDOWS: [number, number][] = [
@@ -521,7 +521,7 @@ function workSignals(
     }
   }
 
-  // Giờ kết thúc Work của từng ngày lịch — dao động lớn nghĩa là hết giờ
+  // Giờ kết thúc Work của từng ngày lịch - dao động lớn nghĩa là hết giờ
   // làm mỗi hôm một khác, thứ mà tổng giờ Work không cho thấy.
   const ends = new Map<string, number>();
   const starts = new Set<string>();
@@ -547,7 +547,7 @@ function workSignals(
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm D — Learn
+// Nhóm D - Learn
 // ---------------------------------------------------------------------------
 
 const MORNING_START = 4 * 60;
@@ -577,7 +577,7 @@ function learnSignals(
     }
   }
 
-  // Target Learn của từng ngày — cần cho streak và target cuối tuần.
+  // Target Learn của từng ngày - cần cho streak và target cuối tuần.
   const targetOf = (d: string) =>
     dailyTargetFor(weekdayOf(d), weekTargets.get(weekOf(d)) ?? PRESETS.normal.weekly).learn;
 
@@ -636,7 +636,7 @@ function worstWeekday(
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm E — Fitness
+// Nhóm E - Fitness
 // ---------------------------------------------------------------------------
 
 function fitnessSignals(
@@ -676,7 +676,7 @@ function fitnessSignals(
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm F — Leisure
+// Nhóm F - Leisure
 // ---------------------------------------------------------------------------
 
 const LATE_LEISURE = 22 * 60;
@@ -715,7 +715,7 @@ function leisureSignals(sessions: Sess[], nights: Night[]): LeisureSignals {
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm G — Liên hệ chéo. Chỉ mô tả, không nhân quả. Dưới 3 mẫu → null.
+// Nhóm G - Liên hệ chéo. Chỉ mô tả, không nhân quả. Dưới 3 mẫu → null.
 // ---------------------------------------------------------------------------
 
 function link(values: number[]): Link | null {

@@ -1,6 +1,6 @@
 // ============================================================
-// logi — Chạy đúng một lần cho mỗi requestId.
-// Bấm Confirm hai cái, mic bắn onResult lại, mạng chập chờn rồi retry —
+// logi - Chạy đúng một lần cho mỗi requestId.
+// Bấm Confirm hai cái, mic bắn onResult lại, mạng chập chờn rồi retry -
 // tất cả đều dẫn tới cùng một requestId và chỉ được ghi một bản.
 // File thuần, không React, để test bằng `node --test`.
 // ============================================================

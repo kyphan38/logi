@@ -21,7 +21,7 @@ const EMPTY: Activity[] = [];
 const EMPTY_META: SnapMeta = { hasPendingWrites: false, fromCache: false, pendingIds: NO_PENDING };
 
 /**
- * Offline, promise của write Firestore chỉ resolve khi server nhận được — có thể
+ * Offline, promise của write Firestore chỉ resolve khi server nhận được - có thể
  * chờ hàng giờ. Cache local đã cập nhật ngay, nên UI chỉ khoá tối đa `ms` rồi mở.
  * Lỗi đến muộn vẫn được báo qua `onLateError`.
  */
@@ -109,7 +109,7 @@ const PROMOTE_EVERY_MS = 30_000;
  *
  * Không dùng push notification: chỉ cần app mở là promote. Chạy khi mount, khi
  * app quay lại foreground, và mỗi 30 giây lúc có record tới hạn. `startAt` giữ
- * nguyên giá trị đã hẹn, nên mở app muộn thì timer đã đếm sẵn — đúng nghĩa
+ * nguyên giá trị đã hẹn, nên mở app muộn thì timer đã đếm sẵn - đúng nghĩa
  * "bắt đầu lúc 22:05".
  */
 export function useScheduledActivities() {
@@ -156,7 +156,7 @@ export function useScheduledActivities() {
     void promote();
   }, [promote]);
 
-  // Quay lại foreground — hay gặp nhất: hẹn 22:05, mở app lúc 22:30.
+  // Quay lại foreground - hay gặp nhất: hẹn 22:05, mở app lúc 22:30.
   useOnForeground(() => void promote());
 
   // Đang mở app mà tới giờ. Chỉ query khi thật sự có record quá hạn.
@@ -181,7 +181,7 @@ export function useDayActivities(logicalDate: string | null) {
   const uid = user?.uid ?? null;
 
   const [activities, setActivities] = useState<Activity[]>(EMPTY);
-  /** Record của ngày trước tràn qua 04:00 — chỉ để vẽ, không tính vào tổng. */
+  /** Record của ngày trước tràn qua 04:00 - chỉ để vẽ, không tính vào tổng. */
   const [carriedIn, setCarriedIn] = useState<Activity[]>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState<SnapMeta>(EMPTY_META);
@@ -240,7 +240,7 @@ export function useDayActivities(logicalDate: string | null) {
 }
 
 // ------------------------------------------------------------
-// Những ngày logic có dữ liệu — cho chấm nhỏ dưới dải ngày
+// Những ngày logic có dữ liệu - cho chấm nhỏ dưới dải ngày
 // ------------------------------------------------------------
 
 const NO_DATES: ReadonlySet<string> = new Set();
@@ -266,13 +266,13 @@ export function useRecentDates(sinceDate: string): ReadonlySet<string> {
 }
 
 // ------------------------------------------------------------
-// Timer — derived state
+// Timer - derived state
 // ------------------------------------------------------------
 
 /**
  * Nhịp re-render. KHÔNG cộng dồn: chỉ đẩy Date.now() mới vào state.
  * iOS throttle rất mạnh timer chạy nền, nên phải sync lại khi tab quay lại
- * foreground — thiếu bước này thì mở app lên timer đứng ở giá trị cũ.
+ * foreground - thiếu bước này thì mở app lên timer đứng ở giá trị cũ.
  */
 export function useTick(intervalMs = 1000, enabled = true): number {
   const [now, setNow] = useState(() => Date.now());
@@ -309,7 +309,7 @@ export function useElapsed(startAt: number): number {
 }
 
 // ------------------------------------------------------------
-// Một tuần logic — cho balance banner
+// Một tuần logic - cho balance banner
 // ------------------------------------------------------------
 
 export function useWeekActivities(logicalWeek: string | null) {

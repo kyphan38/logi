@@ -55,7 +55,7 @@ export default function BottomNav() {
               {tab.icon}
             </span>
             <span>{tab.label}</span>
-            {/* Gạch đậm dưới tab đang mở — nhìn là thấy ngay. */}
+            {/* Gạch đậm dưới tab đang mở - nhìn là thấy ngay. */}
             <span
               aria-hidden="true"
               className={[

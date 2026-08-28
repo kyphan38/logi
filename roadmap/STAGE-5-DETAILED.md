@@ -1,7 +1,7 @@
-# STAGE 5 — Analytics
+# STAGE 5 - Analytics
 
 > Plan này viết cho một AI coding agent thực thi. Làm đúng thứ tự task.
-> Sau mỗi task có mục **Verify** — phải pass mới đi tiếp.
+> Sau mỗi task có mục **Verify** - phải pass mới đi tiếp.
 > Nếu gặp mâu thuẫn hoặc thiếu thông tin, **DỪNG và hỏi người dùng**, không tự đoán.
 
 ---
@@ -24,11 +24,11 @@ dashboard doanh nghiệp.
 - Sửa `logi.ts` / `balance.ts` / `gemini-parse.ts`
 
 ### Dependency mới
-`npm i recharts` — chart duy nhất được phép thêm. Không cài thư viện chart nào khác.
+`npm i recharts` - chart duy nhất được phép thêm. Không cài thư viện chart nào khác.
 
 ---
 
-## Task 1 — Bộ lọc khoảng thời gian
+## Task 1 - Bộ lọc khoảng thời gian
 
 `src/components/RangePicker.tsx`
 
@@ -59,7 +59,7 @@ vào thứ Ba sẽ luôn báo thiếu mọi thứ.
 
 **Một query cho cả khoảng.** Gom nhóm ở client. Không query từng ngày.
 
-Giới hạn: khoảng > 92 ngày → chặn, hiện `Range too large — max 3 months.`
+Giới hạn: khoảng > 92 ngày → chặn, hiện `Range too large - max 3 months.`
 
 ### Verify
 Chọn từng chip, kiểm tra `from`/`to` đúng theo mốc ngày logic 04:00. `Today` lúc
@@ -67,7 +67,7 @@ Chọn từng chip, kiểm tra `from`/`to` đúng theo mốc ngày logic 04:00. 
 
 ---
 
-## Task 2 — Target cho một khoảng bất kỳ
+## Task 2 - Target cho một khoảng bất kỳ
 
 **Đây là phần khó nhất và dễ sai nhất của Stage 5.**
 
@@ -93,7 +93,7 @@ với mỗi ngày logic d trong [from..to]:
 ```
 
 ### Ba điều bắt buộc
-1. **Không** dùng `weeklyTarget × số ngày / 7`. Target không phân bố đều — thứ Ba
+1. **Không** dùng `weeklyTarget × số ngày / 7`. Target không phân bố đều - thứ Ba
    Work là 9.5h còn Chủ nhật là 0h. Đã kiểm chứng ở Stage 4: chia đều lệch tới 5h.
 2. **Mỗi tuần có target riêng.** Tuần trước có thể là Crunch, tuần này Normal.
    Phải đọc `weekTarget` của từng tuần trong khoảng, không dùng chung một bộ.
@@ -111,7 +111,7 @@ export function coverageForRange(activities, range, now): number {
 }
 ```
 
-### Verify — bắt buộc có test
+### Verify - bắt buộc có test
 - Khoảng Thứ Hai→Thứ Sáu, preset Normal → Work expected **43h** (5 ngày có commute
   T3/T5), không phải `43 × 5/7 = 30.7h`
 - Khoảng vắt qua hai tuần khác preset → tổng đúng bằng tổng hai phần
@@ -120,7 +120,7 @@ export function coverageForRange(activities, range, now): number {
 
 ---
 
-## Task 3 — Balance bars (chart chính)
+## Task 3 - Balance bars (chart chính)
 
 Đặt **trên cùng**. Đây là chart trả lời cả hai câu hỏi trong một hình.
 
@@ -142,12 +142,12 @@ Leisure   ███████│▓                      +8%     ✓
 - `flag === 'ok'` → dấu ✓, không mũi tên
 
 ### Ngưỡng
-Dùng đúng `deviations()` của `balance.ts` — deadband kép: chỉ đánh dấu ▲▼ khi lệch
+Dùng đúng `deviations()` của `balance.ts` - deadband kép: chỉ đánh dấu ▲▼ khi lệch
 > 25% **và** ≥ 2h. Nằm trong deadband thì hiện ✓ dù số % có lớn.
 
 ### Màu
 `--text-secondary` cho nhãn, `CATEGORY_COLOR` cho thanh, hổ phách cho phần vượt.
-**Không dùng đỏ** — đỏ dành cho lỗi hệ thống, không dành cho hành vi người dùng.
+**Không dùng đỏ** - đỏ dành cho lỗi hệ thống, không dành cho hành vi người dùng.
 
 ### Có thể tự vẽ bằng div
 Chart này đơn giản, dùng div + CSS sẽ gọn và dễ chỉnh hơn Recharts. Agent tự chọn,
@@ -155,7 +155,7 @@ miễn đọc được ở 320px.
 
 ---
 
-## Task 4 — Stacked bar theo ngày
+## Task 4 - Stacked bar theo ngày
 
 ### Gộp nhóm theo độ dài khoảng
 | Số ngày | Mỗi cột là |
@@ -168,7 +168,7 @@ miễn đọc được ở 320px.
 ### Hình thức
 - Recharts `BarChart` + `ResponsiveContainer`
 - Trục X: `Mon 24` (ngày) hoặc `W35` (tuần)
-- Trục Y: giờ. **Không** dùng % của 24h — có overlap nên tổng có thể vượt 24
+- Trục Y: giờ. **Không** dùng % của 24h - có overlap nên tổng có thể vượt 24
 - 5 stack theo `CATEGORY_COLOR`
 - Đường ngang đứt = target trung bình mỗi ngày trong khoảng
 - Tuần có `lateChange: true` → dấu ⚠ nhỏ dưới nhãn trục X
@@ -179,13 +179,13 @@ chỉ hover.
 
 ---
 
-## Task 5 — Heatmap 24h × ngày
+## Task 5 - Heatmap 24h × ngày
 
 Chart giá trị nhất với bạn: nó cho thấy **khi nào**, không chỉ **bao nhiêu**. Đây là
 thứ lộ ra OT tràn vào buổi tối và cuối tuần.
 
 ### Quan trọng
-Heatmap dùng **tỉ lệ tuyến tính**. Không áp co giãn như History — trục giờ phải
+Heatmap dùng **tỉ lệ tuyến tính**. Không áp co giãn như History - trục giờ phải
 thẳng hàng giữa các ngày thì mới so sánh được. Đây chính là lý do heatmap tồn tại.
 
 ### Hình thức
@@ -207,7 +207,7 @@ Hàng chip nhỏ 5 màu ở dưới. Tap một chip → làm mờ các category 
 
 ---
 
-## Task 6 — Coverage & overlap
+## Task 6 - Coverage & overlap
 
 Đặt dưới cùng, chữ nhỏ, không phải chart.
 
@@ -227,7 +227,7 @@ Chỉ số này quan trọng hơn vẻ ngoài của nó: coverage 40% thì mọi
 không đáng tin, và người dùng cần biết điều đó **trước khi** đọc chart.
 
 Coverage mục tiêu ~70% (129.5h/168h là kế hoạch, phần còn lại là ăn uống, sinh hoạt,
-đi lại — không log).
+đi lại - không log).
 
 ### Overlap
 Chỉ hiện khi `> 0`. Tap → tooltip:
@@ -235,7 +235,7 @@ Chỉ hiện khi `> 0`. Tap → tooltip:
 
 ---
 
-## Task 7 — Export
+## Task 7 - Export
 
 Nút `Export` góc trên phải màn Analytics → sheet:
 
@@ -280,7 +280,7 @@ trên iPhone. Nếu không được, fallback sang mở tab mới với `data:` 
 
 ---
 
-## Task 8 — Bố cục màn Analytics
+## Task 8 - Bố cục màn Analytics
 
 Từ trên xuống:
 1. Range picker (chips + custom)
@@ -291,7 +291,7 @@ Từ trên xuống:
 6. Coverage · Overlap
 7. Nút Export (góc trên phải, cạnh tiêu đề)
 
-Desktop: `max-width: 720px`, căn giữa — nhất quán với các màn khác sau Stage 4.6.
+Desktop: `max-width: 720px`, căn giữa - nhất quán với các màn khác sau Stage 4.6.
 
 ### Trạng thái
 - Loading: skeleton cho từng chart, không chặn cả trang
@@ -300,7 +300,7 @@ Desktop: `max-width: 720px`, căn giữa — nhất quán với các màn khác 
 
 ---
 
-## Task 9 — Test
+## Task 9 - Test
 
 `test/range-target.test.ts`
 - T2→T6 preset Normal → Work **43h**, không phải 30.7h
@@ -330,7 +330,7 @@ Desktop: `max-width: 720px`, căn giữa — nhất quán với các màn khác 
 
 ---
 
-## Task 10 — Kiểm thử tay trên iPhone
+## Task 10 - Kiểm thử tay trên iPhone
 
 | # | Kiểm tra | Mong đợi |
 |---|---|---|
@@ -350,7 +350,7 @@ Desktop: `max-width: 720px`, căn giữa — nhất quán với các màn khác 
 | 14 | Khoảng 4 tháng | Bị chặn, có thông báo |
 | 15 | Xoay ngang | Layout không vỡ |
 
-Mục 3 và 4 là hai bài quan trọng nhất — chúng chứng minh `expectedForRange` xử lý
+Mục 3 và 4 là hai bài quan trọng nhất - chúng chứng minh `expectedForRange` xử lý
 đúng chuyện pro-rate.
 
 ---

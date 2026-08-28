@@ -1,11 +1,11 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Chạy AI insight cho một khoảng (Stage 7 Task 5 + 6)
+// logi - Chạy AI insight cho một khoảng (Stage 7 Task 5 + 6)
 //
 // Thứ tự bắt buộc:
 //   1. Tính chỉ số bằng code (`computeSignals`)
-//   2. Cổng chặn (`canAnalyze`) — không đạt thì KHÔNG gọi API
+//   2. Cổng chặn (`canAnalyze`) - không đạt thì KHÔNG gọi API
 //   3. Có bản cache cùng `digestHash` → dùng lại, cũng không gọi API
 //   4. Còn lại mới gọi `/api/insight`, kết quả trả về đã sanitize
 // ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ export type InsightState = 'idle' | 'loading' | 'ready' | 'error';
 
 export interface UseInsight {
   state: InsightState;
-  /** Cổng chặn tính từ dữ liệu hiện có — biết trước khi bấm. */
+  /** Cổng chặn tính từ dữ liệu hiện có - biết trước khi bấm. */
   gate: Gate;
   signals: Signals;
   result: InsightResult | null;
@@ -74,7 +74,7 @@ export function useInsight(input: InsightInput): UseInsight {
     setError(null);
   }
 
-  // Chỉ số của kỳ này. Chưa có kỳ trước — phần so sánh chỉ thêm vào lúc chạy.
+  // Chỉ số của kỳ này. Chưa có kỳ trước - phần so sánh chỉ thêm vào lúc chạy.
   const signals = useMemo(
     () =>
       computeSignals(
@@ -109,7 +109,7 @@ export function useInsight(input: InsightInput): UseInsight {
           const at = stamp;
           const prev = previousRange(range);
           // Kỳ trước đã đóng, đọc một lần là đủ. Lỗi mạng ở đây không nên
-          // giết cả lần phân tích — thiếu so sánh vẫn còn 6 nhóm chỉ số.
+          // giết cả lần phân tích - thiếu so sánh vẫn còn 6 nhóm chỉ số.
           let prevActivities: Activity[] = [];
           try {
             prevActivities = await listByRange(uid, prev);

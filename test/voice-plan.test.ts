@@ -23,7 +23,7 @@ function cmd(o: Partial<ParsedCommand>): ParsedCommand {
   };
 }
 
-describe('planVoice — nhánh không ghi', () => {
+describe('planVoice - nhánh không ghi', () => {
   it('unknown → nhập tay', () => {
     assert.equal(planVoice(cmd({ intent: 'unknown' }), { active: [] }).kind, 'manual');
   });
@@ -33,7 +33,7 @@ describe('planVoice — nhánh không ghi', () => {
   });
 });
 
-describe('planVoice — ngưỡng tự ghi', () => {
+describe('planVoice - ngưỡng tự ghi', () => {
   it('0.95 + đủ field → ghi luôn', () => {
     assert.equal(planVoice(cmd({}), { active: [] }).kind, 'commit');
   });
@@ -49,14 +49,14 @@ describe('planVoice — ngưỡng tự ghi', () => {
   });
 });
 
-describe('planVoice — field bắt buộc', () => {
+describe('planVoice - field bắt buộc', () => {
   it('start thiếu category → confirm + báo đúng field', () => {
     const p = planVoice(cmd({ category: null }), { active: [] });
     assert.equal(p.kind, 'confirm');
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['category']);
   });
 
-  it('start không có giờ vẫn ghi được — mặc định là bây giờ', () => {
+  it('start không có giờ vẫn ghi được - mặc định là bây giờ', () => {
     assert.equal(planVoice(cmd({ startAt: null }), { active: [] }).kind, 'commit');
   });
 
@@ -76,13 +76,13 @@ describe('planVoice — field bắt buộc', () => {
     assert.equal(p.kind, 'commit');
   });
 
-  it('confidence cao vẫn thua field thiếu — thiếu là phải hỏi', () => {
+  it('confidence cao vẫn thua field thiếu - thiếu là phải hỏi', () => {
     const p = planVoice(cmd({ category: null, confidence: 1 }), { active: [] });
     assert.equal(p.kind, 'confirm');
   });
 });
 
-describe('planVoice — chọn session cho stop/edit', () => {
+describe('planVoice - chọn session cho stop/edit', () => {
   const one = [act({ id: 'x1', startAt: NOW - 3_600_000 })];
   const two = [
     act({ id: 'x1', category: 'work', startAt: NOW - 3_600_000 }),
@@ -111,7 +111,7 @@ describe('planVoice — chọn session cho stop/edit', () => {
     assert.equal(p.cmd.targetActivityId, 'x2');
   });
 
-  it('stop không cần category — "I am done" là đủ', () => {
+  it('stop không cần category - "I am done" là đủ', () => {
     const p = planVoice(cmd({ intent: 'stop', category: null }), { active: one });
     assert.equal(p.kind, 'commit');
   });
@@ -129,7 +129,7 @@ describe('planVoice — chọn session cho stop/edit', () => {
   });
 });
 
-describe('planVoice — chỉ hỏi lại một lần (Task 5)', () => {
+describe('planVoice - chỉ hỏi lại một lần (Task 5)', () => {
   it('clarify lần đầu → hỏi', () => {
     const p = planVoice(cmd({ intent: 'clarify' }), { active: [] });
     assert.equal(p.kind, 'clarify');
@@ -151,7 +151,7 @@ describe('planVoice — chỉ hỏi lại một lần (Task 5)', () => {
   });
 });
 
-describe('planVoice — sửa bằng giọng nói record vừa ghi (Task 5)', () => {
+describe('planVoice - sửa bằng giọng nói record vừa ghi (Task 5)', () => {
   const one = [act({ id: 'x1', startAt: NOW - 3_600_000 })];
 
   it('edit không có session nào đang chạy → sửa record vừa ghi', () => {
@@ -163,7 +163,7 @@ describe('planVoice — sửa bằng giọng nói record vừa ghi (Task 5)', ()
     assert.equal(p.cmd.targetActivityId, 'past1');
   });
 
-  it('record vừa ghi thắng session đang chạy — "no, that was learning" nói về nó', () => {
+  it('record vừa ghi thắng session đang chạy - "no, that was learning" nói về nó', () => {
     const p = planVoice(cmd({ intent: 'edit', category: 'learn' }), {
       active: one,
       lastCreatedId: 'past1',
@@ -179,7 +179,7 @@ describe('planVoice — sửa bằng giọng nói record vừa ghi (Task 5)', ()
     assert.equal(p.cmd.targetActivityId, 'x9');
   });
 
-  it('stop KHÔNG lấy record vừa ghi — nó có thể đã dừng rồi', () => {
+  it('stop KHÔNG lấy record vừa ghi - nó có thể đã dừng rồi', () => {
     const p = planVoice(cmd({ intent: 'stop', category: null }), {
       active: [],
       lastCreatedId: 'past1',

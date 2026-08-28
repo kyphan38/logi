@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
-// logi — Heatmap 24h × ngày (Stage 5 Task 5)
+// logi - Heatmap 24h × ngày (Stage 5 Task 5)
 //
-// Trả lời "KHI NÀO", không phải "BAO NHIÊU" — bao nhiêu đã có ở balance bars.
+// Trả lời "KHI NÀO", không phải "BAO NHIÊU" - bao nhiêu đã có ở balance bars.
 //
 // Hàng đi từ 04:00 → 04:00 hôm sau, đúng biên của ngày logic. Nếu để 00:00 thì
 // giấc ngủ 22:00–06:00 sẽ bị cắt làm đôi và nằm ở hai cột khác nhau.
@@ -15,7 +15,7 @@ import { daysBetween, daysOf, type Range } from '@/lib/range';
 import { dayWindow } from '@/lib/timeline';
 import { CATEGORIES, type Activity, type Category } from '@/types/logi';
 
-/** Quá 14 ngày thì ô hẹp hơn 3px — vô nghĩa. */
+/** Quá 14 ngày thì ô hẹp hơn 3px - vô nghĩa. */
 export const MAX_HEATMAP_DAYS = 14;
 
 const HOUR_MS = 3_600_000;
@@ -33,7 +33,7 @@ export interface Heatmap {
   days: string[];
   /** Nhãn hàng: "04:00" … "03:00". */
   hours: string[];
-  /** grid[hàng][cột] — hàng 0 là 04:00. */
+  /** grid[hàng][cột] - hàng 0 là 04:00. */
   grid: Cell[][];
 }
 

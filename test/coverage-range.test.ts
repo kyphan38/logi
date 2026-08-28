@@ -62,12 +62,12 @@ test('session đang chạy chỉ tính tới now', () => {
   assert.equal(r2(coverageForRange(acts, range, now)), r2(2 / 6));
 });
 
-test('KHÔNG chia cứng cho 168 — khoảng 2 ngày mẫu số là 48h', () => {
+test('KHÔNG chia cứng cho 168 - khoảng 2 ngày mẫu số là 48h', () => {
   const range = full('2026-08-24', DAY);
   assert.equal(realHoursOfRange(range, at('2026-08-27', '12:00')), 48);
 
   const acts = [act({ startAt: at(DAY, '00:00'), endAt: at(DAY, '12:00'), category: 'sleep' })];
-  // 12h / 48h = 25%. Nếu chia 168 thì ra 7% — sai hẳn một bậc.
+  // 12h / 48h = 25%. Nếu chia 168 thì ra 7% - sai hẳn một bậc.
   assert.equal(r2(coverageForRange(acts, range, at('2026-08-27', '12:00'))), 0.25);
 });
 

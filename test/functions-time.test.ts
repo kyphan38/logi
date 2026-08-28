@@ -7,7 +7,7 @@ import { at } from './_helpers.ts';
 
 // ---------------------------------------------------------------------------
 // Cloud Function chạy tách khỏi app nên phải chép lại quy ước ngày logic.
-// Hai bản chép nào rồi cũng trôi khỏi nhau — trừ khi có test giữ chúng lại.
+// Hai bản chép nào rồi cũng trôi khỏi nhau - trừ khi có test giữ chúng lại.
 //
 // Lệch một ngày ở đây nghĩa là push nhắc sai ngày, hoặc "tuần này" trong thông
 // báo không phải tuần đang hiện trong app.
@@ -39,7 +39,7 @@ test('logicalWeek khớp app, kể cả tuần vắt qua năm', () => {
   }
 });
 
-test('logicalWeekday khớp app — Chủ nhật phải là 0 ở cả hai nơi', () => {
+test('logicalWeekday khớp app - Chủ nhật phải là 0 ở cả hai nơi', () => {
   for (const ts of SPANS) {
     assert.equal(fn.logicalWeekday(ts), logicalWeekday(ts));
   }

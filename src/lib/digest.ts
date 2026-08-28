@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi — Digest gửi cho model (Stage 7 Task 2)
+// logi - Digest gửi cho model (Stage 7 Task 2)
 //
 // Digest là thứ DUY NHẤT rời khỏi máy người dùng. Không record thô, không nhãn
 // người dùng tự gõ, không id. Chỉ các con số đã tính sẵn ở `signals.ts`.
@@ -7,14 +7,14 @@
 // Ba việc file này làm:
 //   1. Gói `Signals` thành JSON gọn, mọi số làm tròn 1 chữ số
 //   2. Bỏ chỉ số null và chỉ số liên hệ có sampleSize < 3
-//   3. Cổng chặn `canAnalyze()` — dữ liệu mỏng thì KHÔNG gọi API
+//   3. Cổng chặn `canAnalyze()` - dữ liệu mỏng thì KHÔNG gọi API
 //
 // Thuần: dùng được cả ở client lẫn server. Test bằng `node --test`.
 // ---------------------------------------------------------------------------
 import { MIN_SAMPLE, type Link, type Signals } from '@/lib/signals';
 import { CATEGORIES, type Category } from '@/types/logi';
 
-/** Digest là JSON tự do — model đọc key, không có schema cứng. */
+/** Digest là JSON tự do - model đọc key, không có schema cứng. */
 export type Digest = Record<string, unknown>;
 
 /** Coverage dưới mức này thì mọi kết luận đều không đáng tin. */
@@ -64,7 +64,7 @@ export function buildDigest(s: Signals): Digest {
     sessions: s.recordCount,
   };
 
-  // Đủ cả 5 category, kể cả category không có gì bất thường — model cần thấy
+  // Đủ cả 5 category, kể cả category không có gì bất thường - model cần thấy
   // toàn cảnh mới chọn đúng cái đáng nói.
   const totals: Digest = {};
   for (const c of CATEGORIES) {
@@ -186,7 +186,7 @@ export function buildDigest(s: Signals): Digest {
 // ---------------------------------------------------------------------------
 
 /**
- * FNV-1a 32-bit. Không cần chống va chạm có chủ đích — chỉ để biết
+ * FNV-1a 32-bit. Không cần chống va chạm có chủ đích - chỉ để biết
  * "dữ liệu có đổi không" giữa hai lần bấm Analyse.
  */
 export function digestHash(d: Digest): string {
@@ -268,7 +268,7 @@ function num(o: unknown, ...path: string[]): number | null {
  *
  * Cố ý nhạt: mốc so sánh là target do chính người dùng đặt, không phải
  * khuyến nghị y tế. Không chẩn đoán, không hoảng, không màu đỏ.
- * Trả null khi mọi thứ bình thường — im lặng là mặc định.
+ * Trả null khi mọi thứ bình thường - im lặng là mặc định.
  */
 export function extremeNote(digest: Digest): string | null {
   const days = num(digest, 'period', 'days') ?? 0;
@@ -294,7 +294,7 @@ export function extremeNote(digest: Digest): string | null {
   return null;
 }
 
-/** Tên category viết hoa đầu — dùng lại ở UI khi hiện `metric`. */
+/** Tên category viết hoa đầu - dùng lại ở UI khi hiện `metric`. */
 export function categoryOf(key: string): Category | null {
   return (CATEGORIES as readonly string[]).includes(key) ? (key as Category) : null;
 }

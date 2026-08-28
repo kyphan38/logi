@@ -1,7 +1,7 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Stacked bar theo ngày / theo tuần (Stage 5 Task 4)
+// logi - Stacked bar theo ngày / theo tuần (Stage 5 Task 4)
 //
 // Trục Y là GIỜ, không phải % của 24h: có overlap nên tổng một ngày hoàn toàn
 // có thể vượt 24. Ép về % sẽ phải cắt bớt, tức là nói dối.
@@ -34,7 +34,7 @@ interface Props {
   activities: Activity[];
   range: Range;
   weekTargets: Map<string, Record<Category, number>>;
-  /** Tuần bị đổi target muộn — số liệu vẫn đúng nhưng target thì đã đổi giữa chừng. */
+  /** Tuần bị đổi target muộn - số liệu vẫn đúng nhưng target thì đã đổi giữa chừng. */
   lateWeeks: Set<string>;
   now: number;
 }

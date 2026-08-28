@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi — Layout cho Timeline (History)
+// logi - Layout cho Timeline (History)
 // Hàm thuần, không đụng React. Mọi tính toán vị trí block nằm ở đây.
 // ---------------------------------------------------------------------------
 import { DAY_CUTOFF_HOUR, type Activity } from '@/types/logi';
@@ -44,7 +44,7 @@ export interface Segment {
   /** true khi session tràn qua mốc 04:00 hôm sau. */
   clippedEnd: boolean;
   /**
-   * true khi session bắt đầu trước 04:00 — tức kéo sang từ ngày logic trước
+   * true khi session bắt đầu trước 04:00 - tức kéo sang từ ngày logic trước
    * (VD ngủ 22:00 → 06:00). Vẽ ở đầu timeline để ngày không bị thủng lỗ.
    */
   continuedFromPrevious: boolean;
@@ -154,7 +154,7 @@ export const ELASTIC_MIN_PX = 44;
 /** Session ngủ 6.5h không được chiếm hết màn hình. */
 export const ELASTIC_MAX_PX = 132;
 export const ELASTIC_SLOPE = 0.22;
-/** Dòng "untracked" — cao vừa đủ đọc, không hơn. */
+/** Dòng "untracked" - cao vừa đủ đọc, không hơn. */
 export const GAP_ROW_PX = 32;
 
 /**
@@ -187,7 +187,7 @@ export type Row = BlockRow | GapRow;
 
 /**
  * Gom segment chồng giờ thành cụm, rồi trộn với các khoảng trống theo thứ tự
- * thời gian. Không dùng `position: absolute` nữa — block dưới sẽ bấm được.
+ * thời gian. Không dùng `position: absolute` nữa - block dưới sẽ bấm được.
  *
  * `gaps` lấy thẳng từ `coverageOfDay()` nên đã bỏ sẵn phần tương lai của
  * ngày hôm nay và các khoảng ngắn hơn 30 phút.

@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Nhắc trong app (Stage 4, Task 6).
+// logi - Nhắc trong app (Stage 4, Task 6).
 //
 // KHÔNG push notification. Chỉ hiện khi app đang mở.
 // File thuần, không React → test được bằng `node --test`.
@@ -39,7 +39,7 @@ export interface ReminderInput {
 }
 
 /**
- * Tối đa MỘT nhắc. Xét theo thứ tự giờ mốc giảm dần — nhắc mới nhất thắng.
+ * Tối đa MỘT nhắc. Xét theo thứ tự giờ mốc giảm dần - nhắc mới nhất thắng.
  * Nhiều dòng cùng lúc thì người dùng học cách bỏ qua tất cả.
  */
 export function pickReminder(input: ReminderInput): Reminder | null {
@@ -57,7 +57,7 @@ export function pickReminder(input: ReminderInput): Reminder | null {
     return isDismissed(key) ? null : { type, key, text, action };
   };
 
-  // 20:45 — chưa học buổi tối.
+  // 20:45 - chưa học buổi tối.
   if (now >= markAt(today, 20, 45) && !learned(markAt(today, 19))) {
     const done = actualHours(week, now).learn;
     const tail = weekly ? ` Learn: ${h1(done)} / ${h1(weekly.learn)} this week.` : '';
@@ -65,7 +65,7 @@ export function pickReminder(input: ReminderInput): Reminder | null {
     if (r) return r;
   }
 
-  // Chủ nhật 19:00 — tổng kết tuần. Luôn hiện.
+  // Chủ nhật 19:00 - tổng kết tuần. Luôn hiện.
   if (logicalWeekday(now) === 0 && now >= markAt(today, 19)) {
     const tracked = Object.values(actualHours(week, now)).reduce((a, b) => a + b, 0);
     const worst = pickBalance(week, weekly, now);
@@ -74,7 +74,7 @@ export function pickReminder(input: ReminderInput): Reminder | null {
     if (r) return r;
   }
 
-  // 06:15 — chưa học buổi sáng.
+  // 06:15 - chưa học buổi sáng.
   if (now >= markAt(today, 6, 15) && !learned(dayWindow(today).start)) {
     const r = make('morning', 'Morning study not logged yet.', 'start-learn');
     if (r) return r;

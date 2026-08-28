@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// logi — Nối nút mic với /api/parse rồi ghi qua activities.ts.
+// logi - Nối nút mic với /api/parse rồi ghi qua activities.ts.
 // Giữ toàn bộ luồng ở một chỗ để trang Now không phình ra.
 // ============================================================
 
@@ -166,7 +166,7 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
           | null;
 
         if (!res.ok || !body) {
-          // Server chối (hết lượt, quá dài, key hỏng) — đừng bỏ người dùng
+          // Server chối (hết lượt, quá dài, key hỏng) - đừng bỏ người dùng
           // giữa chừng, mở luôn sheet để ghi tay.
           push(body?.error ?? 'Voice failed. Fill it in instead.');
           onManual();
@@ -186,7 +186,7 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
   );
 
   /**
-   * Bấm một nút trong câu hỏi. Gửi lựa chọn về cho parser đọc lại cùng câu gốc —
+   * Bấm một nút trong câu hỏi. Gửi lựa chọn về cho parser đọc lại cùng câu gốc -
    * chỉ nó mới biết "10:00 PM" là intent gì. Giữ nguyên requestId để một câu nói
    * vẫn chỉ ghi được một record.
    */
@@ -196,7 +196,7 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
       if (!uid || asking === null) return;
 
       const said = asking.transcript ? `"${asking.transcript}"` : 'The last utterance';
-      const text = `${said} — asked "${asking.question}", the user answered "${option}". Emit the final command now.`;
+      const text = `${said} - asked "${asking.question}", the user answered "${option}". Emit the final command now.`;
 
       setThinking(true);
       try {

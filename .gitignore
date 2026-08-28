@@ -34,7 +34,7 @@ yarn-error.log*
 .env
 .env*.local
 
-# credentials — NEVER commit
+# credentials - NEVER commit
 *serviceAccount*.json
 *firebase-adminsdk*.json
 firebase_project_cred.txt

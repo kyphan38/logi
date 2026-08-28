@@ -12,7 +12,7 @@ function clock(ts: number): string {
  * Session đã hẹn giờ, chưa chạy (Task 6). Nằm phía trên các session đang chạy
  * trong màn hình Now.
  *
- * Tới giờ mà `promoteScheduled()` chưa kịp ghi xong thì hiện "starting…" — card
+ * Tới giờ mà `promoteScheduled()` chưa kịp ghi xong thì hiện "starting…" - card
  * tự biến mất khi record đổi sang `active`.
  */
 export default function ScheduledCard({

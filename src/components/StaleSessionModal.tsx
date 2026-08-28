@@ -19,7 +19,7 @@ function startedLine(a: Activity, now: number): string {
     minute: '2-digit',
   });
   const hours = Math.round((now - a.startAt) / 3_600_000);
-  return `${CATEGORY_LABEL[a.category].toUpperCase()} started ${when} — ${hours} hours ago.`;
+  return `${CATEGORY_LABEL[a.category].toUpperCase()} started ${when} - ${hours} hours ago.`;
 }
 
 export default function StaleSessionModal({
@@ -79,7 +79,7 @@ export default function StaleSessionModal({
   }
 
   return (
-    // Không đóng được bằng cách bấm ra ngoài — bắt buộc phải xử lý.
+    // Không đóng được bằng cách bấm ra ngoài - bắt buộc phải xử lý.
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
       role="dialog"

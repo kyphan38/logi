@@ -1,8 +1,8 @@
-# STAGE 6 — Weekly Review & hardening
+# STAGE 6 - Weekly Review & hardening
 
 > Stage cuối. Plan này viết cho một AI coding agent thực thi.
-> Sau mỗi task có mục **Verify** — phải pass mới đi tiếp.
-> Task 2 có quyết định về chi phí — **phải hỏi người dùng trước khi làm**.
+> Sau mỗi task có mục **Verify** - phải pass mới đi tiếp.
+> Task 2 có quyết định về chi phí - **phải hỏi người dùng trước khi làm**.
 
 ---
 
@@ -11,9 +11,9 @@
 Stage 1–5 đã xong. App ghi được, sửa được, nói được, đặt mục tiêu được, xem chart được.
 
 Stage 6 làm ba việc:
-1. **Đóng vòng lặp** — thêm khoảnh khắc nhìn lại tuần và quyết định tuần tới
-2. **Làm cứng** — backup, quota, lỗi, bảo mật
-3. **Tuỳ chọn** — PWA + push notification thật
+1. **Đóng vòng lặp** - thêm khoảnh khắc nhìn lại tuần và quyết định tuần tới
+2. **Làm cứng** - backup, quota, lỗi, bảo mật
+3. **Tuỳ chọn** - PWA + push notification thật
 
 Phần lớn nội dung polish của roadmap gốc đã được làm ở Stage 4.5/4.6.
 
@@ -23,7 +23,7 @@ Phần lớn nội dung polish của roadmap gốc đã được làm ở Stage 
 
 ---
 
-## Task 1 — Weekly Review
+## Task 1 - Weekly Review
 
 ### Tại sao cần
 
@@ -41,7 +41,7 @@ Không có bước này thì app chỉ là sổ ghi chép có biểu đồ đẹ
 
 ### Ba màn, vuốt ngang
 
-**Màn 1 — Tuần vừa rồi**
+**Màn 1 - Tuần vừa rồi**
 ```
 Week 35 · Aug 24–30
 
@@ -55,7 +55,7 @@ Coverage 71%
 ```
 Dùng lại component Balance bars của Stage 5, không viết lại.
 
-**Màn 2 — Điều đáng chú ý**
+**Màn 2 - Điều đáng chú ý**
 Tối đa **hai** dòng, chọn theo thứ tự ưu tiên:
 1. `weekendConflict()` nếu có
 2. Deviation lớn nhất theo `|deltaHours|`
@@ -64,7 +64,7 @@ Tối đa **hai** dòng, chọn theo thứ tự ưu tiên:
 
 Nêu số, không dạy đời. Không có gì đáng nói → `A balanced week.` rồi sang màn 3.
 
-**Màn 3 — Tuần tới**
+**Màn 3 - Tuần tới**
 ```
 Set up week 36
 
@@ -90,21 +90,21 @@ Chạy review, chọn Deep Learn cho tuần sau, kiểm tra Firestore có doc tu
 
 ---
 
-## Task 2 — PWA & push notification (CẦN QUYẾT ĐỊNH)
+## Task 2 - PWA & push notification (CẦN QUYẾT ĐỊNH)
 
 **Dừng và hỏi người dùng trước khi làm task này.**
 
 ### Được gì
 - Nhắc 06:15 / 20:45 hiện ở màn khoá **kể cả khi không mở app**. Hiện tại nhắc
-  in-app chỉ thấy khi đã mở — mà lúc đó thường là bạn đã nhớ rồi.
+  in-app chỉ thấy khi đã mở - mà lúc đó thường là bạn đã nhớ rồi.
 - Bỏ thanh địa chỉ Safari, được thêm ~15% chiều cao màn hình
 - Quyền mic ổn định hơn giữa các phiên
 
 ### Mất gì
 1. **Phải dùng Safari để Add to Home Screen.** iOS chỉ cho A2HS qua Safari, không
-   qua Edge. Bạn đang dùng Edge — sẽ phải đổi, ít nhất cho lần cài đặt.
+   qua Edge. Bạn đang dùng Edge - sẽ phải đổi, ít nhất cho lần cài đặt.
 2. **Cần Firebase Blaze plan.** Cloud Functions (để gửi push theo lịch) yêu cầu
-   Blaze — trả theo mức dùng, phải gắn thẻ. Mức dùng của app cá nhân gần như chắc
+   Blaze - trả theo mức dùng, phải gắn thẻ. Mức dùng của app cá nhân gần như chắc
    chắn nằm trong hạn mức miễn phí, nhưng vẫn phải có thẻ.
    Vercel Hobby cron chỉ chạy **1 lần/ngày**, không đủ cho nhắc theo giờ.
 3. Thêm service worker → thêm một tầng phải debug khi có lỗi cache.
@@ -117,7 +117,7 @@ Chạy review, chọn Deep Learn cho tuần sau, kiểm tra Firestore có doc tu
 5. Cloud Function scheduled chạy mỗi 15 phút, kiểm tra ba điều kiện nhắc,
    gửi qua FCM
 6. Dedupe: một loại nhắc chỉ gửi một lần mỗi ngày logic
-7. **Giữ nguyên nhắc in-app** làm dự phòng — không xoá
+7. **Giữ nguyên nhắc in-app** làm dự phòng - không xoá
 
 ### Nếu người dùng từ chối
 Bỏ qua task này hoàn toàn. Nhắc in-app của Stage 4 vẫn hoạt động.
@@ -125,7 +125,7 @@ Ghi lại quyết định vào README để sau này khỏi bàn lại.
 
 ---
 
-## Task 3 — Backup & an toàn dữ liệu
+## Task 3 - Backup & an toàn dữ liệu
 
 Sau một năm, đây là dữ liệu không thể tạo lại. Firestore free tier **không có backup
 tự động**.
@@ -154,7 +154,7 @@ Export all-time → xoá vài record → import lại → record quay về, khô
 
 ---
 
-## Task 4 — Quota & hiệu năng
+## Task 4 - Quota & hiệu năng
 
 ### Kiểm tra quota Firestore
 Free tier: **50k đọc/ngày**. Nghe nhiều nhưng subscription realtime có thể đốt nhanh.
@@ -164,7 +164,7 @@ Việc cần làm:
 2. Màn hình không hiển thị vẫn còn listener → phải `unsubscribe` khi unmount
 3. Day strip ở History: xác nhận đúng **một** query mỗi tuần (Stage 4.5 Task 4)
 4. Analytics: một query cho cả khoảng, không query từng ngày
-5. `promoteScheduled` mỗi 30 giây — xác nhận chỉ query khi thật sự có record đến hạn
+5. `promoteScheduled` mỗi 30 giây - xác nhận chỉ query khi thật sự có record đến hạn
 
 Ghi lại số đọc ước tính cho một ngày dùng bình thường. Vượt 20k/ngày là dấu hiệu
 có listener bị rò.
@@ -172,12 +172,12 @@ có listener bị rò.
 ### Hiệu năng
 - Analytics với 1 tháng dữ liệu → load < 2s trên iPhone 11
 - History đổi ngày → < 300ms (dữ liệu tuần đã cache)
-- Không re-render toàn bộ danh sách khi timer nhảy mỗi giây — dùng `memo` cho
+- Không re-render toàn bộ danh sách khi timer nhảy mỗi giây - dùng `memo` cho
   session card, chỉ phần số đếm re-render
 
 ---
 
-## Task 5 — Xử lý lỗi & trạng thái rỗng
+## Task 5 - Xử lý lỗi & trạng thái rỗng
 
 Rà soát toàn bộ, bổ sung chỗ còn thiếu:
 
@@ -200,7 +200,7 @@ Log lỗi ra console kèm ngữ cảnh (không kèm dữ liệu cá nhân).
 
 ---
 
-## Task 6 — Chỉnh prompt theo lỗi thật
+## Task 6 - Chỉnh prompt theo lỗi thật
 
 Sau khi dùng thật vài tuần, gom các câu voice bị parse sai.
 
@@ -215,7 +215,7 @@ Quy trình:
 
 ---
 
-## Task 7 — Rà soát bảo mật
+## Task 7 - Rà soát bảo mật
 
 Checklist cuối:
 
@@ -232,7 +232,7 @@ Checklist cuối:
 
 ---
 
-## Task 8 — Bảng sửa hàng loạt cho desktop (tuỳ chọn)
+## Task 8 - Bảng sửa hàng loạt cho desktop (tuỳ chọn)
 
 **Ưu tiên thấp nhất.** Chỉ làm nếu bảy task trên đã xong và bạn thấy cần.
 
@@ -246,7 +246,7 @@ Thực tế nếu voice và timeline hoạt động tốt thì bạn sẽ không
 
 ---
 
-## Task 9 — Kiểm thử cuối
+## Task 9 - Kiểm thử cuối
 
 | # | Kiểm tra | Mong đợi |
 |---|---|---|
@@ -289,7 +289,7 @@ Dự án coi như xong. Việc còn lại là bảo trì:
 - **Vài tuần một lần**: rà lỗi voice, chỉnh prompt (Task 6)
 - **Sau 3 tháng dùng thật**: xem lại `BASELINE_DAILY` trong `logi.ts`. Nếu dữ liệu
   cho thấy baseline không phản ánh đời thật (VD Learn cuối tuần 8h/ngày chưa bao giờ
-  đạt) thì sửa con số — nhưng sửa vì có bằng chứng, không phải vì tuần này bận.
+  đạt) thì sửa con số - nhưng sửa vì có bằng chứng, không phải vì tuần này bận.
 
 Đây là lần duy nhất được sửa `logi.ts`, và chỉ sau khi có ít nhất 8 tuần dữ liệu
 với coverage > 60%.
@@ -299,7 +299,7 @@ với coverage > 60%.
 ## Quy tắc cho agent
 
 **Dừng và hỏi khi:**
-- Task 2 — **luôn hỏi trước**, vì liên quan chi phí và phải đổi browser
+- Task 2 - **luôn hỏi trước**, vì liên quan chi phí và phải đổi browser
 - Số đọc Firestore vượt xa dự kiến và cần đổi kiến trúc query
 
 **Không được:**

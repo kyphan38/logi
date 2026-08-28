@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import BottomNav from '@/components/BottomNav';
 import { useOnline } from '@/hooks/useActivities';
 
-/** Banner mảnh trên cùng. Không chặn thao tác — Firestore vẫn ghi vào cache. */
+/** Banner mảnh trên cùng. Không chặn thao tác - Firestore vẫn ghi vào cache. */
 function OfflineBanner() {
   const online = useOnline();
   if (online) return null;
@@ -14,7 +14,7 @@ function OfflineBanner() {
       className="bg-amber-400 px-4 py-1 text-center text-xs font-medium text-amber-950"
       style={{ paddingTop: 'calc(0.25rem + env(safe-area-inset-top))' }}
     >
-      Offline — changes will sync
+      Offline - changes will sync
     </div>
   );
 }

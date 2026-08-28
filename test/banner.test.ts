@@ -8,7 +8,7 @@ import { act, at, H } from './_helpers.ts';
 
 const WEEKLY = PRESETS.normal.weekly;
 
-// 2026-08-31 là thứ Hai. Mốc kiểm là thứ Tư 20:41 — đúng ví dụ trong plan.
+// 2026-08-31 là thứ Hai. Mốc kiểm là thứ Tư 20:41 - đúng ví dụ trong plan.
 const MON = '2026-08-31';
 const WED_2041 = at('2026-09-02', '20:41');
 

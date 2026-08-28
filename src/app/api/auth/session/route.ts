@@ -14,14 +14,14 @@ function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-// GET — client hỏi: server có coi mình là đã đăng nhập không?
+// GET - client hỏi: server có coi mình là đã đăng nhập không?
 // Dùng để làm mới cookie khi nó hết hạn mà client vẫn còn user.
 export async function GET() {
   const user = await getSessionUser();
   return NextResponse.json({ authenticated: user !== null });
 }
 
-// POST — đổi ID token lấy session cookie
+// POST - đổi ID token lấy session cookie
 export async function POST(req: NextRequest) {
   let idToken: unknown;
   try {
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   return res;
 }
 
-// DELETE — đăng xuất
+// DELETE - đăng xuất
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
   res.cookies.set({

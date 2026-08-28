@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Week target & debt repository
+// logi - Week target & debt repository
 // MỌI thao tác Firestore với target/nợ đi qua file này.
 // Path:
 //   users/{uid}/weekTargets/{week}   VD "2026-W35"
@@ -68,7 +68,7 @@ const rolloverRef = (uid: string) => doc(db, 'users', uid, 'meta', 'rollover');
  * Cờ "đã review tuần này": `{ "2026-W35": <epoch> }`.
  *
  * Để riêng chứ không nhét vào `weekTargets/{week}` vì rules chặn update khi
- * `lockedAt != null` — mà tuần khoá lúc 21:00 CN, còn review mở từ 19:00 CN
+ * `lockedAt != null` - mà tuần khoá lúc 21:00 CN, còn review mở từ 19:00 CN
  * và còn hạn tới hết thứ Ba. Nhét chung là mất cờ đúng lúc cần nó nhất.
  */
 const reviewsRef = (uid: string) => doc(db, 'users', uid, 'meta', 'reviews');
@@ -132,7 +132,7 @@ export async function getDebt(uid: string): Promise<DebtLedger> {
  *
  * Id của doc chính là tuần ("2026-W35") và sắp xếp chuỗi trùng với thứ tự thời
  * gian, kể cả khi qua năm ("2025-W52" < "2026-W01"). Nên một query khoảng trên
- * documentId() là đủ — không cần `in`, không đụng giới hạn 30 phần tử.
+ * documentId() là đủ - không cần `in`, không đụng giới hạn 30 phần tử.
  *
  * Tuần nào chưa có doc thì vắng mặt trong Map; nơi gọi tự lùi về PRESETS.normal.
  */
@@ -158,7 +158,7 @@ export async function listWeekTargets(
   return out;
 }
 
-/** N tuần gần nhất, theo thứ tự tăng dần — `crunchStreak()` đọc từ cuối lên. */
+/** N tuần gần nhất, theo thứ tự tăng dần - `crunchStreak()` đọc từ cuối lên. */
 export async function listRecentWeekTargets(uid: string, n = 6): Promise<WeekTarget[]> {
   const q = query(weekCol(uid), orderBy('week', 'desc'), fsLimit(n));
   const snap = await getDocs(q);
@@ -229,7 +229,7 @@ export async function ensureWeekTarget(uid: string, week: string): Promise<WeekT
 
 /**
  * Đổi preset. Nợ của tuần này đã bị tiêu một lần lúc tạo doc, nên ở đây
- * chỉ cộng lại đúng phần `debtApplied` đã ghi — không tiêu thêm từ `meta/debt`.
+ * chỉ cộng lại đúng phần `debtApplied` đã ghi - không tiêu thêm từ `meta/debt`.
  * Không vậy thì đổi preset năm lần là nợ bay hơi.
  */
 export async function setPreset(
@@ -297,7 +297,7 @@ export async function setCustomTargets(
   });
 }
 
-/** Đóng sổ. Đã khoá rồi thì thôi — rules chặn update khi `lockedAt != null`. */
+/** Đóng sổ. Đã khoá rồi thì thôi - rules chặn update khi `lockedAt != null`. */
 export async function lockWeek(uid: string, week: string, at: number = Date.now()): Promise<void> {
   const current = await getWeekTarget(uid, week);
   if (!current || current.lockedAt !== null) return;
@@ -321,7 +321,7 @@ export async function lockIfClosed(
 }
 
 /**
- * "Reset baseline" — 4/6 tuần crunch thì crunch không còn là ngoại lệ.
+ * "Reset baseline" - 4/6 tuần crunch thì crunch không còn là ngoại lệ.
  * Đặt tuần này thành Crunch và XOÁ phần nợ do chính kiểu cắt đó sinh ra.
  * Không sửa `BASELINE_DAILY` trong logi.ts (Stage 4 chưa làm tới đó).
  */
@@ -377,7 +377,7 @@ export interface RolloverResult {
  * Chuyển tuần. Gọi lúc màn hình Now mount và lúc app quay lại foreground.
  *
  * Toàn bộ chạy trong `runTransaction`: đọc cột mốc, đọc target các tuần, đọc nợ,
- * rồi ghi tất cả cùng lúc. Bạn dùng cả điện thoại lẫn laptop — không có
+ * rồi ghi tất cả cùng lúc. Bạn dùng cả điện thoại lẫn laptop - không có
  * transaction thì mở app trên hai máy gần nhau là chạy rollover hai lần.
  *
  * Firestore tự chạy lại transaction khi có tranh chấp; lần chạy lại đọc được
@@ -465,7 +465,7 @@ export function subscribeReviews(
   );
 }
 
-/** Dùng cho nút Skip — chỉ đóng banner, không đụng target tuần sau. */
+/** Dùng cho nút Skip - chỉ đóng banner, không đụng target tuần sau. */
 export async function markReviewed(
   uid: string,
   week: string,
@@ -479,7 +479,7 @@ export async function markReviewed(
  *
  * Một transaction cho cả ba việc: ghi target, trừ nợ, đánh dấu đã review.
  * Nếu doc tuần sau đã tồn tại (chạy review hai lần, hoặc rollover đã chạy trước)
- * thì KHÔNG tạo lại và KHÔNG tiêu nợ lần nữa — chỉ đổi preset trên phần
+ * thì KHÔNG tạo lại và KHÔNG tiêu nợ lần nữa - chỉ đổi preset trên phần
  * `debtApplied` đã ghi, đúng như `setPreset()` làm. Đó là chốt idempotent.
  */
 export async function setupNextWeek(
@@ -518,7 +518,7 @@ export async function setupNextWeek(
         weekly,
         debtApplied: applied,
         changedAt: now,
-        // Tuần sau chưa bắt đầu — đặt trước không phải là "sửa muộn".
+        // Tuần sau chưa bắt đầu - đặt trước không phải là "sửa muộn".
         lateChange: false,
         lockedAt: null,
       };
@@ -558,7 +558,7 @@ export async function markExported(uid: string, at: number = Date.now()): Promis
   await setDoc(backupRef(uid), { lastExport: at }, { merge: true });
 }
 
-/** Mọi tuần đã có target — cho bản export "All time". */
+/** Mọi tuần đã có target - cho bản export "All time". */
 export async function listAllWeekTargets(uid: string): Promise<WeekTarget[]> {
   const snap = await getDocs(query(weekCol(uid), orderBy(documentId())));
   return snap.docs.map((d) => toWeekTarget(d.id, d.data()));

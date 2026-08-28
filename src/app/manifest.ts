@@ -1,15 +1,15 @@
 import type { MetadataRoute } from 'next';
 
 // ---------------------------------------------------------------------------
-// logi — Web app manifest (Stage 6 Task 2)
+// logi - Web app manifest (Stage 6 Task 2)
 //
 // `display: standalone` bỏ thanh địa chỉ, được thêm ~15% chiều cao màn hình.
-// Trên iOS chỉ Safari mới Add to Home Screen được — Edge không làm được.
+// Trên iOS chỉ Safari mới Add to Home Screen được - Edge không làm được.
 // ---------------------------------------------------------------------------
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'logi — time audit',
+    name: 'logi - time audit',
     short_name: 'logi',
     description: 'Personal time-audit app.',
     start_url: '/now',

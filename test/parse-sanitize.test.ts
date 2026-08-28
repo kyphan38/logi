@@ -8,7 +8,7 @@ const NOW = at('2026-08-26', '12:00');
 const IDS = new Set(['a1']);
 const opts = { now: NOW, knownIds: IDS };
 
-/** ParseResult tối thiểu, hợp lệ — mỗi test chỉ bẻ một chỗ. */
+/** ParseResult tối thiểu, hợp lệ - mỗi test chỉ bẻ một chỗ. */
 function base(over: Record<string, unknown> = {}) {
   return {
     intent: 'log_past',

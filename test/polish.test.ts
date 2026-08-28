@@ -69,7 +69,7 @@ test('mọi preset đều có hint tiếng Anh', () => {
 test('budgetMessages: vượt ngân sách nói rõ thừa bao nhiêu', () => {
   const over = { ...PRESETS.normal.weekly, work: PRESETS.normal.weekly.work + 3 };
   const msgs = budgetMessages(over);
-  assert.equal(msgs[0], 'Over by 3.0h — reduce another category');
+  assert.equal(msgs[0], 'Over by 3.0h - reduce another category');
 });
 
 test('budgetMessages: còn thừa giờ chưa phân bổ', () => {

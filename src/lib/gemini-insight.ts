@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Digest → nhận xét, qua Gemini Flash (Stage 7 Task 4)
+// logi - Digest → nhận xét, qua Gemini Flash (Stage 7 Task 4)
 // Chạy SERVER-SIDE ONLY. Không bao giờ gọi từ browser.
 //
 // Model KHÔNG được tính toán. Nó chỉ chọn 2–4 điều đáng nói trong digest
@@ -66,7 +66,7 @@ export const INSIGHT_SCHEMA = {
 /**
  * Chín quy tắc dưới đây là bản dịch nguyên văn của plan Stage 7.
  * Sửa prompt thì phải chạy lại `test/insight-sanitize.test.ts` và đọc tay
- * vài kết quả — prompt lỏng ra là sanitize phải bỏ nhiều hơn.
+ * vài kết quả - prompt lỏng ra là sanitize phải bỏ nhiều hơn.
  */
 export const INSIGHT_SYSTEM_PROMPT = `You analyse a personal time-audit digest and surface what matters.
 
@@ -115,7 +115,7 @@ const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODE
 
 /**
  * Trả về JSON THÔ của model. Người gọi BẮT BUỘC đưa qua `sanitizeInsight()`
- * trước khi gửi ra client — không có ngoại lệ.
+ * trước khi gửi ra client - không có ngoại lệ.
  */
 export async function analyseDigest(digest: Digest, apiKey: string): Promise<unknown> {
   const res = await fetch(`${ENDPOINT}?key=${apiKey}`, {

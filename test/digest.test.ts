@@ -202,7 +202,7 @@ const plain = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-test('tuần bình thường thì im lặng — mặc định là không nói gì', () => {
+test('tuần bình thường thì im lặng - mặc định là không nói gì', () => {
   assert.equal(extremeNote(plain()), null);
 });
 

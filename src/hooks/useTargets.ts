@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// logi — Target tuần + sổ nợ cho UI.
+// logi - Target tuần + sổ nợ cho UI.
 //
 // `useRollover()` là chốt chuyển tuần. Không có server cron, nên nó chạy
 // ở client lúc mở app và lúc app quay lại foreground.
@@ -42,9 +42,9 @@ export function useCurrentWeek(): string {
  * Chạy rollover một lần cho mỗi tuần, mỗi phiên app.
  *
  * Ba lớp chống chạy trùng, vì cộng nợ hai lần thì im lặng và rất khó lần ra:
- *  1. `once` — chặn hai lần gọi song song trong cùng một tab.
- *  2. `runTransaction` trong `targets.ts` — chặn hai tab / hai máy.
- *  3. Cột mốc `lastProcessedWeek` — chặn mọi lần chạy về sau.
+ *  1. `once` - chặn hai lần gọi song song trong cùng một tab.
+ *  2. `runTransaction` trong `targets.ts` - chặn hai tab / hai máy.
+ *  3. Cột mốc `lastProcessedWeek` - chặn mọi lần chạy về sau.
  *
  * Lỗi thì nuốt: người dùng không làm gì được với "rollover failed", và
  * lần mở app sau sẽ thử lại.
@@ -75,7 +75,7 @@ export function useRollover(): RolloverResult | null {
         }
       })
       .catch(() => {
-        // `once` đã nhả id ra rồi — lần foreground sau sẽ thử lại.
+        // `once` đã nhả id ra rồi - lần foreground sau sẽ thử lại.
       });
   }, [uid, week]);
 
@@ -163,7 +163,7 @@ export function useDebt() {
     balance,
     total,
     loading,
-    /** Nợ quá 20h thì Crunch bị khoá — không thể vay thêm mãi. */
+    /** Nợ quá 20h thì Crunch bị khoá - không thể vay thêm mãi. */
     crunchLocked: total > DEBT_LOCK_THRESHOLD,
   };
 }
@@ -172,7 +172,7 @@ export function useDebt() {
 // Lịch sử preset
 // ------------------------------------------------------------
 
-/** 6 tuần gần nhất, để hỏi "4/6 tuần crunch — đây có còn là ngoại lệ không?" */
+/** 6 tuần gần nhất, để hỏi "4/6 tuần crunch - đây có còn là ngoại lệ không?" */
 export function useCrunchStreak(deps: unknown = null) {
   const { user } = useAuth();
   const uid = user?.uid ?? null;

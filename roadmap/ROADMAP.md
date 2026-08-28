@@ -1,4 +1,4 @@
-# logi — Implementation Roadmap
+# logi - Implementation Roadmap
 
 Cá nhân time-audit web app. Next.js (App Router) + Firebase + Vercel + Gemini Flash.
 Single user, mobile-first, giao diện tiếng Anh.
@@ -21,7 +21,7 @@ Các quy tắc này bất biến. Agent thực thi không được thay đổi m
    người dùng. Không hard-delete.
 7. **Target là zero-sum 135.5h.** Không cho tăng tổng. Sàn cứng: sleep ≥ 42h,
    fitness ≥ 4.5h.
-8. **Câu chữ nêu số, không dạy đời.** `"Work: 46h / 40h (+15%)"` — không phải
+8. **Câu chữ nêu số, không dạy đời.** `"Work: 46h / 40h (+15%)"` - không phải
    `"Bạn đang làm việc quá nhiều rồi"`.
 9. **iOS/WebKit là target chính** (iPhone 11, browser Edge/Safari). Không dùng
    `audio/webm`. Không phụ thuộc Web Push.
@@ -43,7 +43,7 @@ Các quy tắc này bất biến. Agent thực thi không được thay đổi m
 
 ---
 
-## Stage 1 — Foundation & Auth
+## Stage 1 - Foundation & Auth
 
 → Xem file `STAGE-1-DETAILED.md` để có plan đầy đủ.
 
@@ -56,7 +56,7 @@ deploy Vercel, deploy Firestore rules.
 
 ---
 
-## Stage 2 — Core Tracking
+## Stage 2 - Core Tracking
 
 **Mục tiêu:** log hoạt động bằng tay, đầy đủ và đáng tin, trước khi đụng tới AI.
 
@@ -88,17 +88,17 @@ Stop → record xuất hiện trong History đúng ngày. Sửa giờ kết thú
 
 ---
 
-## Stage 3 — Voice & AI
+## Stage 3 - Voice & AI
 
 **Mục tiêu:** thay phần lớn thao tác tay bằng giọng nói, với cơ chế sửa lỗi tốt.
 
 ### Phạm vi
-- `MediaRecorder` + `pickAudioMime()` (bắt buộc — iOS không nhận webm).
+- `MediaRecorder` + `pickAudioMime()` (bắt buộc - iOS không nhận webm).
 - Nút mic giữ-để-nói (press & hold) ở màn hình Now, có waveform hoặc chỉ báo đang ghi.
 - API route `POST /api/parse`: verify session cookie → build system prompt kèm context
   (thời gian hiện tại, active sessions, 5 activity gần nhất) → `parseAudio()` → trả
   `ParseResult`. `maxDuration: 30` trong `vercel.json`.
-- **Confirmation card** — tầng chống lỗi quan trọng nhất:
+- **Confirmation card** - tầng chống lỗi quan trọng nhất:
   - `confidence ≥ 0.85` → auto-commit + toast "Undo" 5 giây.
   - `confidence < 0.85` → hiện card, mọi field tap được để sửa, phải bấm Confirm.
   - `intent === 'clarify'` → hiện `clarifyQuestion` + `clarifyOptions` thành nút.
@@ -137,7 +137,7 @@ mà không cần sửa tay.
 
 ---
 
-## Stage 4 — Targets & Balance
+## Stage 4 - Targets & Balance
 
 **Mục tiêu:** biến dữ liệu thô thành đánh giá cân bằng, kèm cơ chế chống tự lừa mình.
 
@@ -145,12 +145,12 @@ mà không cần sửa tay.
 - Collection `weekTargets/{logicalWeek}`, khởi tạo từ `PRESETS.normal` nếu chưa có.
 - Màn hình **Targets**:
   - 4 preset card (Normal / Crunch / Deep Learn / Recovery).
-  - Slider tuỳ chỉnh dùng `rebalance()` — kéo một cái, các cái khác tự trừ.
+  - Slider tuỳ chỉnh dùng `rebalance()` - kéo một cái, các cái khác tự trừ.
     Hiện `validateTargets()` errors ngay dưới.
   - Sleep khoá cứng 46.5h. Sàn sleep 42h / fitness 4.5h không kéo xuống dưới được.
 - **Debt ledger** (`meta/debt`):
   - Cuối tuần chạy `accrueDebt()`.
-  - Đầu tuần chạy `applyDebt()` — cộng 50% nợ, trần 10h.
+  - Đầu tuần chạy `applyDebt()` - cộng 50% nợ, trần 10h.
   - Nợ > 20h → khoá preset Crunch, hiện lý do.
 - **Khoá tuần**: 21:00 Chủ nhật set `lockedAt`. Sau đó không sửa target được nữa
   (rules đã chặn ở tầng DB).
@@ -162,11 +162,11 @@ mà không cần sửa tay.
   - 20:45 chưa có Learn buổi tối
   - CN 19:00 tổng kết tuần
   - Kiểm tra khi app mở hoặc quay lại foreground. Dismiss được, không lặp lại trong ngày.
-- `crunchStreak()` — 4/6 tuần là Crunch → hiện prompt hỏi có nên đặt lại baseline.
+- `crunchStreak()` - 4/6 tuần là Crunch → hiện prompt hỏi có nên đặt lại baseline.
 
 ### Ràng buộc
 - Deviation dùng `expectedHours()` (pro-rate theo lịch). **Tuyệt đối không chia đều**
-  `weekly × ngày/7` — sai lệch tới 5h và sẽ báo động sai mỗi thứ Tư.
+  `weekly × ngày/7` - sai lệch tới 5h và sẽ báo động sai mỗi thứ Tư.
 - Deadband kép: chỉ cảnh báo khi lệch > 25% **VÀ** ≥ 2h.
 
 ### Xong khi
@@ -175,21 +175,21 @@ Learn giảm và nợ được ghi. Tuần sau mở lên → target Learn tự t
 
 ---
 
-## Stage 5 — Analytics
+## Stage 5 - Analytics
 
-**Mục tiêu:** trả lời hai câu hỏi — *tuần này mình dành nhiều cho cái gì*, và
+**Mục tiêu:** trả lời hai câu hỏi - *tuần này mình dành nhiều cho cái gì*, và
 *có lệch mục tiêu không*.
 
 ### Phạm vi
 - **Bộ lọc**: chips `Today · This week · Last week · This month` + `Custom from–to`.
   Mặc định là `This week`.
-- **Chart 1 — Balance bars** (chart chính, đặt trên cùng):
+- **Chart 1 - Balance bars** (chart chính, đặt trên cùng):
   5 thanh ngang, mỗi thanh có vạch dọc đánh dấu target, kèm nhãn `46.5h ✓` /
   `+15% ▲` / `−47% ▼`. Trả lời cả hai câu hỏi trong một hình.
-- **Chart 2 — Stacked bar theo ngày**: 7 cột, màu theo `CATEGORY_COLOR`.
-- **Chart 3 — Heatmap 24h × ngày**: trục dọc giờ trong ngày, trục ngang ngày.
+- **Chart 2 - Stacked bar theo ngày**: 7 cột, màu theo `CATEGORY_COLOR`.
+- **Chart 3 - Heatmap 24h × ngày**: trục dọc giờ trong ngày, trục ngang ngày.
   Đây là chart lộ ra OT tràn vào buổi tối và cuối tuần.
-- **Coverage indicator**: `coverage()` — nếu < 55% hiện cảnh báo rằng dữ liệu chưa đủ
+- **Coverage indicator**: `coverage()` - nếu < 55% hiện cảnh báo rằng dữ liệu chưa đủ
   để kết luận.
 - **Overlap indicator**: tổng giờ double-count.
 - **Export**: nút export CSV và JSON, chọn khoảng thời gian (`Last 3 days`,
@@ -199,7 +199,7 @@ Learn giảm và nợ được ghi. Tuần sau mở lên → target Learn tự t
 - Thư viện chart: Recharts. Phải đọc được trên màn hình rộng 375px.
 - Query Firestore theo `logicalWeek` (tuần) hoặc range `logicalDate` (custom).
   Không kéo toàn bộ collection.
-- Không dùng pie/donut ở vị trí chính — ít thông tin và sẽ sai khi có overlap.
+- Không dùng pie/donut ở vị trí chính - ít thông tin và sẽ sai khi có overlap.
 
 ### Xong khi
 Mở Analytics trên iPhone, chọn This week, đọc được ngay category nào vượt/thiếu.
@@ -207,11 +207,11 @@ Export CSV mở được bằng Excel.
 
 ---
 
-## Stage 6 — Polish
+## Stage 6 - Polish
 
 - Loading skeleton, empty state, error boundary cho mọi màn hình.
 - Undo cho mọi hành động phá huỷ dữ liệu.
-- Bảng edit dạng table cho desktop (sửa hàng loạt) — ưu tiên thấp.
+- Bảng edit dạng table cho desktop (sửa hàng loạt) - ưu tiên thấp.
 - Kiểm tra Firestore free tier: read/write per day, tối ưu query nếu cần.
 - **Tuỳ chọn**: PWA + Add to Home Screen qua Safari để có push notification thật.
   Chỉ làm nếu in-app reminder chứng minh là không đủ sau vài tuần dùng thật.

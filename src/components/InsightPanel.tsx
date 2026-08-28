@@ -1,7 +1,7 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Nhận xét AI cho khoảng đang chọn (Stage 7 Task 5)
+// logi - Nhận xét AI cho khoảng đang chọn (Stage 7 Task 5)
 //
 // Đặt DƯỚI các chart: chart trả lời "cái gì", phần này trả lời "nên để ý gì".
 // Dùng đúng range của Stage 5, không có picker riêng.
@@ -142,7 +142,7 @@ function Result({
         <p className="text-[13px] text-ink-soft">{result.positive}</p>
       )}
 
-      {/* Dòng của code, không phải của AI — chỉ hiện khi số quá lệch. */}
+      {/* Dòng của code, không phải của AI - chỉ hiện khi số quá lệch. */}
       {digest && extremeNote(digest) && (
         <p className="text-[13px] text-ink-soft">{extremeNote(digest)}</p>
       )}
@@ -203,9 +203,9 @@ function PresetLink({ id }: { id: PresetId }) {
   );
 }
 
-/** Số gốc trong digest, hiện y nguyên — đây là bước đối chiếu, không làm đẹp. */
+/** Số gốc trong digest, hiện y nguyên - đây là bước đối chiếu, không làm đẹp. */
 function format(v: unknown): string {
-  if (v === null || v === undefined) return '—';
+  if (v === null || v === undefined) return '-';
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }

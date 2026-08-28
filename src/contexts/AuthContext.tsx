@@ -42,7 +42,7 @@ const AuthContext = createContext<AuthState | null>(null);
 
 function newProvider() {
   const provider = new GoogleAuthProvider();
-  // Luôn cho chọn tài khoản — quan trọng khi cần thử email ngoài allowlist.
+  // Luôn cho chọn tài khoản - quan trọng khi cần thử email ngoài allowlist.
   provider.setCustomParameters({ prompt: 'select_account' });
   return provider;
 }
@@ -150,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const code = (err as { code?: string })?.code ?? '';
 
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        // Người dùng tự đóng — im lặng.
+        // Người dùng tự đóng - im lặng.
       } else if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
         // iOS Safari/Edge hay chặn popup → chuyển sang redirect.
         try {

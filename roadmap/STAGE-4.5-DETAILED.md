@@ -1,10 +1,10 @@
-# STAGE 4.5 — History redesign
+# STAGE 4.5 - History redesign
 
 > Chèn giữa Stage 4 và Stage 5. **Chỉ bắt đầu khi Stage 4 đã xong**, vì summary line
 > cần `weekTarget` do Stage 4 tạo ra.
 >
 > Plan này viết cho một AI coding agent thực thi. Làm đúng thứ tự task.
-> Sau mỗi task có mục **Verify** — phải pass mới đi tiếp.
+> Sau mỗi task có mục **Verify** - phải pass mới đi tiếp.
 
 ---
 
@@ -19,8 +19,8 @@ có thanh cuộn ngang.
 5–8 record. Phần lớn màn hình là khoảng trống, phải cuộn nhiều mới xem hết một ngày.
 
 Stage 4.5 sửa cả hai, và làm History phục vụ đúng **hai việc** nó cần làm:
-1. **Kiểm tra & sửa** — voice parse sai, quên bấm Stop. Đây là việc chính.
-2. **Nhìn lại hình dạng của ngày** — cái gì chiếm bao nhiêu, lỗ hổng ở đâu.
+1. **Kiểm tra & sửa** - voice parse sai, quên bấm Stop. Đây là việc chính.
+2. **Nhìn lại hình dạng của ngày** - cái gì chiếm bao nhiêu, lỗ hổng ở đâu.
 
 ### KHÔNG làm ở stage này
 - Chart, heatmap, export (Stage 5)
@@ -29,7 +29,7 @@ Stage 4.5 sửa cả hai, và làm History phục vụ đúng **hai việc** nó
 
 ---
 
-## Task 1 — Sửa bug tràn ngang
+## Task 1 - Sửa bug tràn ngang
 
 ### Chẩn đoán trước khi sửa
 Nguyên nhân khả dĩ:
@@ -50,12 +50,12 @@ segment trước khi đụng CSS. Có thể đây là bug logic, không phải b
 - Ẩn thanh cuộn **không** phải là cách sửa. Phải sửa layout.
 
 ### Verify
-Mở DevTools ở 320px, 375px, 414px, 768px — không có tràn ngang ở bề rộng nào.
+Mở DevTools ở 320px, 375px, 414px, 768px - không có tràn ngang ở bề rộng nào.
 `document.documentElement.scrollWidth === clientWidth`.
 
 ---
 
-## Task 2 — Timeline co giãn
+## Task 2 - Timeline co giãn
 
 Thay tỉ lệ tuyến tính 24h bằng bố cục co giãn: khối có dữ liệu giữ chiều cao đọc
 được, khoảng trống thu về một dòng.
@@ -68,8 +68,8 @@ Bán tỉ lệ, có chặn hai đầu:
 height = clamp(44, 44 + (durationMin - 30) * 0.22, 132)
 ```
 
-- Tối thiểu **44px** — đủ để chạm theo chuẩn iOS, kể cả session 5 phút
-- Tối đa **132px** — session ngủ 6.5h không được chiếm hết màn hình
+- Tối thiểu **44px** - đủ để chạm theo chuẩn iOS, kể cả session 5 phút
+- Tối đa **132px** - session ngủ 6.5h không được chiếm hết màn hình
 - Ở giữa vẫn thấy được cái nào dài hơn
 
 Chấp nhận đánh đổi: mất tính tỉ lệ chính xác. Bù lại, thời lượng luôn viết bằng
@@ -87,14 +87,14 @@ Ngày hôm nay: khoảng trống chỉ tính tới **hiện tại**, không tín
 
 ### Nhãn giờ
 Cột trái rộng 42px, chỉ hiện giờ bắt đầu của mỗi block. **Không** vẽ thang giờ
-đều đặn 2 tiếng nữa — thang đó chỉ có nghĩa khi tỉ lệ tuyến tính.
+đều đặn 2 tiếng nữa - thang đó chỉ có nghĩa khi tỉ lệ tuyến tính.
 
 ### Block chồng nhau
 Vẫn dùng `layoutDay()` để chia lane. Trong bố cục mới, các block cùng khung giờ
 nằm **cạnh nhau trên cùng một hàng**, chia đôi/ba bề ngang. Chiều cao hàng = block
 cao nhất trong nhóm.
 
-Không dùng `position: absolute` chồng lên nhau — block dưới sẽ không bấm được.
+Không dùng `position: absolute` chồng lên nhau - block dưới sẽ không bấm được.
 
 ### Giữ nguyên từ bản cũ
 - `continuedFromPrevious` → viền đứt phía trên + nhãn `cont. from Aug 26`
@@ -112,9 +112,9 @@ Empty state: `Nothing tracked on this day.` + nút `+` để thêm.
 
 ---
 
-## Task 3 — Summary line theo target
+## Task 3 - Summary line theo target
 
-Thay `Tracked 9.4h · Untracked 6.9h · Overlap 0.0h` — dòng này không cho biết
+Thay `Tracked 9.4h · Untracked 6.9h · Overlap 0.0h` - dòng này không cho biết
 9.4h là nhiều hay ít.
 
 Dòng mới đối chiếu với target của **đúng ngày trong tuần đó**:
@@ -136,7 +136,7 @@ export function dailyTargetFor(
 }
 ```
 
-Đây đúng là cách `expectedHours()` trong `balance.ts` đang làm cho cả tuần —
+Đây đúng là cách `expectedHours()` trong `balance.ts` đang làm cho cả tuần -
 tách ra thành phiên bản một ngày để dùng lại, không sao chép công thức khác đi.
 
 ### Quy tắc hiển thị
@@ -158,7 +158,7 @@ phải `8.0`. Chủ nhật → Learn target `8.0`.
 
 ---
 
-## Task 4 — Day strip có ý nghĩa
+## Task 4 - Day strip có ý nghĩa
 
 Dải 7 ngày trên cùng hiện chỉ có chấm "có dữ liệu / không có". Đổi thành thanh
 mini 5 màu theo tỉ lệ category của ngày đó.
@@ -190,7 +190,7 @@ Thanh của ngày hôm nay phải khớp với summary line bên dưới.
 
 ---
 
-## Task 5 — Test
+## Task 5 - Test
 
 Thêm vào bộ `node --test`:
 
@@ -209,7 +209,7 @@ Thêm vào bộ `node --test`:
 
 ---
 
-## Task 6 — Kiểm thử tay trên iPhone
+## Task 6 - Kiểm thử tay trên iPhone
 
 | # | Kiểm tra | Mong đợi |
 |---|---|---|
@@ -226,7 +226,7 @@ Thêm vào bộ `node --test`:
 | 11 | Tuần chưa có weekTarget | Quay về summary cũ, không crash |
 | 12 | Ngày có 2 record chồng giờ | Hai cột cạnh nhau, cả hai bấm được |
 
-Test 1 và 3 là hai bài chính — chúng là lý do stage này tồn tại.
+Test 1 và 3 là hai bài chính - chúng là lý do stage này tồn tại.
 
 ---
 
@@ -259,4 +259,4 @@ Test 1 và 3 là hai bài chính — chúng là lý do stage này tồn tại.
 
 **Ghi chú cho Stage 5**: heatmap 24h × ngày ở Analytics **vẫn dùng tỉ lệ tuyến
 tính**. Co giãn chỉ áp dụng cho History một ngày. Hai chỗ phục vụ hai mục đích
-khác nhau — heatmap cần trục giờ thẳng hàng giữa các ngày mới so sánh được.
+khác nhau - heatmap cần trục giờ thẳng hàng giữa các ngày mới so sánh được.

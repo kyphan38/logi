@@ -1,5 +1,5 @@
 // ============================================================
-// logi — Thực thi ParsedCommand. Mọi đường ghi vẫn qua activities.ts.
+// logi - Thực thi ParsedCommand. Mọi đường ghi vẫn qua activities.ts.
 // Phần quyết định (thuần logic) nằm ở voice-plan.ts.
 // ============================================================
 

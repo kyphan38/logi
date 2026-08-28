@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// logi — Một nhắc, có nút làm ngay.
+// logi - Một nhắc, có nút làm ngay.
 //
 // Nút gọi thẳng `startActivity()`, không mở sheet. Nhắc mà còn phải
 // bấm thêm ba bước nữa thì không ai dùng.

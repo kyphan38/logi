@@ -3,7 +3,7 @@
 // ============================================================
 // Thẻ xác nhận sau khi nói.
 // Hiện khi máy chưa đủ chắc, hoặc thiếu field bắt buộc.
-// Sửa được ngay tại chỗ — không bắt người dùng nói lại.
+// Sửa được ngay tại chỗ - không bắt người dùng nói lại.
 // ============================================================
 
 import { useState } from 'react';
@@ -36,7 +36,7 @@ export default function ParseConfirmCard({
 }: {
   cmd: ParsedCommand;
   missing: MissingField[];
-  /** Session đang chạy — để chọn khi câu "I'm done" không rõ dừng cái nào. */
+  /** Session đang chạy - để chọn khi câu "I'm done" không rõ dừng cái nào. */
   active: Activity[];
   busy: boolean;
   /** Trả về lệnh đã sửa, không phải lệnh gốc. */
@@ -53,7 +53,7 @@ export default function ParseConfirmCard({
   const needsEnd = cmd.intent === 'log_past';
   const needsCategory = cmd.intent !== 'stop';
   const needsTarget = cmd.intent === 'stop' || cmd.intent === 'edit';
-  // "Change it to 9 AM" không nhắc category — đừng bắt chọn thứ họ không muốn đổi.
+  // "Change it to 9 AM" không nhắc category - đừng bắt chọn thứ họ không muốn đổi.
   const categoryRequired = needsCategory && cmd.intent !== 'edit';
 
   const startAt = fromLocalInput(startStr);
@@ -112,7 +112,7 @@ export default function ParseConfirmCard({
               {active.map((a) => (
                 <option key={a.id} value={a.id}>
                   {CATEGORY_LABEL[a.category]}
-                  {a.label ? ` — ${a.label}` : ''}
+                  {a.label ? ` - ${a.label}` : ''}
                 </option>
               ))}
             </select>

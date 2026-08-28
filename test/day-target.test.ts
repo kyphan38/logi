@@ -50,7 +50,7 @@ test('dailyTargetFor: Crunch scale đúng tỉ lệ, giữ hình dạng tuần',
   assert.ok(crunchTue.work > normalTue.work, 'Crunch phải kéo Work lên');
 });
 
-test('dailyTargetFor: khớp với expectedHours() — không được lệch công thức', () => {
+test('dailyTargetFor: khớp với expectedHours() - không được lệch công thức', () => {
   // Thứ Ba 20:00 → đã qua T2, và T3 mới đi được một phần.
   const now = at('2026-09-01', '20:00');
   const weekly = PRESETS.normal.weekly;

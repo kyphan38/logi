@@ -1,11 +1,11 @@
 // ============================================================
-// logi — Số học tuần ISO ("2026-W35")
+// logi - Số học tuần ISO ("2026-W35")
 // File thuần: không React, không Firestore. Test bằng `node --test`.
 //
 // `logicalWeek()` trong balance.ts đi một chiều: ts → "2026-W35".
 // Stage 4 cần chiều ngược lại (tuần → mốc thời gian) để lùi/tiến tuần
 // và để biết lúc nào là 21:00 Chủ nhật. File này làm việc đó, và luôn
-// quay về `logicalWeek()` để đặt tên tuần — không tự đặt tên song song.
+// quay về `logicalWeek()` để đặt tên tuần - không tự đặt tên song song.
 // ============================================================
 
 import { logicalWeek, logicalWeekday } from '@/lib/balance';
@@ -23,7 +23,7 @@ export function isWeekId(week: string): boolean {
  * Mốc 12:00 trưa thứ Hai (giờ địa phương) của tuần.
  *
  * Cố ý dùng 12:00 chứ không phải 00:00: ngày logic cắt lúc 04:00, nên
- * 00:00 thứ Hai vẫn thuộc về Chủ nhật — lệch nguyên một tuần.
+ * 00:00 thứ Hai vẫn thuộc về Chủ nhật - lệch nguyên một tuần.
  */
 export function weekStart(week: string): number {
   const m = WEEK_RE.exec(week);
@@ -58,7 +58,7 @@ export function weekDiff(from: string, to: string): number {
 }
 
 /**
- * 21:00 Chủ nhật của tuần — mốc đóng sổ.
+ * 21:00 Chủ nhật của tuần - mốc đóng sổ.
  * Chủ nhật là ngày logic thứ 7 của tuần, tức thứ Hai + 6 ngày.
  */
 export function weekLockAt(week: string): number {

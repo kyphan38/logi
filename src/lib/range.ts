@@ -1,10 +1,10 @@
 // ---------------------------------------------------------------------------
-// logi — Khoảng thời gian cho Analytics (Stage 5 Task 1)
+// logi - Khoảng thời gian cho Analytics (Stage 5 Task 1)
 //
 // File thuần: không React, không Firestore → test bằng `node --test`.
 //
 // Mọi mốc ngày đi qua `logicalDate()` (cắt 04:00). "Today" lúc 02:00 sáng là
-// ngày HÔM TRƯỚC — nếu dùng ngày lịch thô thì mọi số sau nửa đêm đều sai.
+// ngày HÔM TRƯỚC - nếu dùng ngày lịch thô thì mọi số sau nửa đêm đều sai.
 // ---------------------------------------------------------------------------
 import { dayProgress, logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
 import { addDays } from '@/lib/timeline';
@@ -26,10 +26,10 @@ export interface Range {
   isPartial: boolean;
 }
 
-/** Quá mốc này thì chặn — query nặng mà chart cũng không đọc nổi. */
+/** Quá mốc này thì chặn - query nặng mà chart cũng không đọc nổi. */
 export const MAX_RANGE_DAYS = 92;
 
-export const RANGE_TOO_LARGE = 'Range too large — max 3 months.';
+export const RANGE_TOO_LARGE = 'Range too large - max 3 months.';
 
 /** Số tuần tối đa còn dùng được query `logicalWeek in [...]` (Firestore cho 30). */
 export const MAX_WEEKS_IN_QUERY = 4;
@@ -146,7 +146,7 @@ export interface CustomResult {
 export function customRange(from: string, to: string, now: number = Date.now()): CustomResult {
   if (!from || !to) return { range: null, error: 'Pick both dates.' };
 
-  // Chọn ngược thì sửa hộ, không bắt lỗi — người dùng chỉ bấm nhầm thứ tự.
+  // Chọn ngược thì sửa hộ, không bắt lỗi - người dùng chỉ bấm nhầm thứ tự.
   const [a, b] = noonOf(from) <= noonOf(to) ? [from, to] : [to, from];
 
   if (daysBetween(a, b) > MAX_RANGE_DAYS) return { range: null, error: RANGE_TOO_LARGE };
@@ -157,7 +157,7 @@ export function customRange(from: string, to: string, now: number = Date.now()):
   };
 }
 
-/** `Last 7 days` / `Last 30 days` — n ngày tính cả hôm nay. */
+/** `Last 7 days` / `Last 30 days` - n ngày tính cả hôm nay. */
 export function lastNDays(n: number, now: number = Date.now()): Range {
   const today = logicalDate(now);
   return {
@@ -169,7 +169,7 @@ export function lastNDays(n: number, now: number = Date.now()): Range {
 }
 
 // ---------------------------------------------------------------------------
-// Chiến lược query — MỘT query cho cả khoảng
+// Chiến lược query - MỘT query cho cả khoảng
 // ---------------------------------------------------------------------------
 
 export type QueryPlan =

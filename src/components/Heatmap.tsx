@@ -1,12 +1,12 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi — Heatmap 24h × ngày (Stage 5 Task 5)
+// logi - Heatmap 24h × ngày (Stage 5 Task 5)
 //
 // Div + CSS grid. Recharts không có kiểu chart này, và một lưới ô vuông thì
 // CSS làm gọn hơn nhiều.
 //
-// Trên mobile KHÔNG có hover, nên chi tiết phải mở bằng cách chạm — chạm vào ô
+// Trên mobile KHÔNG có hover, nên chi tiết phải mở bằng cách chạm - chạm vào ô
 // thì hiện một dòng ngay dưới lưới, không dùng tooltip bay.
 // ---------------------------------------------------------------------------
 import { useState } from 'react';
@@ -72,8 +72,8 @@ export default function Heatmap({ activities, range, now }: Props) {
       <p className="min-h-4 text-[11px] tabular-nums text-ink-soft" aria-live="polite">
         {picked && cell
           ? cell.category
-            ? `${dayLabel(days[picked.col])} ${hours[picked.row]} — ${CATEGORY_LABEL[cell.category]}, ${Math.round(cell.minutes)} min`
-            : `${dayLabel(days[picked.col])} ${hours[picked.row]} — nothing logged`
+            ? `${dayLabel(days[picked.col])} ${hours[picked.row]} - ${CATEGORY_LABEL[cell.category]}, ${Math.round(cell.minutes)} min`
+            : `${dayLabel(days[picked.col])} ${hours[picked.row]} - nothing logged`
           : ''}
       </p>
 

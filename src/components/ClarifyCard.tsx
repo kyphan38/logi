@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// logi — Máy nghe chưa rõ thì hỏi lại đúng MỘT câu (Task 5).
+// logi - Máy nghe chưa rõ thì hỏi lại đúng MỘT câu (Task 5).
 // Bấm một lựa chọn → gửi lại cho parser → hiện card xác nhận.
 // Hỏi vòng hai là người dùng bỏ dùng voice, nên không có vòng hai.
 // ============================================================

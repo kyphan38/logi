@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi — Gộp khoảng thành các cột cho stacked bar (Stage 5 Task 4)
+// logi - Gộp khoảng thành các cột cho stacked bar (Stage 5 Task 4)
 //
 // 30 cột trên màn 375px không ai đọc được: nhãn chồng lên nhau, mỗi cột rộng
 // 5px. Nên quy tắc là cứng:
@@ -33,7 +33,7 @@ export function bucketMode(range: { from: string; to: string }): BucketMode {
 }
 
 /**
- * Cắt khoảng thành các cột. Tuần ở hai đầu bị cắt theo đúng biên của khoảng —
+ * Cắt khoảng thành các cột. Tuần ở hai đầu bị cắt theo đúng biên của khoảng -
  * không kéo dài ra ngoài, nếu không cột đầu sẽ trông thấp giả tạo so với target
  * của cả tuần.
  */

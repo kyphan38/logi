@@ -1,10 +1,10 @@
 // ---------------------------------------------------------------------------
-// logi functions — Ngày logic (Stage 6 Task 2)
+// logi functions - Ngày logic (Stage 6 Task 2)
 //
 // BẢN SAO của quy ước trong `src/lib/balance.ts`. Function chạy tách khỏi app
 // nên không import chung được. Đổi quy ước ở app thì PHẢI đổi cả ở đây.
 //
-// Việt Nam không có giờ mùa hè, nên offset luôn là +07:00 — dùng số cố định
+// Việt Nam không có giờ mùa hè, nên offset luôn là +07:00 - dùng số cố định
 // thay vì Intl, đỡ một tầng có thể sai.
 // ---------------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ export function logicalWeekday(now: number): number {
   return new Date(`${logicalDate(now)}T00:00:00Z`).getUTCDay();
 }
 
-/** Tuần ISO "2026-W35" — phải khớp `logicalWeek()` của app từng ký tự. */
+/** Tuần ISO "2026-W35" - phải khớp `logicalWeek()` của app từng ký tự. */
 export function logicalWeek(now: number): string {
   const d = new Date(`${logicalDate(now)}T00:00:00Z`);
   // Thứ năm của tuần đó quyết định tuần thuộc về năm nào (quy tắc ISO 8601).

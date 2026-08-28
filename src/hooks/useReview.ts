@@ -1,7 +1,7 @@
 'use client';
 
 // ------------------------------------------------------------
-// logi — Weekly Review (Stage 6 Task 1)
+// logi - Weekly Review (Stage 6 Task 1)
 //
 // Đọc dữ liệu cho ba màn review. Không thêm listener nào cho tuần hiện tại:
 // dùng lại `useWeekActivities` và `useWeekTarget` đã có.
@@ -50,7 +50,7 @@ export function useReviewFlags(): { flags: ReviewFlags; loading: boolean } {
 
 /**
  * Tuần đang cần review, hoặc null.
- * Tick 60s là đủ — mốc là 19:00, không ai cần độ chính xác từng giây.
+ * Tick 60s là đủ - mốc là 19:00, không ai cần độ chính xác từng giây.
  */
 export function useReviewDue(): string | null {
   const now = useTick(60_000, true);
@@ -64,12 +64,12 @@ export function useReviewDue(): string | null {
 
 export interface ReviewData {
   summary: ReviewSummary | null;
-  /** Record của tuần — Stage 7 dùng lại để tính digest, không đọc lần hai. */
+  /** Record của tuần - Stage 7 dùng lại để tính digest, không đọc lần hai. */
   activities: Activity[];
   weekTargets: Map<string, Weekly>;
   /** Cùng mốc thời gian mà summary đã dùng. */
   now: number;
-  /** Sổ nợ hiện tại — màn 3 dùng để hiện phần cộng thêm. */
+  /** Sổ nợ hiện tại - màn 3 dùng để hiện phần cộng thêm. */
   debt: ReturnType<typeof useDebt>;
   /** Tuần đã qua thì chỉ xem. */
   canSetNext: boolean;
