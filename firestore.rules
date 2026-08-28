@@ -51,6 +51,11 @@ service cloud.firestore {
       match /meta/{docId} {
         allow read, write: if isOwner(uid);
       }
+
+      // insights/{from_to} — nhận xét AI đã sinh, cache theo digestHash
+      match /insights/{insightId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     // Mọi thứ còn lại: cấm

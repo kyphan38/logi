@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { deleteAllInsights, listInsights } from '@/lib/insights';
 import {
   disablePush,
   enablePush,
@@ -121,6 +122,8 @@ export default function SettingsPage() {
         )}
       </section>
 
+      <InsightData uid={uid} />
+
       <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
         <h2 className="text-sm font-medium text-ink">Your data</h2>
         <p className="text-[13px] text-ink-muted">
@@ -131,5 +134,84 @@ export default function SettingsPage() {
         </Link>
       </section>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Nhận xét AI đã lưu (Stage 7 Task 8)
+//
+// Insight là suy diễn về đời sống riêng, nên phải xoá được — và xoá thật,
+// không phải ẩn đi. Record gốc không đụng tới.
+// ---------------------------------------------------------------------------
+
+function InsightData({ uid }: { uid: string | null }) {
+  const [count, setCount] = useState<number | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!uid) return;
+    let alive = true;
+    void listInsights(uid)
+      .then((xs) => alive && setCount(xs.length))
+      .catch(() => alive && setCount(0));
+    return () => {
+      alive = false;
+    };
+  }, [uid]);
+
+  async function wipe() {
+    if (!uid) return;
+    setBusy(true);
+    try {
+      await deleteAllInsights(uid);
+      setCount(0);
+      setAsking(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
+      <h2 className="text-sm font-medium text-ink">Saved insights</h2>
+      <p className="text-[13px] text-ink-muted">
+        Notes written by the analysis on the Analytics screen. Your records stay
+        untouched — only the notes go.
+      </p>
+
+      {count === null ? (
+        <p className="text-[13px] text-ink-muted">Checking…</p>
+      ) : count === 0 ? (
+        <p className="text-[13px] text-ink-soft">Nothing saved.</p>
+      ) : asking ? (
+        <div className="flex items-center gap-2">
+          <p className="flex-1 text-[13px] text-ink-soft">Delete {count}?</p>
+          <button
+            type="button"
+            onClick={() => setAsking(false)}
+            className="shrink-0 rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink-soft transition active:scale-[0.98]"
+          >
+            Keep
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void wipe()}
+            className="shrink-0 rounded-sm bg-ink px-3 py-1.5 text-[13px] font-medium text-[var(--surface-0)] transition active:scale-[0.98] disabled:opacity-40"
+          >
+            {busy ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAsking(true)}
+          className="self-start rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink-soft transition active:scale-[0.98]"
+        >
+          Delete {count} saved {count === 1 ? 'insight' : 'insights'}
+        </button>
+      )}
+    </section>
   );
 }

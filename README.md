@@ -186,3 +186,52 @@ id format, that test fails until both copies agree.
 Delete the two functions (`firebase deploy --only functions` after removing
 them, or `firebase functions:delete pushReminders trimPushLog`) and downgrade to
 Spark. The app keeps working; you just lose lock-screen reminders.
+
+## AI insights (Stage 7)
+
+The Analytics screen has an **Analyse this period** button under the charts.
+The rule behind the whole feature is one line:
+
+> **Code does the arithmetic. The model only picks what is worth saying.**
+
+Pipeline: `signals.ts` computes ~15 metrics per category from raw activities →
+`digest.ts` turns them into a small JSON summary → `/api/insight` sends that
+summary to Gemini → `insight-sanitize.ts` throws away anything the digest does
+not support. Raw records never leave the device for the model, and the model is
+never asked to add two numbers together.
+
+### What it costs
+
+About **1,600 tokens per run** on `gemini-3.5-flash-lite` (roughly 1,200 in,
+400 out). Two things keep that from repeating:
+
+- The result is cached in `users/{uid}/insights/{from_to}`, keyed by
+  `digestHash`. Same data, same range → no API call at all.
+- `canAnalyze()` blocks the call entirely below 3 elapsed days or below 55%
+  coverage. A guess from 40% of the truth is worse than no guess.
+
+`Refresh` forces a new call. Editing a record changes the hash, so the next run
+is real. Only the 20 newest insights are kept per user.
+
+### Guardrails
+
+- The sanitizer drops any sentence with a number that is not in the digest, any
+  causal claim (`because`, `led to`), any medical word (`burnout`, `insomnia`),
+  and any judgement (`too much`, `you should`). If everything is dropped, the
+  panel says `Nothing notable in this period.`
+- Correlations (group G) need at least 3 samples or they never reach the model.
+- Severity changes font weight only. **No red, no alarms.**
+- A suggested preset links to `/targets?suggest=…` and is only highlighted
+  there. Nothing is ever applied without a tap and a confirm.
+- Extreme numbers get one flat line written by `extremeNote()` in `digest.ts` —
+  by code, not by the model — measured against your own targets, not against
+  medical advice.
+- The digest is never logged in production; API errors log `e.message` only.
+- Delete everything the model wrote from **Settings → Saved insights**. Your
+  records are untouched.
+
+### Deploying
+
+`firestore.rules` gained an `insights/{insightId}` match. Firestore does not
+cascade a parent `match`, so without `firebase deploy --only firestore:rules`
+saving an insight fails and every run hits the API.

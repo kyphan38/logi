@@ -15,6 +15,7 @@ import { useCrunchStreak, useDebt, useWeekTarget } from '@/hooks/useTargets';
 import { buildReview, canSetNextWeek, reviewDueWeek, type ReviewSummary } from '@/lib/review';
 import { subscribeReviews, type ReviewFlags } from '@/lib/targets';
 import type { Weekly } from '@/lib/rollover';
+import type { Activity } from '@/types/logi';
 
 export function useReviewFlags(): { flags: ReviewFlags; loading: boolean } {
   const { user } = useAuth();
@@ -63,6 +64,11 @@ export function useReviewDue(): string | null {
 
 export interface ReviewData {
   summary: ReviewSummary | null;
+  /** Record của tuần — Stage 7 dùng lại để tính digest, không đọc lần hai. */
+  activities: Activity[];
+  weekTargets: Map<string, Weekly>;
+  /** Cùng mốc thời gian mà summary đã dùng. */
+  now: number;
   /** Sổ nợ hiện tại — màn 3 dùng để hiện phần cộng thêm. */
   debt: ReturnType<typeof useDebt>;
   /** Tuần đã qua thì chỉ xem. */
@@ -77,15 +83,22 @@ export function useReviewData(week: string | null): ReviewData {
   const { history } = useCrunchStreak(week);
   const debt = useDebt();
 
+  const weekTargets = useMemo(() => {
+    const m = new Map<string, Weekly>();
+    if (week && target) m.set(week, target.weekly);
+    return m;
+  }, [week, target]);
+
   const summary = useMemo(() => {
     if (!week || loadingActs || loadingTarget) return null;
-    const weekTargets = new Map<string, Weekly>();
-    if (target) weekTargets.set(week, target.weekly);
     return buildReview({ week, activities, weekTargets, history, now });
-  }, [week, activities, target, history, now, loadingActs, loadingTarget]);
+  }, [week, activities, weekTargets, history, now, loadingActs, loadingTarget]);
 
   return {
     summary,
+    activities,
+    weekTargets,
+    now,
     debt,
     canSetNext: week ? canSetNextWeek(week, now) : false,
     loading: loadingActs || loadingTarget,

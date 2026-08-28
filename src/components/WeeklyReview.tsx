@@ -7,12 +7,15 @@
 // Màn 1 dùng lại BalanceBars của Stage 5 — không vẽ lại chart thứ hai.
 // ------------------------------------------------------------
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import BalanceBars from '@/components/BalanceBars';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInsight } from '@/hooks/useInsight';
 import { useReviewData } from '@/hooks/useReview';
-import { planNextWeek } from '@/lib/review';
+import { extremeNote } from '@/lib/digest';
+import { lookupMetric } from '@/lib/insight-sanitize';
+import { planNextWeek, weekRange } from '@/lib/review';
 import { markReviewed, setupNextWeek } from '@/lib/targets';
 import { addWeeks } from '@/lib/week';
 import { PRESETS, type PresetId } from '@/types/logi';
@@ -28,11 +31,23 @@ interface Props {
 export default function WeeklyReview({ week, onClose }: Props) {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
-  const { summary, debt, canSetNext, loading } = useReviewData(week);
+  const { summary, activities, weekTargets, now, debt, canSetNext, loading } = useReviewData(week);
+
+  // Màn 2 mở ra là chạy luôn — người dùng không phải bấm thêm nút nào.
+  // `weekRange` chốt theo `week`, không theo đồng hồ, để digest không đổi.
+  const range = useMemo(() => weekRange(week), [week]);
+  const insight = useInsight({ activities, range, weekTargets, now, auto: true });
 
   const scroller = useRef<HTMLDivElement>(null);
   const [panel, setPanel] = useState(0);
   const [preset, setPreset] = useState<PresetId>('normal');
+  /** AI gợi ý preset thì đánh dấu sẵn, nhưng người dùng vẫn phải bấm Confirm. */
+  const [tookHint, setTookHint] = useState(false);
+  const hinted = insight.result?.suggestion?.preset ?? null;
+  if (hinted && !tookHint) {
+    setTookHint(true);
+    if (!(hinted === 'crunch' && debt.crunchLocked)) setPreset(hinted);
+  }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,13 +119,32 @@ export default function WeeklyReview({ week, onClose }: Props) {
             )}
           </Panel>
 
-          {/* --- Màn 2: điều đáng chú ý --- */}
+          {/* --- Màn 2: điều đáng chú ý ---
+              AI chọn ra ba điều; hỏng hoặc thiếu dữ liệu thì rơi về note
+              cứng của Stage 6. Màn này không bao giờ được để trống. */}
           <Panel label={PANELS[1]}>
-            {summary?.notes.map((n) => (
-              <p key={n} className="text-sm text-ink">
-                {n}
-              </p>
-            ))}
+            {insight.state === 'loading' ? (
+              <p className="text-[13px] text-ink-muted">Reading your week…</p>
+            ) : insight.state === 'ready' && insight.result ? (
+              <InsightNotes result={insight.result} digest={insight.digest} />
+            ) : (
+              <>
+                {summary?.notes.map((n) => (
+                  <p key={n} className="text-sm text-ink">
+                    {n}
+                  </p>
+                ))}
+                {insight.state === 'error' && (
+                  <button
+                    type="button"
+                    onClick={() => insight.run(true)}
+                    className="self-start text-[13px] text-ink-muted underline decoration-dotted underline-offset-4"
+                  >
+                    Could not analyse. Retry
+                  </button>
+                )}
+              </>
+            )}
           </Panel>
 
           {/* --- Màn 3: tuần tới --- */}
@@ -140,6 +174,12 @@ export default function WeeklyReview({ week, onClose }: Props) {
                     );
                   })}
                 </div>
+
+                {hinted && (
+                  <p className="text-[13px] text-ink-muted">
+                    Suggested: {PRESETS[hinted].label}. Change it if you disagree.
+                  </p>
+                )}
 
                 <p className="text-[13px] text-ink-muted">
                   {plan.debtNote || 'No debt carried over.'}
@@ -206,6 +246,46 @@ export default function WeeklyReview({ week, onClose }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Cùng quy ước với InsightPanel: severity chỉ đổi độ đậm, không dùng màu đỏ. */
+const WEIGHT = {
+  important: 'font-semibold text-ink',
+  notable: 'font-medium text-ink',
+  info: 'font-medium text-ink-soft',
+} as const;
+
+function InsightNotes({
+  result,
+  digest,
+}: {
+  result: import('@/lib/insight-sanitize').InsightResult;
+  digest: import('@/lib/digest').Digest | null;
+}) {
+  return (
+    <>
+      {result.note && <p className="text-sm text-ink-soft">{result.note}</p>}
+      {result.observations.map((o, i) => {
+        const hit = digest && o.metric ? lookupMetric(digest, o.metric) : null;
+        return (
+          <div key={`${o.title}-${i}`} className="flex flex-col gap-0.5">
+            <p className={`text-sm ${WEIGHT[o.severity]}`}>{o.title}</p>
+            <p className="text-[13px] leading-relaxed text-ink-soft">{o.body}</p>
+            {hit && (
+              <p className="text-[11px] tabular-nums text-ink-muted">
+                {hit.path} = {typeof hit.value === 'object' ? JSON.stringify(hit.value) : String(hit.value)}
+              </p>
+            )}
+          </div>
+        );
+      })}
+      {result.positive && <p className="text-[13px] text-ink-soft">{result.positive}</p>}
+      {digest && extremeNote(digest) && (
+        <p className="text-[13px] text-ink-soft">{extremeNote(digest)}</p>
+      )}
+      {result.suggestion && <p className="text-sm text-ink">Try: {result.suggestion.text}</p>}
+    </>
   );
 }
 

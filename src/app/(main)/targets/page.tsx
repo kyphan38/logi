@@ -7,7 +7,8 @@
 // chỉ đổi chỗ. Mọi thứ trên màn hình này phải làm điều đó hiện rõ.
 // ============================================================
 
-import { useCallback, useMemo, useState } from 'react';
+import { Suspense, useCallback, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 import Toasts from '@/components/Toasts';
@@ -63,7 +64,19 @@ function summary(weekly: Weekly): string {
   return ADJUSTABLE.map((c) => `${SHORT[c]}${Math.round(weekly[c])}`).join(' · ');
 }
 
+/**
+ * `useSearchParams` khiến cây con phải render ở client, nên bọc Suspense —
+ * đây là yêu cầu của Next khi build bản tĩnh, không phải cho đẹp.
+ */
 export default function TargetsPage() {
+  return (
+    <Suspense fallback={<p className="py-10 text-center text-sm text-zinc-400">Loading…</p>}>
+      <TargetsView />
+    </Suspense>
+  );
+}
+
+function TargetsView() {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
   const week = useCurrentWeek();
@@ -75,6 +88,13 @@ export default function TargetsPage() {
   const { balance: debt, total: debtTotal, crunchLocked } = useDebt();
   const { streak } = useCrunchStreak(target?.preset ?? null);
   const { toasts, push, dismiss } = useToasts();
+
+  // `/targets?suggest=crunch` — Stage 7 chỉ TÔ SÁNG thẻ, không bao giờ tự áp.
+  // Người dùng vẫn phải bấm và xác nhận như mọi lần đổi preset khác.
+  const params = useSearchParams();
+  const raw = params.get('suggest');
+  const suggested: PresetId | null =
+    raw !== null && (PRESET_ORDER as readonly string[]).includes(raw) ? (raw as PresetId) : null;
 
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<PresetId | null>(null);
@@ -193,6 +213,7 @@ export default function TargetsPage() {
                   key={id}
                   id={id}
                   selected={target?.preset === id && !dirty}
+                  suggested={suggested === id && target?.preset !== id}
                   // Nợ quá 20h thì không được vay thêm nữa.
                   lockedReason={
                     id === 'crunch' && crunchLocked
@@ -283,12 +304,15 @@ export default function TargetsPage() {
 function PresetCard({
   id,
   selected,
+  suggested = false,
   lockedReason,
   disabled,
   onSelect,
 }: {
   id: PresetId;
   selected: boolean;
+  /** Do AI gợi ý ở màn Analytics. Chỉ là dấu nhắc, chưa áp dụng gì. */
+  suggested?: boolean;
   lockedReason: string | null;
   disabled: boolean;
   onSelect: () => void;
@@ -306,13 +330,19 @@ function PresetCard({
         'w-full rounded-md border px-4 py-3 text-left transition',
         selected
           ? 'border-blue-600 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-950/30'
-          : 'border-zinc-200 dark:border-zinc-800',
+          : suggested
+            ? 'border-zinc-400 dark:border-zinc-600'
+            : 'border-zinc-200 dark:border-zinc-800',
         off ? 'cursor-not-allowed opacity-50' : 'active:scale-[0.99]',
       ].join(' ')}
     >
       <div className="flex items-center justify-between">
         <span className="font-medium text-zinc-900 dark:text-zinc-100">{p.label}</span>
-        {selected && <span className="text-blue-600 dark:text-blue-400">✓</span>}
+        {selected ? (
+          <span className="text-blue-600 dark:text-blue-400">✓</span>
+        ) : suggested ? (
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">Suggested</span>
+        ) : null}
       </div>
       <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
         {lockedReason ?? PRESET_HINT[id]}

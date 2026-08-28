@@ -464,6 +464,34 @@ export function subscribeByRange(
   );
 }
 
+/**
+ * Đọc một lần cả một khoảng (Stage 7): AI insight cần kỳ TRƯỚC để so sánh,
+ * mà kỳ trước thì không đổi nữa nên không đáng mở thêm listener.
+ * Dùng lại đúng `queryPlan()` của `subscribeByRange`.
+ */
+export async function listByRange(
+  uid: string,
+  range: { from: string; to: string }
+): Promise<Activity[]> {
+  const plan = queryPlan(range);
+  const q =
+    plan.mode === 'weeks'
+      ? query(col(uid), where('logicalWeek', 'in', plan.weeks), orderBy('startAt', 'asc'))
+      : query(
+          col(uid),
+          where('logicalDate', '>=', plan.from),
+          where('logicalDate', '<=', plan.to),
+          orderBy('logicalDate', 'asc'),
+          orderBy('startAt', 'asc')
+        );
+
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => toActivity(d.id, d.data()))
+    .filter((a) => a.status !== 'scheduled' && inRange(a.logicalDate, range))
+    .sort(byStartAsc);
+}
+
 /** Đọc một lần các session đang chạy. */
 export async function listActive(uid: string): Promise<Activity[]> {
   const q = query(col(uid), where('status', '==', 'active'));
