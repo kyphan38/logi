@@ -36,7 +36,7 @@ export async function restoreActivity(uid: string, a: Activity): Promise<void> {
 }
 
 const FIELD =
-  'min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base dark:border-zinc-800 dark:bg-zinc-900';
+  'min-h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-base dark:border-zinc-800 dark:bg-zinc-900';
 
 export default function RecordSheet({
   target,
@@ -204,7 +204,7 @@ export default function RecordSheet({
       onClick={onClose}
     >
       <div
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 dark:bg-zinc-900"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-lg bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 dark:bg-zinc-900"
         style={{
           overscrollBehavior: 'contain',
           transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
@@ -315,7 +315,7 @@ export default function RecordSheet({
               disabled={busy}
               onClick={() => (confirming ? remove() : setConfirming(true))}
               className={[
-                'min-h-11 flex-1 rounded-xl border text-sm font-medium transition active:scale-[0.99] disabled:opacity-50',
+                'min-h-11 flex-1 rounded-md border text-sm font-medium transition active:scale-[0.99] disabled:opacity-50',
                 confirming
                   ? 'border-red-600 bg-red-600 text-white'
                   : 'border-zinc-200 text-red-600 dark:border-zinc-700 dark:text-red-400',
@@ -328,7 +328,7 @@ export default function RecordSheet({
               type="button"
               disabled={busy}
               onClick={onClose}
-              className="min-h-11 flex-1 rounded-xl border border-zinc-200 text-sm font-medium disabled:opacity-50 dark:border-zinc-700"
+              className="min-h-11 flex-1 rounded-md border border-zinc-200 text-sm font-medium disabled:opacity-50 dark:border-zinc-700"
             >
               Cancel
             </button>
@@ -338,7 +338,7 @@ export default function RecordSheet({
             type="button"
             disabled={busy || !valid}
             onClick={save}
-            className="min-h-11 flex-1 rounded-xl bg-zinc-900 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            className="min-h-11 flex-1 rounded-md bg-zinc-900 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
           >
             {busy ? 'Saving…' : 'Save'}
           </button>

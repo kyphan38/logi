@@ -20,7 +20,7 @@ export default function VoiceSheet({ children }: { children: ReactNode }) {
       ].join(' ')}
     >
       <div
-        className="sheet-up pointer-events-auto max-h-[70vh] w-full max-w-md overflow-y-auto rounded-2xl shadow-2xl"
+        className="sheet-up pointer-events-auto max-h-[70vh] w-full max-w-md overflow-y-auto rounded-lg shadow-2xl"
         style={{ overscrollBehavior: 'contain' }}
       >
         {children}

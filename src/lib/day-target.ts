@@ -71,3 +71,29 @@ export function daySummary(
 export function progressFor(selected: string, today: string, now: number): number {
   return selected === today ? dayProgress(now) : 1;
 }
+
+// ---------------------------------------------------------------------------
+// Hình dạng một ô gauge ở màn History (Stage 4.6 Task 4).
+// Tách ra khỏi component để test được bằng `node --test`.
+// ---------------------------------------------------------------------------
+export interface GaugeShape {
+  /** 0..1 — phần thanh được tô. Không bao giờ quá 1. */
+  fill: number;
+  /** Vượt target → thanh đầy + vạch hổ phách ở mép phải. */
+  over: boolean;
+  /** Không có target (VD Fitness ngày Chủ nhật) → không vẽ thanh, số là `0.0/—`. */
+  noTarget: boolean;
+  /** Không target mà cũng chẳng log gì → ô này không mang tin, làm mờ đi. */
+  dim: boolean;
+}
+
+export function gaugeShape(actual: number, target: number): GaugeShape {
+  const noTarget = target <= 0;
+  return {
+    // Kẹp cả hai đầu: width âm là CSS không hợp lệ, thanh sẽ biến mất.
+    fill: noTarget ? 0 : Math.min(1, Math.max(0, actual / target)),
+    over: !noTarget && actual > target,
+    noTarget,
+    dim: noTarget && actual <= 0,
+  };
+}

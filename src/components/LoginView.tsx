@@ -26,7 +26,7 @@ export default function LoginView() {
         type="button"
         onClick={signIn}
         disabled={loading || signingIn}
-        className="flex h-12 w-full max-w-xs items-center justify-center gap-3 rounded-xl border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+        className="flex h-12 w-full max-w-xs items-center justify-center gap-3 rounded-md border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
       >
         {signingIn ? (
           <>

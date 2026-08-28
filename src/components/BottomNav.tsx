@@ -27,7 +27,7 @@ export default function BottomNav() {
         // Chừa chỗ cho home indicator của iPhone.
         'pb-[env(safe-area-inset-bottom)]',
         // Desktop: đổi thành sidebar bên trái.
-        'md:inset-x-auto md:inset-y-0 md:left-0 md:w-56 md:flex-col md:gap-1 md:border-r md:border-t-0 md:p-3 md:pb-3',
+        'md:inset-x-auto md:inset-y-0 md:left-0 md:w-[180px] md:flex-col md:gap-1 md:border-r md:border-t-0 md:p-3 md:pb-3',
       ].join(' ')}
     >
       {TABS.map((tab) => {

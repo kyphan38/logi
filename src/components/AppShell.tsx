@@ -21,10 +21,12 @@ function OfflineBanner() {
 
 export default function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-full flex-1 flex-col md:pl-56">
+    <div className="flex min-h-full flex-1 flex-col md:pl-[180px]">
       <OfflineBanner />
       {/* pb-20 chừa chỗ cho bottom nav; md thì nav nằm bên trái nên bỏ. */}
-      <main className="flex flex-1 flex-col px-5 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-6 md:pb-6">
+      {/* content-width: mọi màn hình giới hạn 720px và căn giữa. Trước đây chỉ
+          Targets căn giữa còn Now/History kéo full width - nhìn không nhất quán. */}
+      <main className="content-width flex flex-1 flex-col px-5 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-6 md:pb-6">
         {children}
       </main>
       <BottomNav />

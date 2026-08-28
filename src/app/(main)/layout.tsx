@@ -22,8 +22,8 @@ function Skeleton() {
   return (
     <div className="flex flex-1 flex-col gap-4 px-5 pt-6" aria-busy="true" aria-label="Loading">
       <div className="h-7 w-32 animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-800" />
-      <div className="h-28 w-full animate-pulse rounded-xl bg-zinc-200 dark:bg-zinc-800" />
-      <div className="h-28 w-full animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
+      <div className="h-28 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-800" />
+      <div className="h-28 w-full animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-900" />
     </div>
   );
 }

@@ -10,7 +10,7 @@ const CANCEL_DY = 80;
 
 function MicIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-6 w-6">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[26px] w-[26px]">
       <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z" strokeLinecap="round" />
       <path d="M5 11a7 7 0 0 0 14 0M12 18v3" strokeLinecap="round" />
     </svg>
@@ -20,7 +20,7 @@ function MicIcon() {
 function Spinner() {
   return (
     <span
-      className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent"
+      className="h-[26px] w-[26px] animate-spin rounded-full border-2 border-current border-t-transparent"
       aria-hidden="true"
     />
   );
@@ -83,11 +83,11 @@ export default function MicButton({
   const label = armed ? 'Release to cancel' : recording ? `${secs}s · slide up to cancel` : null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-end gap-2 px-4 md:bottom-6 md:px-6">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-end gap-2 px-5 md:bottom-6 md:pl-[180px] md:pr-6">
       {error ? (
         <p
           role="alert"
-          className="pointer-events-auto max-w-xs rounded-xl bg-red-600 px-3 py-2 text-xs text-white shadow-lg"
+          className="pointer-events-auto max-w-xs rounded-md bg-red-600 px-3 py-2 text-xs text-white shadow-lg"
         >
           {error}
         </p>
@@ -126,10 +126,14 @@ export default function MicButton({
           onContextMenu={(e) => e.preventDefault()}
           style={{ touchAction: 'none', WebkitTouchCallout: 'none' }}
           className={[
-            'relative flex h-16 w-16 select-none items-center justify-center rounded-full shadow-lg transition',
+            // 64px trên điện thoại (ngón cái với tới), 56px trên desktop nơi có chuột.
+            'relative flex h-16 w-16 select-none items-center justify-center rounded-full transition md:h-14 md:w-14',
+            // Bóng đậm + quầng sáng mỏng: tách hẳn nút khỏi nội dung phía sau.
+            'shadow-[0_8px_24px_rgb(0_0_0/0.28)] ring-1 ring-black/5',
             'disabled:opacity-50',
             recording
-              ? 'scale-110 bg-red-600 text-white ring-4 ring-red-500/40'
+              // 64 → 76px.
+              ? 'scale-[1.1875] bg-red-600 text-white ring-4 ring-red-500/40'
               : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900',
             armed ? 'opacity-60' : '',
           ].join(' ')}

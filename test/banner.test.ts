@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { deviations, expectedHours, logicalWeekday } from '@/lib/balance';
-import { pickBalance } from '@/lib/banner';
-import { PRESETS, type Activity } from '@/types/logi';
+import { coverage, MIN_COVERAGE, pickBalance } from '@/lib/banner';
+import { CATEGORIES, PRESETS, type Activity } from '@/types/logi';
 import { act, at, H } from './_helpers.ts';
 
 const WEEKLY = PRESETS.normal.weekly;
@@ -89,12 +89,30 @@ test('vượt → over, thiếu → under (không có nhánh nào khác)', () =>
   assert.ok(under!.deltaHours < 0);
 });
 
-test('không ghi gì cả → banner báo thiếu, chọn khoảng trống lớn nhất', () => {
-  // Tới tối thứ Tư, Work là phần expected lớn nhất đã tích lại, nên nó
-  // thắng Sleep. Ghi lại đây để đổi công thức là test kêu ngay.
+test('không ghi gì cả → nói thiếu dữ liệu, KHÔNG bắn -99%', () => {
+  // Tuần trống thì category nào cũng -99%. Nói ra chẳng giúp được gì, chỉ làm
+  // người dùng nản. Trước Stage 4.6 chỗ này trả 'under'/'work'.
   const line = pickBalance([], WEEKLY, WED_2041);
-  assert.equal(line?.kind, 'under');
-  assert.equal(line?.category, 'work');
+  assert.equal(line?.kind, 'sparse');
+  assert.equal(line?.category, null);
+  assert.equal(line?.text, 'Not enough logged this week to compare.');
+});
+
+test('coverage < 20% → sparse, dù lệch to tới đâu', () => {
+  const exp = expectedHours(WEEKLY, WED_2041);
+  const total = CATEGORIES.reduce((a, c) => a + exp[c], 0);
+  // Log đúng 10% lượng lẽ ra phải có.
+  const line = pickBalance([block(MON, 'work', total * 0.1)], WEEKLY, WED_2041);
+  assert.ok(coverage([block(MON, 'work', total * 0.1)], WEEKLY, WED_2041) < MIN_COVERAGE);
+  assert.equal(line?.kind, 'sparse');
+});
+
+test('coverage >= 20% → quay lại so sánh bình thường', () => {
+  const exp = expectedHours(WEEKLY, WED_2041);
+  const total = CATEGORIES.reduce((a, c) => a + exp[c], 0);
+  const acts = [block(MON, 'sleep', total * 0.5)];
+  assert.ok(coverage(acts, WEEKLY, WED_2041) >= MIN_COVERAGE);
+  assert.notEqual(pickBalance(acts, WEEKLY, WED_2041)?.kind, 'sparse');
 });
 
 // --- Xung đột cuối tuần thắng ----------------------------------------
@@ -117,7 +135,15 @@ test('xung đột cuối tuần thắng mọi deviation', () => {
 
 test('nêu số, không dạy đời', () => {
   const line = pickBalance(onPlan(WED_2041, { work: 10 }), WEEKLY, WED_2041);
-  assert.match(line!.text, /^Work: \d+\.\d+h \/ \d+\.\d+h \([+-]?\d+%\)$/);
+  assert.match(line!.text, /^Work \d+\.\d+h · \d+\.\d+h expected by now \([+-]?\d+%\)$/);
+});
+
+test('con số expected KHÔNG đứng cạnh dấu / như thể là target tuần', () => {
+  // Bug cũ: `Work: 0.4h / 31.0h (-99%)` đọc lên tưởng target Work là 31h,
+  // trong khi màn Targets ghi 40h.
+  const line = pickBalance(onPlan(WED_2041, { work: 10 }), WEEKLY, WED_2041);
+  assert.ok(!line!.text.includes('/'), `còn dấu gạch chéo: ${line!.text}`);
+  assert.ok(line!.text.includes('expected by now'));
 });
 
 // --- Banner khớp với deviations() gọi trực tiếp -----------------------

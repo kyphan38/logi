@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { catInk, catTint } from '@/lib/category-style';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Category } from '@/types/logi';
 
 const LONG_PRESS_MS = 500;
@@ -75,17 +76,27 @@ export default function CategoryGrid({
                   : `Start ${CATEGORY_LABEL[c]}`
               }
               className={[
-                'flex min-h-[72px] select-none flex-col items-center justify-center gap-1 rounded-xl border-2 text-base font-medium transition',
+                // Viền HAIRLINE xám cho mọi nút. Năm viền pastel cạnh nhau là thứ
+                // làm màn này rối - màu category thu về đúng một chấm tròn.
+                'flex min-h-[72px] select-none items-center justify-center gap-2 rounded-md border border-line text-base font-medium transition',
                 'touch-manipulation active:scale-[0.98] disabled:opacity-50',
                 last && odd ? 'col-span-2' : '',
-                isRunning
-                  ? 'border-dashed border-zinc-300 bg-transparent text-zinc-400 dark:border-zinc-700 dark:text-zinc-500'
-                  : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900',
+                // Nhấn: nền đậm hơn một bậc, KHÔNG đổi màu viền.
+                isRunning ? 'text-ink' : 'bg-surface-1 text-ink active:bg-surface-2',
               ].join(' ')}
-              style={isRunning ? undefined : { borderColor: `${CATEGORY_COLOR[c]}55` }}
+              style={
+                isRunning
+                  ? { backgroundColor: catTint(c), color: catInk(c) }
+                  : undefined
+              }
             >
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 shrink-0 rounded-full ${isRunning ? 'animate-pulse' : ''}`}
+                style={{ backgroundColor: CATEGORY_COLOR[c] }}
+              />
               <span>{CATEGORY_LABEL[c]}</span>
-              {isRunning ? <span className="text-xs">Running</span> : null}
+              {isRunning ? <span className="text-xs opacity-80">Running</span> : null}
             </button>
           );
         })}
@@ -100,7 +111,7 @@ export default function CategoryGrid({
           onClick={() => setSheetFor(null)}
         >
           <div
-            className="w-full max-w-md rounded-t-2xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] dark:bg-zinc-900"
+            className="w-full max-w-md rounded-t-lg bg-surface-2 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
             style={{ overscrollBehavior: 'contain' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -116,7 +127,7 @@ export default function CategoryGrid({
                 <button
                   key={m}
                   type="button"
-                  className="min-h-12 rounded-xl border border-zinc-200 text-sm font-medium active:scale-[0.99] dark:border-zinc-800"
+                  className="min-h-12 rounded-sm border border-line text-sm font-medium active:scale-[0.99]"
                   onClick={() => {
                     const c = sheetFor;
                     setSheetFor(null);
@@ -128,7 +139,7 @@ export default function CategoryGrid({
               ))}
               <button
                 type="button"
-                className="min-h-12 rounded-xl text-sm text-zinc-500 dark:text-zinc-400"
+                className="min-h-12 rounded-sm text-sm text-ink-soft"
                 onClick={() => setSheetFor(null)}
               >
                 Cancel

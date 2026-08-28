@@ -86,7 +86,7 @@ export default function StaleSessionModal({
       aria-modal="true"
       aria-labelledby="stale-title"
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white p-5 dark:bg-zinc-900">
+      <div className="w-full max-w-sm rounded-lg bg-white p-5 dark:bg-zinc-900">
         <h2 id="stale-title" className="text-lg font-semibold tracking-tight">
           Unfinished session
         </h2>
@@ -107,7 +107,7 @@ export default function StaleSessionModal({
                 type="button"
                 disabled={busy}
                 onClick={() => void stopAt(s.ts)}
-                className="min-h-11 flex-1 rounded-xl border border-zinc-200 px-3 text-sm font-medium active:scale-[0.98] disabled:opacity-50 dark:border-zinc-800"
+                className="min-h-11 flex-1 rounded-md border border-zinc-200 px-3 text-sm font-medium active:scale-[0.98] disabled:opacity-50 dark:border-zinc-800"
               >
                 {s.label}
               </button>
@@ -116,7 +116,7 @@ export default function StaleSessionModal({
               type="button"
               disabled={busy}
               onClick={() => setCustom(toLocalInput(maxTs))}
-              className="min-h-11 flex-1 rounded-xl border border-zinc-200 px-3 text-sm font-medium active:scale-[0.98] disabled:opacity-50 dark:border-zinc-800"
+              className="min-h-11 flex-1 rounded-md border border-zinc-200 px-3 text-sm font-medium active:scale-[0.98] disabled:opacity-50 dark:border-zinc-800"
             >
               Custom…
             </button>
@@ -129,14 +129,14 @@ export default function StaleSessionModal({
               min={toLocalInput(activity.startAt)}
               max={toLocalInput(maxTs)}
               onChange={(e) => setCustom(e.target.value)}
-              className="min-h-11 w-full rounded-xl border border-zinc-200 px-3 text-base dark:border-zinc-800 dark:bg-zinc-900"
+              className="min-h-11 w-full rounded-md border border-zinc-200 px-3 text-base dark:border-zinc-800 dark:bg-zinc-900"
             />
             <div className="flex gap-2">
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => setCustom(null)}
-                className="min-h-11 flex-1 rounded-xl border border-zinc-200 text-sm disabled:opacity-50 dark:border-zinc-800"
+                className="min-h-11 flex-1 rounded-md border border-zinc-200 text-sm disabled:opacity-50 dark:border-zinc-800"
               >
                 Back
               </button>
@@ -144,7 +144,7 @@ export default function StaleSessionModal({
                 type="button"
                 disabled={busy}
                 onClick={saveCustom}
-                className="min-h-11 flex-1 rounded-xl bg-zinc-900 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+                className="min-h-11 flex-1 rounded-md bg-zinc-900 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
               >
                 Save
               </button>
@@ -162,7 +162,7 @@ export default function StaleSessionModal({
           type="button"
           disabled={busy}
           onClick={() => void discard()}
-          className="mt-4 min-h-11 w-full rounded-xl text-sm text-zinc-500 underline-offset-2 hover:underline disabled:opacity-50 dark:text-zinc-400"
+          className="mt-4 min-h-11 w-full rounded-md text-sm text-zinc-500 underline-offset-2 hover:underline disabled:opacity-50 dark:text-zinc-400"
         >
           Discard this session
         </button>

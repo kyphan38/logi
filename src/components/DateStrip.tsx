@@ -58,7 +58,7 @@ export default function DateStrip({
               onClick={() => onSelect(d)}
               aria-current={active ? 'date' : undefined}
               className={[
-                'flex min-h-[52px] w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border text-xs transition',
+                'flex min-h-[52px] w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border text-xs transition',
                 active
                   ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
                   : 'border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400',
@@ -88,7 +88,7 @@ export default function DateStrip({
         })}
       </div>
 
-      <label className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+      <label className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
         <span className="sr-only">Pick a date</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
           <rect x="3" y="5" width="18" height="16" rx="2" />

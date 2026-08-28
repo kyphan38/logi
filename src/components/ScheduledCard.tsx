@@ -33,7 +33,7 @@ export default function ScheduledCard({
 
   return (
     <div
-      className="flex items-center gap-3 rounded-xl border border-l-4 border-dashed border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+      className="flex items-center gap-3 rounded-md border border-l-4 border-dashed border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
       style={{ borderLeftColor: color }}
     >
       <div className="min-w-0 flex-1">

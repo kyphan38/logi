@@ -16,7 +16,7 @@ import {
 import { actualHours, logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
 import { roundDown } from '@/lib/datetime';
 import { addDays, coverageOfDay, dayWindow, layoutDay } from '@/lib/timeline';
-import { daySummary, progressFor, type DayLine } from '@/lib/day-target';
+import { daySummary, gaugeShape, progressFor, type DayLine } from '@/lib/day-target';
 import { useWeekTarget } from '@/hooks/useTargets';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
@@ -112,15 +112,6 @@ export default function HistoryPage() {
     [totals, weekTarget, win, selected, today, nowMinute],
   );
 
-  const bars = useMemo(() => {
-    const sum = CATEGORIES.reduce((s, c) => s + (totals[c] ?? 0), 0);
-    if (sum <= 0) return [];
-    return CATEGORIES.filter((c) => (totals[c] ?? 0) > 0).map((c) => ({
-      c,
-      pct: ((totals[c] ?? 0) / sum) * 100,
-    }));
-  }, [totals]);
-
   // Bố cục co giãn đã bỏ khoảng đêm trống, nên không cần tự cuộn tới 06:00
   // nữa. Đổi ngày thì về đầu danh sách là đủ.
   const headerRef = useRef<HTMLDivElement>(null);
@@ -146,7 +137,7 @@ export default function HistoryPage() {
             type="button"
             onClick={() => setSheet(newRecordDefaults(selected, today, nowMinute))}
             aria-label="Add record"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 text-xl transition active:scale-[0.99] dark:border-zinc-700"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-zinc-200 text-xl transition active:scale-[0.99] dark:border-zinc-700"
           >
             +
           </button>
@@ -156,26 +147,12 @@ export default function HistoryPage() {
           <DateStrip today={today} selected={selected} bars={dayBars} onSelect={setSelected} />
         </div>
 
-        <SummaryLine
+        <SummaryGauge
           lines={summary}
           trackedH={trackedH}
           untrackedH={untrackedH}
           overlap={overlap}
         />
-
-        <div className="mt-1.5 flex h-1.5 gap-0.5 overflow-hidden rounded-full">
-          {bars.length > 0 ? (
-            bars.map((b) => (
-              <span
-                key={b.c}
-                title={`${CATEGORY_LABEL[b.c]} ${(totals[b.c] ?? 0).toFixed(1)}h`}
-                style={{ width: `${b.pct}%`, backgroundColor: CATEGORY_COLOR[b.c] }}
-              />
-            ))
-          ) : (
-            <span className="w-full bg-zinc-100 dark:bg-zinc-800" />
-          )}
-        </div>
       </header>
 
       <div ref={bodyRef} className="pt-4">
@@ -222,7 +199,7 @@ export default function HistoryPage() {
 //
 // Chưa có weekTarget cho tuần đó (dữ liệu cũ) → quay về dòng cũ.
 // ---------------------------------------------------------------------------
-function SummaryLine({
+function SummaryGauge({
   lines,
   trackedH,
   untrackedH,
@@ -235,33 +212,69 @@ function SummaryLine({
 }) {
   const h = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
 
-  return (
-    <div className="mt-3 text-xs tabular-nums">
-      {lines.length > 0 ? (
-        <p className="flex flex-wrap gap-x-2 gap-y-0.5">
-          {lines.map((l) => (
-            <span
-              key={l.category}
-              // Dưới 50% target → đậm hơn một chút. Không dùng đỏ.
-              className={
-                l.low
-                  ? 'font-medium text-zinc-600 dark:text-zinc-300'
-                  : 'text-zinc-400 dark:text-zinc-500'
-              }
-            >
-              {CATEGORY_LABEL[l.category]} {h(l.actual)} / {h(l.target)}
-            </span>
-          ))}
-        </p>
-      ) : (
-        <p className="text-zinc-500 dark:text-zinc-400">
+  // Chưa có weekTarget cho tuần đó thì daySummary trả [] - không vẽ gauge được,
+  // quay về dòng chữ cũ thay vì để trống một mảng.
+  if (lines.length === 0) {
+    return (
+      <div className="mt-3 text-xs tabular-nums text-ink-soft">
+        <p>
           Tracked {h(trackedH)}h · Untracked {h(untrackedH)}h
         </p>
+        {overlap > 0 ? <p className="mt-0.5 text-ink-muted">{h(overlap)}h overlap</p> : null}
+      </div>
+    );
+  }
+
+  const by = new Map(lines.map((l) => [l.category, l]));
+
+  return (
+    <div className="mt-3">
+      <div className="grid grid-cols-5 gap-2">
+        {CATEGORIES.map((c) => (
+          <Gauge key={c} line={by.get(c) ?? { category: c, actual: 0, target: 0, low: false }} />
+        ))}
+      </div>
+      {overlap > 0 ? (
+        <p className="mt-1.5 text-[11px] tabular-nums text-ink-muted">{h(overlap)}h overlap</p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Một ô gauge: nhãn / thanh / số. Thanh cao 6px, không viền. */
+function Gauge({ line }: { line: DayLine }) {
+  const { category: c, actual, target } = line;
+  const h = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
+
+  const { fill, over, noTarget, dim } = gaugeShape(actual, target);
+
+  return (
+    <div className={`min-w-0 ${dim ? 'opacity-40' : ''}`}>
+      <p className="truncate text-[10px] tracking-[-0.01em] text-ink-soft">{CATEGORY_LABEL[c]}</p>
+
+      {noTarget ? (
+        // "không vẽ thanh" - vẫn chừa đúng chiều cao để 5 cột thẳng hàng.
+        <div className="mt-1 h-1.5" aria-hidden="true" />
+      ) : (
+        <div
+          className="relative mt-1 h-1.5 overflow-hidden rounded-full bg-line"
+          role="img"
+          aria-label={`${CATEGORY_LABEL[c]} ${h(actual)} of ${h(target)} hours`}
+        >
+          <span
+            className="absolute inset-y-0 left-0 rounded-full"
+            style={{ width: `${fill * 100}%`, backgroundColor: CATEGORY_COLOR[c] }}
+          />
+          {/* Vượt target: vạch hổ phách ở mép phải. Không đổi màu cả thanh -
+              vượt Learn là chuyện tốt, đừng bôi đỏ nó. */}
+          {over ? <span className="absolute inset-y-0 right-0 w-[3px] bg-amber-500" /> : null}
+        </div>
       )}
 
-      {overlap > 0 ? (
-        <p className="mt-0.5 text-zinc-400 dark:text-zinc-600">{h(overlap)}h overlap</p>
-      ) : null}
+      <p className="mt-1 truncate text-[11px] tabular-nums text-ink">
+        {h(actual)}
+        <span className="text-ink-muted">/{noTarget ? '—' : h(target)}</span>
+      </p>
     </div>
   );
 }

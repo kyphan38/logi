@@ -19,6 +19,7 @@ import {
   useRollover,
   useWeekTarget,
 } from '@/hooks/useTargets';
+import { budgetMessages, PRESET_HINT } from '@/lib/copy';
 import { rebalance, validateTargets } from '@/lib/balance';
 import { roundToBudget, type Weekly } from '@/lib/rollover';
 import {
@@ -141,7 +142,7 @@ export default function TargetsPage() {
   if (!uid) return null;
 
   return (
-    <main className="mx-auto w-full max-w-lg px-4 pb-28 pt-4 md:pb-8">
+    <div className="pb-8">
       <header className="mb-4 flex items-baseline justify-between">
         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Targets</h1>
         <span className="text-sm text-zinc-500 dark:text-zinc-400">{weekLabel(week)}</span>
@@ -211,7 +212,7 @@ export default function TargetsPage() {
                 />
               ))}
 
-              <TotalRow weekly={weekly} errors={check?.errors ?? []} />
+              <TotalRow weekly={weekly} errors={budgetMessages(weekly)} />
 
               {dirty && !locked && (
                 <div className="mt-3 flex gap-2">
@@ -251,7 +252,7 @@ export default function TargetsPage() {
       )}
 
       <Toasts toasts={toasts} onDismiss={dismiss} />
-    </main>
+    </div>
   );
 }
 
@@ -282,7 +283,7 @@ function PresetCard({
       disabled={off}
       aria-pressed={selected}
       className={[
-        'w-full rounded-xl border px-4 py-3 text-left transition',
+        'w-full rounded-md border px-4 py-3 text-left transition',
         selected
           ? 'border-blue-600 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-950/30'
           : 'border-zinc-200 dark:border-zinc-800',
@@ -294,7 +295,7 @@ function PresetCard({
         {selected && <span className="text-blue-600 dark:text-blue-400">✓</span>}
       </div>
       <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-        {lockedReason ?? p.hint}
+        {lockedReason ?? PRESET_HINT[id]}
       </p>
       <p className="mt-1 font-mono text-xs text-zinc-400">{summary(p.weekly)}</p>
     </button>
@@ -400,7 +401,7 @@ function DebtSection({
   return (
     <section className="mb-6">
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Debt</h2>
-      <div className="rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+      <div className="rounded-md border border-zinc-200 px-4 py-3 dark:border-zinc-800">
         {rows.map((c) => (
           <div key={c} className="flex items-baseline justify-between py-1 text-sm">
             <span className="text-zinc-700 dark:text-zinc-300">{CATEGORY_LABEL[c]}</span>
@@ -437,12 +438,12 @@ function StreakPrompt({
   onKeep: () => void;
 }) {
   return (
-    <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
+    <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
       <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
         Crunch: {count} of the last {of} weeks.
       </p>
       <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
-        Make this the real baseline, or is this a problem to fix?
+        Reset your baseline, or is this something to fix?
       </p>
       <div className="mt-3 flex gap-2">
         <button
@@ -490,9 +491,9 @@ function ConfirmSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center">
-      <div className="w-full max-w-lg rounded-t-2xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:bg-zinc-950 md:rounded-2xl md:pb-5">
+      <div className="w-full max-w-lg rounded-t-lg bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:bg-zinc-950 md:rounded-lg md:pb-5">
         <h3 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-          Switching to {PRESETS[to].label}
+          Switch to {PRESETS[to].label}
         </h3>
 
         <div className="mb-4">
@@ -506,7 +507,7 @@ function ConfirmSheet({
                 {/* Đổi preset mà không thấy giá phải trả thì cơ chế này vô nghĩa. */}
                 {r.debt > 0 && (
                   <span className="ml-2 text-amber-600 dark:text-amber-400">
-                    (+{h(r.debt)} debt)
+                    +{h(r.debt)} debt
                   </span>
                 )}
               </span>

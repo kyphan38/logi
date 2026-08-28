@@ -13,7 +13,7 @@ import type { MissingField } from '@/lib/voice-command';
 import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
 const FIELD =
-  'min-h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base dark:border-zinc-800 dark:bg-zinc-900';
+  'min-h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-base dark:border-zinc-800 dark:bg-zinc-900';
 const MISSING = 'border-red-400 dark:border-red-500';
 
 const INTENT_TITLE: Record<ParsedCommand['intent'], string> = {
@@ -83,7 +83,7 @@ export default function ParseConfirmCard({
 
   return (
     <div
-      className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+      className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
       role="group"
       aria-label="Confirm voice entry"
     >
@@ -193,7 +193,7 @@ export default function ParseConfirmCard({
           type="button"
           onClick={onCancel}
           disabled={busy}
-          className="min-h-11 flex-1 rounded-xl border border-zinc-200 text-sm font-medium disabled:opacity-50 dark:border-zinc-800"
+          className="min-h-11 flex-1 rounded-md border border-zinc-200 text-sm font-medium disabled:opacity-50 dark:border-zinc-800"
         >
           Cancel
         </button>
@@ -201,7 +201,7 @@ export default function ParseConfirmCard({
           type="button"
           onClick={confirm}
           disabled={busy || !ready}
-          className="min-h-11 flex-1 rounded-xl bg-zinc-900 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className="min-h-11 flex-1 rounded-md bg-zinc-900 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
         >
           {busy ? 'Saving…' : 'Confirm'}
         </button>

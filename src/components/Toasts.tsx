@@ -21,7 +21,7 @@ export default function Toasts({
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-3 rounded-xl bg-zinc-900 px-4 py-3 text-sm text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900"
+          className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-3 rounded-md bg-zinc-900 px-4 py-3 text-sm text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900"
         >
           <span className="min-w-0 flex-1">{t.message}</span>
           {t.action ? (

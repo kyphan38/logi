@@ -7,7 +7,7 @@
 // ============================================================
 
 const BTN =
-  'min-h-11 rounded-xl border border-zinc-200 px-4 text-sm font-medium transition active:scale-[0.98] disabled:opacity-50 dark:border-zinc-700';
+  'min-h-11 rounded-md border border-zinc-200 px-4 text-sm font-medium transition active:scale-[0.98] disabled:opacity-50 dark:border-zinc-700';
 
 export default function ClarifyCard({
   question,
@@ -29,7 +29,7 @@ export default function ClarifyCard({
 }) {
   return (
     <div
-      className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+      className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
       role="group"
       aria-label="Clarify voice entry"
     >

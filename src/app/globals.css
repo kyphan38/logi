@@ -1,8 +1,79 @@
 @import "tailwindcss";
 
+/* ===========================================================================
+   Design tokens (Stage 4.6)
+
+   Nguyên tắc: BỚT VIỀN, THÊM NỀN. Card phân biệt bằng nền khác biệt, không
+   phải bằng viền bao quanh. Màu chỉ dùng cho category, không dùng cho khung.
+
+   Màu gốc category vẫn nằm ở CATEGORY_COLOR trong logi.ts — file này chỉ
+   thêm biến thể dẫn xuất (tint / ink). KHÔNG sửa logi.ts.
+   =========================================================================== */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* --- Bán kính --- */
+  --radius-sm: 8px;    /* button, input, chip */
+  --radius-md: 12px;   /* card, timeline block, sheet row */
+  --radius-lg: 16px;   /* bottom sheet, modal */
+  --radius-full: 9999px;
+
+  /* --- Bề mặt & viền --- */
+  --surface-0: #ffffff; /* nền trang */
+  --surface-1: #f7f7f8; /* card */
+  --surface-2: #ffffff; /* card nổi / sheet */
+  --border: rgb(0 0 0 / 0.07);        /* hairline */
+  --border-strong: rgb(0 0 0 / 0.16); /* viền đứt vùng untracked */
+
+  /* --- Chữ --- */
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+
+  /* --- Category dẫn xuất (tint = nền block, ink = chữ trên tint) ---
+     Sinh từ CATEGORY_COLOR bằng script; mọi cặp đạt tương phản >= 4.5. */
+  --cat-learn-tint: #e5e6f7;
+  --cat-learn-ink: #5659d2;
+  --cat-work-tint: #f7ecdc;
+  --cat-work-ink: #956007;
+  --cat-fitness-tint: #dbf0ea;
+  --cat-fitness-ink: #0a7854;
+  --cat-sleep-tint: #e5e7eb;
+  --cat-sleep-ink: #5a687d;
+  --cat-leisure-tint: #f6e2ed;
+  --cat-leisure-ink: #b33774;
+
+  /* --- Bề rộng nội dung tối đa trên desktop --- */
+  --content-max: 720px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+
+    --surface-0: #0a0a0a;
+    --surface-1: #161618;
+    --surface-2: #1c1c1f;
+    --border: rgb(255 255 255 / 0.09);
+    --border-strong: rgb(255 255 255 / 0.20);
+
+    --text-primary: #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+
+    --cat-learn-tint: #272848;
+    --cat-learn-ink: #8486f4;
+    --cat-work-tint: #473415;
+    --cat-work-ink: #f59e0b;
+    --cat-fitness-tint: #153a2f;
+    --cat-fitness-ink: #10b981;
+    --cat-sleep-tint: #272b31;
+    --cat-sleep-ink: #8693a5;
+    --cat-leisure-tint: #452134;
+    --cat-leisure-ink: #ee60a6;
+  }
 }
 
 @theme inline {
@@ -10,13 +81,20 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Cho phép dùng thẳng trong Tailwind: bg-surface-1, text-muted, rounded-md… */
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text-primary);
+  --color-ink-soft: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
 }
 
 body {
@@ -26,6 +104,12 @@ body {
 }
 
 @layer base {
+  /* Số liệu KHÔNG được nhảy qua lại khi timer chạy. */
+  .tabular-nums,
+  [class*='tabular'] {
+    font-variant-numeric: tabular-nums;
+  }
+
   /* iOS: bỏ ô sáng khi chạm, bỏ độ trễ 300ms. Trạng thái :active tự vẽ. */
   a,
   button,
@@ -81,4 +165,11 @@ body {
   .dim-in {
     animation: none;
   }
+}
+
+/* ===== Bề rộng nội dung — mọi màn hình dùng chung (Task 8) ===== */
+.content-width {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
 }

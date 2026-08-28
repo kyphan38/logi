@@ -77,6 +77,8 @@ export default function NowPage() {
   );
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
+  // Record dưới một phút đang chờ người dùng xác nhận (4.6 Task 5).
+  const [zeroStop, setZeroStop] = useState<{ id: string; at: number } | null>(null);
 
   const voice = useVoice(uid, active, push);
 
@@ -159,11 +161,45 @@ export default function NowPage() {
 
   async function handleStop(id: string) {
     if (!uid || busy) return;
+    // Chốt mốc dừng NGAY lúc bấm. Nếu đợi tới lúc người dùng bấm Save trong
+    // hộp thoại thì record dài thêm đúng bằng thời gian họ do dự.
+    const at = Date.now();
+    const a = active.find((x) => x.id === id);
+    // Start rồi stop trong cùng một phút gần như luôn là thao tác nhầm.
+    // Hỏi lại, nhưng KHÔNG tự chặn - có thể họ thật sự muốn ghi.
+    if (a && at - a.startAt < 60_000) {
+      setZeroStop({ id, at });
+      return;
+    }
+    await commitStop(id, at);
+  }
+
+  async function commitStop(id: string, at: number) {
+    if (!uid) return;
+    setZeroStop(null);
     setBusy(true);
     try {
-      await capWait(stopActivity(uid, id), (e) => push(`Sync failed. ${(e as Error).message}`));
+      await capWait(stopActivity(uid, id, at), (e) =>
+        push(`Sync failed. ${(e as Error).message}`),
+      );
     } catch (e) {
       push(`Could not stop. ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function discardStop(id: string) {
+    if (!uid) return;
+    setZeroStop(null);
+    setBusy(true);
+    try {
+      await capWait(deleteActivity(uid, id), (e) =>
+        push(`Sync failed. ${(e as Error).message}`),
+      );
+      push('Record discarded.');
+    } catch (e) {
+      push(`Could not discard. ${(e as Error).message}`);
     } finally {
       setBusy(false);
     }
@@ -252,6 +288,37 @@ export default function NowPage() {
         <p className="text-sm text-zinc-400 dark:text-zinc-500">
           Nothing tracked yet. Tap a category to start.
         </p>
+      ) : null}
+
+      {zeroStop ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center">
+          <div className="w-full max-w-lg rounded-t-lg bg-surface-2 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:rounded-lg md:pb-5">
+            <h3 className="mb-1 text-base font-semibold text-ink">
+              Less than a minute. Save anyway?
+            </h3>
+            <p className="mb-4 text-sm text-ink-soft">
+              Start and stop landed in the same minute.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void discardStop(zeroStop.id)}
+                disabled={busy}
+                className="flex-1 rounded-sm border border-line py-2.5 text-sm font-medium text-ink-soft disabled:opacity-40"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={() => void commitStop(zeroStop.id, zeroStop.at)}
+                disabled={busy}
+                className="flex-1 rounded-sm bg-blue-600 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {stale.length > 0 ? (
