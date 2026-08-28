@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  abandonStaleScheduled,
   NO_PENDING,
   promoteScheduled,
   subscribeActive,
@@ -139,6 +140,9 @@ export function useScheduledActivities() {
     if (!uid || running.current) return;
     running.current = true;
     try {
+      // Dọn trước, promote sau: buổi hẹn mười ngày trước phải thành
+      // 'abandoned', không được biến thành session đang chạy 240 tiếng.
+      await abandonStaleScheduled(uid);
       await promoteScheduled(uid);
     } catch {
       // Mất mạng thì lần sau promote. Không có gì để báo người dùng.

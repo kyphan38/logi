@@ -8,8 +8,10 @@
 // ============================================================
 
 import { useCallback, useMemo, useState } from 'react';
+import Link from 'next/link';
 
 import Toasts from '@/components/Toasts';
+import WeeklyReview from '@/components/WeeklyReview';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTick, useToasts } from '@/hooks/useActivities';
 import {
@@ -78,6 +80,8 @@ export default function TargetsPage() {
   const [confirm, setConfirm] = useState<PresetId | null>(null);
   const [draft, setDraft] = useState<Weekly | null>(null);
   const [keepStreak, setKeepStreak] = useState(false);
+  /** Weekly Review mở tay từ đây, không cần đợi tối Chủ nhật. */
+  const [reviewOpen, setReviewOpen] = useState<string | null>(null);
 
   // Từ 21:00 CN tới 04:00 T2, tuần vẫn là "tuần này" nhưng đã đóng sổ.
   // Khoá lười có thể chưa kịp ghi `lockedAt`, nên UI tự kiểm mốc thời gian.
@@ -145,8 +149,19 @@ export default function TargetsPage() {
     <div className="pb-8">
       <header className="mb-4 flex items-baseline justify-between">
         <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Targets</h1>
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">{weekLabel(week)}</span>
+        <div className="flex items-baseline gap-3">
+          <button
+            type="button"
+            onClick={() => setReviewOpen(week)}
+            className="shrink-0 rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink-soft transition active:scale-[0.98]"
+          >
+            Review
+          </button>
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">{weekLabel(week)}</span>
+        </div>
       </header>
+
+      {reviewOpen && <WeeklyReview week={reviewOpen} onClose={() => setReviewOpen(null)} />}
 
       {locked && (
         <p className="mb-4 rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
@@ -250,6 +265,11 @@ export default function TargetsPage() {
           onConfirm={() => applyPreset(confirm)}
         />
       )}
+
+      {/* Settings không có trong thanh điều hướng: mỗi tuần mới vào một lần. */}
+      <Link href="/settings" className="mt-2 self-start text-[13px] text-ink-muted underline">
+        Settings
+      </Link>
 
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>

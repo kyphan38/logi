@@ -14,6 +14,7 @@ import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
 import Toasts from '@/components/Toasts';
 import VoiceSheet from '@/components/VoiceSheet';
+import WeeklyReview from '@/components/WeeklyReview';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   capWait,
@@ -25,6 +26,7 @@ import {
   useWeekActivities,
 } from '@/hooks/useActivities';
 import { useReminders } from '@/hooks/useReminders';
+import { useReviewDue } from '@/hooks/useReview';
 import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
 import { useVoice } from '@/hooks/useVoice';
 import { ActivityError, deleteActivity, startActivity, stopActivity } from '@/lib/activities';
@@ -46,6 +48,10 @@ function prettyLogicalDate(d: string): string {
 export default function NowPage() {
   const { user, signOut } = useAuth();
   const uid = user?.uid ?? null;
+
+  // Weekly Review: banner từ 19:00 CN, còn hạn tới hết thứ Ba.
+  const reviewWeek = useReviewDue();
+  const [reviewOpen, setReviewOpen] = useState<string | null>(null);
 
   // Ngày logic đổi lúc 04:00, không phải nửa đêm → tick 60s là đủ.
   const nowMinute = useTick(60_000, true);
@@ -91,10 +97,12 @@ export default function NowPage() {
     setSheet({ mode: 'create', startAt: end - 3_600_000, endAt: end });
   }, []);
 
-  const nowSecond = useTick(1000, active.length > 1);
+  // Chồng lấn hiện theo giờ, một chữ số thập phân — mỗi bậc là 6 phút. Tick
+  // mỗi giây ở đây sẽ render lại CẢ trang 60 lần/phút chỉ để đổi cùng một con
+  // số. Đồng hồ đếm giây nằm trong từng card (`useElapsed`), không phải ở đây.
   const overlap = useMemo(
-    () => (active.length > 1 ? overlapHours(active, nowSecond) : 0),
-    [active, nowSecond]
+    () => (active.length > 1 ? overlapHours(active, nowMinute) : 0),
+    [active, nowMinute]
   );
 
   const running = useMemo(() => new Set(active.map((a) => a.category)), [active]);
@@ -231,6 +239,21 @@ export default function NowPage() {
         </button>
       </header>
 
+      {reviewWeek && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-line-strong bg-surface-1 px-4 py-3">
+          <p className="text-sm text-ink">Review your week</p>
+          <button
+            type="button"
+            onClick={() => setReviewOpen(reviewWeek)}
+            className="shrink-0 rounded-sm bg-ink px-3 py-1.5 text-[13px] font-medium text-[var(--surface-0)] transition active:scale-[0.98]"
+          >
+            Open
+          </button>
+        </div>
+      )}
+
+      {reviewOpen && <WeeklyReview week={reviewOpen} onClose={() => setReviewOpen(null)} />}
+
       {reminder ? (
         <ReminderBanner
           reminder={reminder}
@@ -254,6 +277,16 @@ export default function NowPage() {
             />
           ))}
         </section>
+      ) : null}
+
+      {/* Chưa biết có session nào đang chạy hay không thì giữ chỗ, đừng để
+          CategoryGrid nhảy xuống ngay khi dữ liệu về. */}
+      {activeLoading && active.length === 0 ? (
+        <div
+          className="h-[76px] animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-900"
+          aria-busy="true"
+          aria-label="Loading sessions"
+        />
       ) : null}
 
       {active.length > 0 ? (

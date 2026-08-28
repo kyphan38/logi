@@ -20,12 +20,14 @@ import {
   query,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
   type Unsubscribe,
 } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase-client';
 import { logicalDate, logicalWeek, findStale } from '@/lib/balance';
+import { inRange, queryPlan } from '@/lib/range';
 import { addDays, dayWindow } from '@/lib/timeline';
 import {
   CATEGORIES,
@@ -419,6 +421,49 @@ export function subscribeByWeek(
   );
 }
 
+/**
+ * Nghe cả một KHOẢNG cho Analytics (Stage 5).
+ *
+ * MỘT query cho cả khoảng — không bao giờ query từng ngày. `queryPlan()` chọn
+ * cách rẻ hơn:
+ *   ≤ 4 tuần → `logicalWeek in [...]`, trùng cache với History/Now
+ *   dài hơn  → range trên `logicalDate` (index `logicalDate ASC + startAt ASC`)
+ *
+ * Query theo tuần lấy dư ở hai đầu nên phải lọc lại bằng `inRange()`.
+ */
+export function subscribeByRange(
+  uid: string,
+  range: { from: string; to: string },
+  cb: (activities: Activity[], meta: SnapMeta) => void,
+  onError?: (e: unknown) => void
+): Unsubscribe {
+  const plan = queryPlan(range);
+  const q =
+    plan.mode === 'weeks'
+      ? query(col(uid), where('logicalWeek', 'in', plan.weeks), orderBy('startAt', 'asc'))
+      : query(
+          col(uid),
+          where('logicalDate', '>=', plan.from),
+          where('logicalDate', '<=', plan.to),
+          orderBy('logicalDate', 'asc'),
+          orderBy('startAt', 'asc')
+        );
+
+  return onSnapshot(
+    q,
+    { includeMetadataChanges: true },
+    (snap) => {
+      const list = snap.docs
+        .map((d) => toActivity(d.id, d.data()))
+        // 'scheduled' là dự định, chưa phải giờ đã sống → không vào chart.
+        .filter((a) => a.status !== 'scheduled' && inRange(a.logicalDate, range))
+        .sort(byStartAsc);
+      cb(list, metaOf(snap));
+    },
+    (e) => onError?.(e)
+  );
+}
+
 /** Đọc một lần các session đang chạy. */
 export async function listActive(uid: string): Promise<Activity[]> {
   const q = query(col(uid), where('status', '==', 'active'));
@@ -445,6 +490,44 @@ export async function listRecent(uid: string, n = 5): Promise<Activity[]> {
   );
   const snap = isOffline() ? await getDocsFromCache(q) : await getDocs(q);
   return snap.docs.map((d) => toActivity(d.id, d.data()));
+}
+
+/**
+ * Hẹn giờ rồi không bao giờ xảy ra. Quá hạn này thì coi như đã bỏ.
+ * Bảy ngày: đủ dài để một buổi hẹn tuần sau vẫn còn nguyên, đủ ngắn để
+ * không tích thành một danh sách rác.
+ */
+export const SCHEDULED_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** `scheduled` mà đã quá hạn — chỉ là phép so sánh, tách ra để test được. */
+export function isStaleScheduled(a: Activity, now: number = Date.now()): boolean {
+  return a.status === 'scheduled' && now - a.startAt > SCHEDULED_MAX_AGE_MS;
+}
+
+/**
+ * Dọn các buổi đã hẹn nhưng không bao giờ diễn ra: 'scheduled' → 'abandoned'.
+ *
+ * PHẢI chạy trước `promoteScheduled`. Không có nó, một buổi hẹn từ mười ngày
+ * trước sẽ được promote thành 'active' với startAt cũ mèm, rồi hiện ra như một
+ * session đang chạy 240 tiếng.
+ *
+ * Không xoá: record vẫn còn đó để xem lại, chỉ là không tính vào giờ.
+ */
+export async function abandonStaleScheduled(uid: string, now: number = Date.now()): Promise<number> {
+  const q = query(
+    col(uid),
+    where('status', '==', 'scheduled' satisfies ActivityStatus),
+    where('startAt', '<=', now - SCHEDULED_MAX_AGE_MS),
+    orderBy('startAt', 'asc')
+  );
+  const snap = isOffline() ? await getDocsFromCache(q) : await getDocs(q);
+  for (const d of snap.docs) {
+    await updateDoc(ref(uid, d.id), {
+      status: 'abandoned' satisfies ActivityStatus,
+      updatedAt: Date.now(),
+    });
+  }
+  return snap.docs.length;
 }
 
 /**
@@ -511,4 +594,84 @@ export function subscribeRecentDates(
     (snap) => cb(new Set(snap.docs.map((d) => d.data().logicalDate as string))),
     (e) => onError?.(e)
   );
+}
+
+// ------------------------------------------------------------
+// Backup & khôi phục (Stage 6 Task 3)
+// ------------------------------------------------------------
+
+/**
+ * Toàn bộ record, cho bản export "All time".
+ *
+ * Đọc một lần, không listener. Tốn đúng N read — sau một năm khoảng 2–3 nghìn,
+ * vẫn dưới hạn 50k/ngày của free tier, và người dùng chỉ bấm export mỗi tháng.
+ */
+export async function listAll(uid: string): Promise<Activity[]> {
+  const q = query(col(uid), orderBy('startAt', 'asc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => toActivity(d.id, d.data()));
+}
+
+/** Record cũ nhất — để biết dữ liệu đã tích được bao lâu. Đọc đúng 1 doc. */
+export async function firstActivityDate(uid: string): Promise<string | null> {
+  const q = query(col(uid), orderBy('startAt', 'asc'), fsLimit(1));
+  const snap = await getDocs(q);
+  return snap.empty ? null : (snap.docs[0].data().logicalDate as string);
+}
+
+/** Chỉ id, để biết record nào đã có trước khi khôi phục. */
+export async function listAllIds(uid: string): Promise<Set<string>> {
+  const snap = await getDocs(query(col(uid)));
+  return new Set(snap.docs.map((d) => d.id));
+}
+
+/** Firestore cho tối đa 500 thao tác một batch; chừa chỗ cho an toàn. */
+const BATCH_SIZE = 400;
+
+/**
+ * Ghi lại các record trong file backup. CHỈ THÊM.
+ *
+ * Đọc id đang có NGAY TRƯỚC khi ghi rồi lọc lại lần nữa, dù nơi gọi đã lọc:
+ * giữa lúc xem preview và lúc bấm nút có thể đã trôi qua vài phút, và mỗi giây
+ * đó là một cơ hội ghi đè record mới bằng bản cũ hơn.
+ */
+export async function restoreActivities(uid: string, add: Activity[]): Promise<number> {
+  if (add.length === 0) return 0;
+
+  const existing = await listAllIds(uid);
+  const todo = add.filter((a) => !existing.has(a.id));
+  let written = 0;
+
+  for (let i = 0; i < todo.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    for (const a of todo.slice(i, i + BATCH_SIZE)) {
+      batch.set(ref(uid, a.id), restoreDoc(a));
+    }
+    await batch.commit();
+    written += Math.min(BATCH_SIZE, todo.length - i);
+  }
+  return written;
+}
+
+/**
+ * Dựng lại doc từ record trong file.
+ *
+ * Tự tính lại field dẫn xuất thay vì tin file: file có thể do bản app cũ xuất
+ * ra, hoặc bị người ta sửa tay. `startAt` là sự thật gốc, phần còn lại suy ra.
+ */
+function restoreDoc(a: Activity) {
+  const endAt = a.endAt ?? null;
+  return {
+    category: a.category,
+    label: a.label ?? null,
+    startAt: a.startAt,
+    endAt,
+    ...derive(a.startAt, endAt),
+    status: a.status,
+    source: a.source ?? 'manual',
+    confidence: a.confidence ?? null,
+    rawText: a.rawText ?? null,
+    createdAt: a.createdAt ?? a.startAt,
+    updatedAt: Date.now(),
+  };
 }

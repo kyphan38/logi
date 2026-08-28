@@ -1,10 +1,176 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+
+import { useAuth } from '@/contexts/AuthContext';
+import BalanceBars, { categoryOrder } from '@/components/BalanceBars';
+import CoverageNote from '@/components/CoverageNote';
+import ExportSheet from '@/components/ExportSheet';
+import Heatmap from '@/components/Heatmap';
+import RangePicker from '@/components/RangePicker';
+import StackedDays from '@/components/StackedDays';
+import { useTick } from '@/hooks/useActivities';
+import { fetchAllTime, useExportNudge } from '@/hooks/useBackup';
+import { useRangeData } from '@/hooks/useRangeData';
+import { bucketMode } from '@/lib/bucket';
+import { buildRange, rangeLabel, type Range } from '@/lib/range';
+import {
+  actualForRange,
+  coverageForRange,
+  deviationsForRange,
+  expectedForRange,
+  overlapForRange,
+} from '@/lib/range-target';
+
+const COVERAGE_FLOOR = 0.55;
+
 export default function AnalyticsPage() {
+  // Ngày logic đổi lúc 04:00 nên phút là đủ mịn; giây chỉ làm chart nháy.
+  const now = useTick(60_000, true);
+
+  const [range, setRange] = useState<Range>(() => buildRange('this_week', Date.now()));
+  const [exporting, setExporting] = useState(false);
+  const { activities, weekTargets, lateWeeks, loading, error, reload } = useRangeData(range);
+
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+  const { nudge, markDone } = useExportNudge(now);
+
+  const view = useMemo(() => {
+    const actual = actualForRange(activities, range, now);
+    const expected = expectedForRange(range, weekTargets, now);
+    const byCat = new Map(deviationsForRange(actual, expected).map((d) => [d.category, d]));
+    return {
+      rows: categoryOrder().map((c) => byCat.get(c)!),
+      coverage: coverageForRange(activities, range, now),
+      overlap: overlapForRange(activities, range, now),
+      logged: Object.values(actual).reduce((a, b) => a + b, 0),
+    };
+  }, [activities, weekTargets, range, now]);
+
+  const empty = !loading && activities.length === 0;
+
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-      <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-zinc-300 p-10 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-        Coming in Stage 5
+    <div className="flex flex-col gap-6">
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+          <p className="text-[13px] text-ink-muted">{rangeLabel(range)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExporting(true)}
+          disabled={loading}
+          className="shrink-0 rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink-soft transition active:scale-[0.98] disabled:opacity-40"
+        >
+          Export
+        </button>
+      </header>
+
+      {/* Firestore free tier không tự backup. Nhắc mỗi Chủ nhật đầu tháng. */}
+      {nudge.show && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-line-strong bg-surface-1 p-3">
+          <p className="min-w-0 text-[13px] text-ink-soft">{nudge.text}</p>
+          <button
+            type="button"
+            onClick={() => setExporting(true)}
+            className="shrink-0 rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink transition active:scale-[0.98]"
+          >
+            Back up
+          </button>
+        </div>
+      )}
+
+      <RangePicker value={range} onChange={setRange} now={now} />
+
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-line-strong bg-surface-1 p-3">
+          <p className="min-w-0 text-[13px] text-ink-soft">{error}</p>
+          <button
+            type="button"
+            onClick={reload}
+            className="shrink-0 rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink transition active:scale-[0.98]"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <Skeleton />
+      ) : empty ? (
+        <EmptyState onThisWeek={() => setRange(buildRange('this_week', now))} />
+      ) : (
+        <>
+          {/* Coverage đứng TRƯỚC mọi chart: log được 40% thời gian thì các con
+              số bên dưới không nói lên điều gì, phải biết trước khi đọc. */}
+          <CoverageNote coverage={view.coverage} overlap={view.overlap} />
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-[13px] font-medium text-ink-soft">Balance</h2>
+            <BalanceBars rows={view.rows} showDeviation={view.coverage >= COVERAGE_FLOOR} />
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-[13px] font-medium text-ink-soft">By {bucketMode(range)}</h2>
+            <StackedDays
+              activities={activities}
+              range={range}
+              weekTargets={weekTargets}
+              lateWeeks={lateWeeks}
+              now={now}
+            />
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-[13px] font-medium text-ink-soft">When</h2>
+            <Heatmap activities={activities} range={range} now={now} />
+          </section>
+        </>
+      )}
+
+      {exporting && (
+        <ExportSheet
+          activities={activities}
+          range={range}
+          weekTargets={weekTargets}
+          now={now}
+          onClose={() => setExporting(false)}
+          loadAllTime={uid ? () => fetchAllTime(uid) : undefined}
+          onExported={markDone}
+        />
+      )}
+    </div>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div className="flex animate-pulse flex-col gap-3" aria-busy="true" aria-label="Loading">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex flex-col gap-1">
+          <div className="h-3 w-20 rounded-sm bg-surface-1" />
+          <div className="h-3 w-full rounded-full bg-surface-1" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ onThisWeek }: { onThisWeek: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-line-strong px-4 py-10 text-center">
+      <div className="flex flex-col gap-1">
+        <p className="text-sm text-ink-soft">Nothing logged in this period.</p>
+        <p className="text-[13px] text-ink-muted">Try a range where you have records.</p>
       </div>
+      <button
+        type="button"
+        onClick={onThisWeek}
+        className="rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink transition active:scale-[0.98]"
+      >
+        This week
+      </button>
     </div>
   );
 }

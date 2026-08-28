@@ -12,6 +12,7 @@
 import {
   collection,
   doc,
+  documentId,
   getDoc,
   getDocs,
   limit as fsLimit,
@@ -21,6 +22,7 @@ import {
   runTransaction,
   setDoc,
   updateDoc,
+  where,
   type DocumentData,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -43,7 +45,7 @@ import {
   assertOpen,
   assertValid,
 } from '@/lib/target-rules';
-import { isLateChange, isWeekClosed } from '@/lib/week';
+import { addWeeks, isLateChange, isWeekClosed } from '@/lib/week';
 import {
   CATEGORIES,
   PRESETS,
@@ -61,6 +63,15 @@ const weekCol = (uid: string) => collection(db, 'users', uid, 'weekTargets');
 const weekRef = (uid: string, week: string) => doc(db, 'users', uid, 'weekTargets', week);
 const debtRef = (uid: string) => doc(db, 'users', uid, 'meta', 'debt');
 const rolloverRef = (uid: string) => doc(db, 'users', uid, 'meta', 'rollover');
+
+/**
+ * Cờ "đã review tuần này": `{ "2026-W35": <epoch> }`.
+ *
+ * Để riêng chứ không nhét vào `weekTargets/{week}` vì rules chặn update khi
+ * `lockedAt != null` — mà tuần khoá lúc 21:00 CN, còn review mở từ 19:00 CN
+ * và còn hạn tới hết thứ Ba. Nhét chung là mất cờ đúng lúc cần nó nhất.
+ */
+const reviewsRef = (uid: string) => doc(db, 'users', uid, 'meta', 'reviews');
 
 function toWeekly(d: DocumentData | undefined): Weekly {
   const out = {} as Weekly;
@@ -114,6 +125,37 @@ export async function getDebt(uid: string): Promise<DebtLedger> {
   const snap = await getDoc(debtRef(uid));
   const d = snap.data();
   return { balance: toDebt(d?.balance as DocumentData | undefined), updatedAt: d?.updatedAt ?? 0 };
+}
+
+/**
+ * Target của nhiều tuần liền nhau, cho Analytics (Stage 5).
+ *
+ * Id của doc chính là tuần ("2026-W35") và sắp xếp chuỗi trùng với thứ tự thời
+ * gian, kể cả khi qua năm ("2025-W52" < "2026-W01"). Nên một query khoảng trên
+ * documentId() là đủ — không cần `in`, không đụng giới hạn 30 phần tử.
+ *
+ * Tuần nào chưa có doc thì vắng mặt trong Map; nơi gọi tự lùi về PRESETS.normal.
+ */
+export async function listWeekTargets(
+  uid: string,
+  weeks: string[]
+): Promise<Map<string, WeekTarget>> {
+  const out = new Map<string, WeekTarget>();
+  if (weeks.length === 0) return out;
+
+  const sorted = [...weeks].sort();
+  const q = query(
+    weekCol(uid),
+    where(documentId(), '>=', sorted[0]),
+    where(documentId(), '<=', sorted[sorted.length - 1]),
+    orderBy(documentId())
+  );
+  const snap = await getDocs(q);
+  const want = new Set(weeks);
+  for (const d of snap.docs) {
+    if (want.has(d.id)) out.set(d.id, toWeekTarget(d.id, d.data()));
+  }
+  return out;
 }
 
 /** N tuần gần nhất, theo thứ tự tăng dần — `crunchStreak()` đọc từ cuối lên. */
@@ -393,8 +435,131 @@ export async function runRollover(
 }
 
 // ------------------------------------------------------------
+// Weekly Review (Stage 6)
+// ------------------------------------------------------------
+
+export type ReviewFlags = Record<string, number>;
+
+function toReviews(d: DocumentData | undefined): ReviewFlags {
+  const out: ReviewFlags = {};
+  for (const [k, v] of Object.entries(d ?? {})) {
+    if (typeof v === 'number') out[k] = v;
+  }
+  return out;
+}
+
+export async function getReviews(uid: string): Promise<ReviewFlags> {
+  const snap = await getDoc(reviewsRef(uid));
+  return toReviews(snap.data());
+}
+
+export function subscribeReviews(
+  uid: string,
+  cb: (flags: ReviewFlags) => void,
+  onError?: (e: unknown) => void
+): Unsubscribe {
+  return onSnapshot(
+    reviewsRef(uid),
+    (snap) => cb(toReviews(snap.data())),
+    (e) => onError?.(e)
+  );
+}
+
+/** Dùng cho nút Skip — chỉ đóng banner, không đụng target tuần sau. */
+export async function markReviewed(
+  uid: string,
+  week: string,
+  at: number = Date.now()
+): Promise<void> {
+  await setDoc(reviewsRef(uid), { [week]: at }, { merge: true });
+}
+
+/**
+ * Màn 3 của review: chốt preset cho tuần KẾ TIẾP, tạo trước khi rollover chạy.
+ *
+ * Một transaction cho cả ba việc: ghi target, trừ nợ, đánh dấu đã review.
+ * Nếu doc tuần sau đã tồn tại (chạy review hai lần, hoặc rollover đã chạy trước)
+ * thì KHÔNG tạo lại và KHÔNG tiêu nợ lần nữa — chỉ đổi preset trên phần
+ * `debtApplied` đã ghi, đúng như `setPreset()` làm. Đó là chốt idempotent.
+ */
+export async function setupNextWeek(
+  uid: string,
+  reviewedWeek: string,
+  presetId: PresetId,
+  now: number = Date.now()
+): Promise<WeekTarget> {
+  const week = addWeeks(reviewedWeek, 1);
+
+  return runTransaction(db, async (tx) => {
+    // ---- READS ----
+    const wSnap = await tx.get(weekRef(uid, week));
+    const existing = wSnap.exists() ? toWeekTarget(week, wSnap.data()) : null;
+    const debtSnap = existing ? null : await tx.get(debtRef(uid));
+
+    if (existing?.lockedAt != null) throw new TargetError('locked', WEEK_CLOSED);
+
+    // ---- WRITES ----
+    let wt: WeekTarget;
+
+    if (existing) {
+      // Nợ của tuần này đã tiêu lúc tạo doc. Cộng lại đúng phần đã ghi.
+      const weekly = roundToBudget(reapplyDebt(PRESETS[presetId].weekly, existing.debtApplied));
+      assertValid(weekly);
+      wt = { ...existing, preset: presetId, weekly, changedAt: now };
+      tx.update(weekRef(uid, week), { preset: presetId, weekly, changedAt: now });
+    } else {
+      const debt = toDebt(debtSnap!.data()?.balance as DocumentData | undefined);
+      const { weekly, applied, remaining } = buildWeekly(PRESETS[presetId].weekly, debt);
+      assertValid(weekly);
+
+      wt = {
+        week,
+        preset: presetId,
+        weekly,
+        debtApplied: applied,
+        changedAt: now,
+        // Tuần sau chưa bắt đầu — đặt trước không phải là "sửa muộn".
+        lateChange: false,
+        lockedAt: null,
+      };
+      tx.set(weekRef(uid, week), seedDoc(wt));
+      if (Object.keys(applied).length > 0) {
+        tx.set(debtRef(uid), { balance: remaining, updatedAt: now });
+      }
+    }
+
+    tx.set(reviewsRef(uid), { [reviewedWeek]: now }, { merge: true });
+    return wt;
+  });
+}
+
+// ------------------------------------------------------------
 // Tiện ích cho UI
 // ------------------------------------------------------------
 
 // Luật thuần sống ở `target-rules.ts` để test được mà không cần Firestore.
 export { TargetError, WEEK_CLOSED, previewSwitch, totalDebt } from '@/lib/target-rules';
+
+// ------------------------------------------------------------
+// Backup (Stage 6 Task 3)
+// ------------------------------------------------------------
+
+/** `meta/backup` = { lastExport: <epoch> }. */
+const backupRef = (uid: string) => doc(db, 'users', uid, 'meta', 'backup');
+
+export async function getLastExport(uid: string): Promise<number | null> {
+  const snap = await getDoc(backupRef(uid));
+  const v = snap.data()?.lastExport;
+  return typeof v === 'number' ? v : null;
+}
+
+/** Ghi sau khi file đã tải xong, không phải lúc bấm nút. */
+export async function markExported(uid: string, at: number = Date.now()): Promise<void> {
+  await setDoc(backupRef(uid), { lastExport: at }, { merge: true });
+}
+
+/** Mọi tuần đã có target — cho bản export "All time". */
+export async function listAllWeekTargets(uid: string): Promise<WeekTarget[]> {
+  const snap = await getDocs(query(weekCol(uid), orderBy(documentId())));
+  return snap.docs.map((d) => toWeekTarget(d.id, d.data()));
+}
