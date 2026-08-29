@@ -92,7 +92,11 @@ export function overlapHours(activities: Activity[], now: number = Date.now()): 
   return overlap / 3_600_000;
 }
 
-/** % của 168h thực sự được log. < 55% → mọi kết luận khác không đáng tin. */
+/**
+ * @deprecated Mẫu số 168h không còn nghĩa sau khi bỏ Sleep - 89h/168h = 53%
+ * là điểm tuyệt đối mà vẫn dưới ngưỡng 55%. Dùng `logQuality()` ở
+ * `@/lib/log-quality`. Hàm này sẽ bị xoá cùng các nơi gọi nó.
+ */
 export function coverage(activities: Activity[], now?: number): number {
   const total = Object.values(actualHours(activities, now)).reduce((a, b) => a + b, 0);
   return (total - overlapHours(activities, now)) / 168;
@@ -243,14 +247,14 @@ export function validateTargets(weekly: Record<Category, number>): BudgetCheck {
   return { ok: errors.length === 0, total, budget: TOTAL_BUDGET, errors };
 }
 
-/** Khi kéo một category, tự trừ/bù đều ở các category còn lại (trừ sleep). */
+/** Khi kéo một category, tự trừ/bù đều ở các category còn lại. */
 export function rebalance(
   weekly: Record<Category, number>,
   changed: Category,
   newValue: number
 ): Record<Category, number> {
   const next = { ...weekly, [changed]: newValue };
-  const others = CATEGORIES.filter((c) => c !== changed && c !== 'sleep');
+  const others = CATEGORIES.filter((c) => c !== changed);
   let delta = Object.values(next).reduce((a, b) => a + b, 0) - TOTAL_BUDGET;
 
   for (let pass = 0; pass < 5 && Math.abs(delta) > 0.05; pass++) {
@@ -324,7 +328,7 @@ export function suggestedEndTimes(a: Activity): { label: string; ts: number }[] 
   const d = new Date(a.startAt);
   const at = (h: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h).getTime();
   const map: Record<Category, number[]> = {
-    work: [17, 22], learn: [6, 22], fitness: [19], sleep: [4, 6], leisure: [22],
+    work: [17, 22], learn: [6, 22], fitness: [19], leisure: [22],
   };
   return (map[a.category] ?? [22])
     .map((h) => ({ label: `${String(h).padStart(2, '0')}:00`, ts: at(h) }))
