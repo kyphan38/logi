@@ -176,7 +176,7 @@ function isRetired(d: DocumentData): boolean {
 }
 
 /** Map snapshot → Activity[], bỏ mọi category đã ngưng dùng. */
-function mapDocs(docs: QueryDocumentSnapshot[]): Activity[] {
+export function mapDocs(docs: QueryDocumentSnapshot[]): Activity[] {
   const out: Activity[] = [];
   for (const d of docs) {
     if (isRetired(d.data())) continue;
