@@ -46,7 +46,7 @@ const db = getFirestore(app);
 
 const fmt = (ts) =>
   ts == null
-    ? '—'
+    ? '-'
     : new Date(ts).toLocaleString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' });
 
 const users = await db.collection('users').listDocuments();
@@ -85,7 +85,7 @@ for (const user of users) {
   console.log(`  Record category='sleep' : ${rows.length}`);
   console.log(`  startAt sớm nhất        : ${fmt(starts.length ? Math.min(...starts) : null)}`);
   console.log(`  startAt muộn nhất       : ${fmt(starts.length ? Math.max(...starts) : null)}`);
-  console.log(`  logicalDate             : ${dates[0] ?? '—'} → ${dates.at(-1) ?? '—'}`);
+  console.log(`  logicalDate             : ${dates[0] ?? '-'} → ${dates.at(-1) ?? '-'}`);
   console.log(`  Theo status             : ${JSON.stringify(byStatus)}`);
 }
 

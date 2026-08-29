@@ -25,7 +25,7 @@ export interface NowTile {
   over: boolean;
   /** Không có target (VD Work ngày Chủ nhật) → không vẽ dải. */
   noTarget: boolean;
-  /** `1.5 / 3.0h`, hoặc `0.0 / —` khi ngày đó không có target. */
+  /** `1.5 / 3.0h`, hoặc `0.0 / -` khi ngày đó không có target. */
   label: string;
 }
 
@@ -56,7 +56,7 @@ export function nowTiles(
       fill,
       over,
       noTarget,
-      label: noTarget ? `${h1(a)} / —` : `${h1(a)} / ${h1(t)}h`,
+      label: noTarget ? `${h1(a)} / -` : `${h1(a)} / ${h1(t)}h`,
     };
   });
 }

@@ -1,19 +1,19 @@
-# AMENDMENT — Gỡ bỏ Sleep tracking + fix Analytics
+# AMENDMENT - Gỡ bỏ Sleep tracking + fix Analytics
 
 > Thay đổi lớn. Đọc **toàn bộ** file trước khi sửa dòng code đầu tiên.
 >
-> File này **cho phép sửa `logi.ts`** — ngoại lệ duy nhất so với mọi plan trước.
+> File này **cho phép sửa `logi.ts`** - ngoại lệ duy nhất so với mọi plan trước.
 >
 > Thay thế phần lớn `AMENDMENT-sleep-boundary.md`. Xem mục 9 để biết phần nào còn
 > giữ lại.
 
 ---
 
-## 0. Dữ liệu Sleep cũ — XOÁ, nhưng export trước
+## 0. Dữ liệu Sleep cũ - XOÁ, nhưng export trước
 
 Người dùng đã quyết: **xoá hẳn** record `category === 'sleep'` khỏi Firestore.
 
-### Trình tự bắt buộc — không được đảo thứ tự
+### Trình tự bắt buộc - không được đảo thứ tự
 
 1. Chạy **Export all-time JSON** (chức năng của Stage 5), tải file về máy
 2. **Người dùng xác nhận** đã mở được file và thấy dữ liệu sleep trong đó
@@ -28,7 +28,7 @@ lúc đó không có đường lùi.
 ### Không được
 - Xoá trước khi export và người dùng xác nhận đã có file
 - Dùng điều kiện xoá rộng hơn `category === 'sleep'`
-- Xoá `weekTargets` hay `meta/*` — chúng không chứa dữ liệu sleep riêng
+- Xoá `weekTargets` hay `meta/*` - chúng không chứa dữ liệu sleep riêng
 
 ---
 
@@ -42,7 +42,7 @@ Còn lại **4 category**: `learn` · `work` · `fitness` · `leisure`
 
 ---
 
-## 2. `logi.ts` — sửa các hằng số
+## 2. `logi.ts` - sửa các hằng số
 
 ### 2.1 Categories
 ```ts
@@ -79,12 +79,12 @@ Bỏ `sleep` khỏi cả bốn. Các con số còn lại **giữ nguyên**, và 
 | Recovery | 22 | 40 | 12 | 15 | 89 |
 
 ### 2.5 GIỮ NGUYÊN
-- `DAY_CUTOFF_HOUR = 4` — **không đổi**. Lý do ở mục 5.
+- `DAY_CUTOFF_HOUR = 4` - **không đổi**. Lý do ở mục 5.
 - `MAX_SESSION_MIN`, `TIMEZONE`, các type, cơ chế debt
 
 ---
 
-## 3. `balance.ts` — sửa tối thiểu
+## 3. `balance.ts` - sửa tối thiểu
 
 ### 3.1 `rebalance()`
 Bỏ điều kiện loại trừ `sleep`:
@@ -92,18 +92,18 @@ Bỏ điều kiện loại trừ `sleep`:
 const others = CATEGORIES.filter((c) => c !== changed);   // bỏ && c !== 'sleep'
 ```
 
-### 3.2 Bỏ hẳn `coverage()` — thay bằng `logQuality()`
+### 3.2 Bỏ hẳn `coverage()` - thay bằng `logQuality()`
 
 **Xoá** `coverage()` khỏi `balance.ts` và `coverageForRange()` khỏi Stage 5.
 
-Lý do: mẫu số 24h/ngày cho ra 89/168 = **53%** ngay cả khi log hoàn hảo — dưới ngưỡng
+Lý do: mẫu số 24h/ngày cho ra 89/168 = **53%** ngay cả khi log hoàn hảo - dưới ngưỡng
 cảnh báo 55%, nên nó sẽ bắn liên tục. Còn nếu trừ đi giờ ngủ giả định thì lại là một
 giả định về giấc ngủ, đúng thứ vừa gỡ bỏ.
 
 Vấn đề gốc: sau khi bỏ Sleep, **phần lớn 24 tiếng đúng là không có gì để log**.
 Một tỉ lệ trên nền 24h không còn nói lên điều gì.
 
-### Định nghĩa mới — không giả định gì
+### Định nghĩa mới - không giả định gì
 
 Đo **khoảng trống giữa các hoạt động đã log**, dùng đúng quy tắc mục 6:
 
@@ -119,7 +119,7 @@ export function logQuality(activities, range, now): {
 ```
 
 - Thời gian **trước** activity đầu tiên và **sau** activity cuối cùng của mỗi ngày
-  không tính vào đâu cả — không phải giờ chưa log, chỉ là không có gì để log
+  không tính vào đâu cả - không phải giờ chưa log, chỉ là không có gì để log
 - Hôm nay: `cuối` = `now`
 - Ngày không có activity nào → không đóng góp vào `activeSpanHours`, nhưng vẫn tính
   vào `totalDays`
@@ -133,8 +133,8 @@ Ba con số thô, mỗi cái tự kiểm chứng được, không con số nào 
 
 ### Cảnh báo
 Hiện banner khi **một trong hai** điều kiện đúng:
-- `gapRatio > 0.25` — nhiều khoảng trống giữa các hoạt động
-- `loggedDays / totalDays < 0.6` — nhiều ngày không log gì
+- `gapRatio > 0.25` - nhiều khoảng trống giữa các hoạt động
+- `loggedDays / totalDays < 0.6` - nhiều ngày không log gì
 
 ```
 9h of gaps across 5 logged days.
@@ -143,7 +143,7 @@ The numbers below may not reflect reality.
 
 ### Vì sao cần cả hai điều kiện
 `gapRatio` một mình có lỗ hổng: ngày chỉ log **đúng một** session 30 phút thì
-`activeSpan` = 30 phút, gap = 0, tỉ lệ 100% — trông hoàn hảo trong khi thực ra
+`activeSpan` = 30 phút, gap = 0, tỉ lệ 100% - trông hoàn hảo trong khi thực ra
 gần như không log gì. `loggedDays` bịt lỗ đó.
 
 ### Áp dụng
@@ -152,7 +152,7 @@ một ngày. Dòng tóm tắt ở History đổi từ `Coverage 68%` sang `9.4h 
 
 ### 3.3 Còn lại
 `actualHours`, `overlapHours`, `expectedHours`, `deviations`, `weekendConflict`,
-`accrueDebt`, `applyDebt`, `validateTargets` — không đổi logic, tự chạy đúng với
+`accrueDebt`, `applyDebt`, `validateTargets` - không đổi logic, tự chạy đúng với
 4 category.
 
 `suggestedEndTimes()`: bỏ dòng `sleep`.
@@ -174,7 +174,7 @@ Dù đã xoá, vẫn thêm bộ lọc `category !== 'sleep'` ở mọi hàm đ�
 `src/lib/activities.ts`. Phòng trường hợp xoá sót hoặc có record đang chờ sync
 offline lúc chạy script.
 
-Lọc ở client sau khi nhận snapshot, không thêm `where` — thêm điều kiện sẽ cần index
+Lọc ở client sau khi nhận snapshot, không thêm `where` - thêm điều kiện sẽ cần index
 mới mà không được lợi gì.
 
 ### 4.3 Session sleep đang chạy
@@ -184,7 +184,7 @@ không. Có thì xoá luôn cùng lô.
 ### 4.4 Export
 Sau khi xoá, thêm ghi chú vào mọi file export sau này:
 `"note": "sleep category was retired on <date>"`. File export **trước** khi xoá là
-bản lưu duy nhất của dữ liệu sleep — nhắc người dùng cất giữ.
+bản lưu duy nhất của dữ liệu sleep - nhắc người dùng cất giữ.
 
 ---
 
@@ -192,7 +192,7 @@ bản lưu duy nhất của dữ liệu sleep — nhắc người dùng cất gi
 
 Mốc 04:00 ban đầu đặt ra vì giấc ngủ, nhưng nó vẫn cần cho lý do khác:
 
-1. Khối học sáng bắt đầu 04:30 — phải thuộc đúng ngày
+1. Khối học sáng bắt đầu 04:30 - phải thuộc đúng ngày
 2. Leisure hoặc Work kéo qua nửa đêm (xem phim tới 01:00, OT tới 23:30) vẫn phải
    gán về ngày hôm trước, đúng như cách con người nghĩ
 
@@ -203,12 +203,12 @@ sau dậy trước 04:00 thành thói quen thì hạ xuống 03:00. Giữ ghi ch
 
 ---
 
-## 6. History — khoảng đêm không được tính là untracked
+## 6. History - khoảng đêm không được tính là untracked
 
 Đây là hệ quả dễ bỏ sót nhất.
 
 Bỏ Sleep thì mỗi ngày có một khoảng **22:00 → 04:30 hoàn toàn trống**. Nếu vẫn tính
-là untracked thì mọi ngày đều hiện `6h 30m untracked` ở cuối — nhìn như quên log,
+là untracked thì mọi ngày đều hiện `6h 30m untracked` ở cuối - nhìn như quên log,
 trong khi thực ra không có gì để log.
 
 ### Quy tắc mới
@@ -222,13 +222,13 @@ Ngày trống hoàn toàn → empty state như cũ.
 
 ---
 
-## 6b. Màn Now — nút gọn kèm tiến độ hôm nay
+## 6b. Màn Now - nút gọn kèm tiến độ hôm nay
 
 Thay đổi này vừa giải quyết chuyện click nhầm khi cuộn, vừa cho chỗ xem nhanh target
 hôm nay mà không trùng với History hay Analytics.
 
 ### Ý tưởng cốt lõi
-**Chính cái nút là thanh đo.** Không thêm một thanh riêng bên cạnh — mỗi nút category
+**Chính cái nút là thanh đo.** Không thêm một thanh riêng bên cạnh - mỗi nút category
 có một dải tiến độ mảnh chạy dọc mép dưới, thể hiện hôm nay đã làm bao nhiêu so với
 target của **đúng ngày đó** (`dailyTargetFor` từ Stage 4.5).
 
@@ -258,7 +258,7 @@ fill = min(1, actual / dailyTarget)
 ```
 - Màu = `CATEGORY_COLOR`
 - `actual > target` → dải đầy + **đoạn hổ phách ~14% ở mép phải** báo vượt
-- `dailyTarget === 0` (VD Work ngày Chủ nhật) → không vẽ dải, số hiện `0.0 / —`
+- `dailyTarget === 0` (VD Work ngày Chủ nhật) → không vẽ dải, số hiện `0.0 / -`
 - Dải bám sát mép dưới, bo theo góc dưới của nút (`overflow: hidden`)
 
 ### Nút của category đang chạy
@@ -273,7 +273,7 @@ fill = min(1, actual / dailyTarget)
 4. Lưới 4 nút
 5. FAB mic
 
-Bỏ dòng `Today: Learn 0.0h · Work 0.3h …` ở cuối — nay đã nằm trong các nút.
+Bỏ dòng `Today: Learn 0.0h · Work 0.3h …` ở cuối - nay đã nằm trong các nút.
 
 ### Thu gọn khi nhiều session
 Mục tiêu là **cả trang vừa màn hình iPhone 11, không phải cuộn**. Không cuộn thì
@@ -288,23 +288,23 @@ Từ **3 session đang chạy trở lên**, card thu thành hàng đơn cao 56px
 
 Bố cục ở mục 6b đã loại phần lớn nguyên nhân. Thêm ba lớp bảo vệ, tất cả đều rẻ:
 
-1. **Ngưỡng di chuyển** — chỉ kích hoạt khi `pointerup` mà ngón di chuyển **dưới
+1. **Ngưỡng di chuyển** - chỉ kích hoạt khi `pointerup` mà ngón di chuyển **dưới
    10px** so với `pointerdown` và tổng thời gian **dưới 500ms**.
    Đây là fix gốc: trên iOS, thao tác vuốt kết thúc bằng một `click` nếu ngón dừng
    lại trên nút.
-2. **Chặn sau cuộn** — bỏ qua mọi tap trong **300ms** sau khi sự kiện `scroll` gần
+2. **Chặn sau cuộn** - bỏ qua mọi tap trong **300ms** sau khi sự kiện `scroll` gần
    nhất kết thúc.
-3. **Undo 5 giây** — mọi lần Start hiện toast `Started Learn · Undo`. Lỡ nhầm thì
+3. **Undo 5 giây** - mọi lần Start hiện toast `Started Learn · Undo`. Lỡ nhầm thì
    huỷ bằng một chạm.
 
 Áp dụng cho **cả 4 nút category**. Nút Stop không cần (nó nằm trong card, ít bị
 lướt qua) nhưng thêm cũng không hại.
 
-**Không** dùng long-press hay bước xác nhận cho việc Start — phải giữ đúng một chạm.
+**Không** dùng long-press hay bước xác nhận cho việc Start - phải giữ đúng một chạm.
 
 ---
 
-## 7. Fix Analytics #1 — "By day" cắt session
+## 7. Fix Analytics #1 - "By day" cắt session
 
 ### Lỗi
 Chart By day đang cắt session ở ranh giới ngày logic. Giấc ngủ 00:00 → 06:15 bị chia
@@ -312,7 +312,7 @@ Chart By day đang cắt session ở ranh giới ngày logic. Giấc ngủ 00:00
 
 Sleep sắp bị bỏ, nhưng **lỗi vẫn còn** với Leisure và Work vắt qua nửa đêm.
 
-### Quy tắc — viết vào README
+### Quy tắc - viết vào README
 > Mọi con số về **khối lượng giờ** gán **trọn vẹn** cho `logicalDate` của `startAt`,
 > không bao giờ cắt. Chỉ **heatmap** dùng giờ đồng hồ thật.
 
@@ -320,7 +320,7 @@ Sleep sắp bị bỏ, nhưng **lỗi vẫn còn** với Leisure và Work vắt 
 By day gom nhóm theo `logicalDate` và cộng **toàn bộ** `durationMin`. Không dùng
 `layoutDay` hay bất kỳ hàm nào có cắt theo cửa sổ ngày.
 
-Balance đang làm đúng — dùng lại cùng đường tính của nó.
+Balance đang làm đúng - dùng lại cùng đường tính của nó.
 
 ### Sửa kèm
 Nhãn trục Y đang bị cắt (`ih`, `'h` thay vì `4h`, `3h`). Tăng `margin.left` của
@@ -328,7 +328,7 @@ Recharts hoặc rút ngắn nhãn.
 
 ---
 
-## 8. Fix Analytics #2 — bỏ range "Today" + bảng theo range
+## 8. Fix Analytics #2 - bỏ range "Today" + bảng theo range
 
 ### 8.1 Bỏ hẳn chip "Today"
 
@@ -336,7 +336,7 @@ Chips còn lại: `This week` · `Last week` · `This month` · `Custom`.
 Mặc định **This week**.
 
 Lý do: sau khi nút category ở màn Now đã hiện tiến độ hôm nay, ba màn hình có phân
-công rõ ràng —
+công rõ ràng -
 
 | Màn | Trả lời |
 |---|---|
@@ -347,7 +347,7 @@ công rõ ràng —
 Range "Today" rơi vào khoảng giữa mà không làm tốt hơn hai cái kia: By day một cột
 vô nghĩa, When một cột trùng History, Balance trùng chính mấy cái nút.
 
-`Custom` vẫn cho chọn khoảng 1 ngày — khi đó ẩn By day và When, chỉ hiện Balance
+`Custom` vẫn cho chọn khoảng 1 ngày - khi đó ẩn By day và When, chỉ hiện Balance
 kèm dòng `Pick 2+ days to see daily and hourly patterns.`
 
 ### 8.2 Bảng DONE/TARGET/LEFT bám theo range
@@ -365,10 +365,10 @@ Bảng bám theo range đang chọn, và **đổi tiêu đề + cột cuối** t
 | Custom (đã qua) | `Aug 10 – Aug 20` | `DIFF` | `Final numbers for this period.` |
 | Custom (còn đang diễn ra) | `Aug 25 – Aug 31` | `LEFT` | `Hours left in this period.` |
 
-- `LEFT` = `max(0, target − done)` — chỉ dùng cho khoảng **chưa kết thúc**
-- `DIFF` = `done − target`, có dấu `+`/`−` — dùng cho khoảng **đã đóng**
+- `LEFT` = `max(0, target − done)` - chỉ dùng cho khoảng **chưa kết thúc**
+- `DIFF` = `done − target`, có dấu `+`/`−` - dùng cho khoảng **đã đóng**
 
-Khoảng đã kết thúc mà vẫn hiện "còn lại bao nhiêu giờ" là vô nghĩa — không còn thời
+Khoảng đã kết thúc mà vẫn hiện "còn lại bao nhiêu giờ" là vô nghĩa - không còn thời
 gian để làm nốt.
 
 ### Ẩn dòng
@@ -381,14 +381,14 @@ Chỉ ẩn khi `done === 0 && target === 0` (VD Work vào Chủ nhật). Còn l�
 
 | Mục | Trạng thái |
 |---|---|
-| Giữ mốc 04:00 | **Giữ** — lý do mới, xem mục 5 |
+| Giữ mốc 04:00 | **Giữ** - lý do mới, xem mục 5 |
 | `logicalDate` từ `startAt` | **Giữ** |
-| Không cắt block ở History | **Giữ** — vẫn cần cho Leisure/Work qua nửa đêm |
+| Không cắt block ở History | **Giữ** - vẫn cần cho Leisure/Work qua nửa đêm |
 | Nhãn `→ next day` | **Giữ** |
 | Bỏ `clippedEnd` / `continuedFromPrevious` | **Giữ** |
-| Hàng `Asleep until 7:30 AM` | **BỎ** — không còn dữ liệu ngủ |
+| Hàng `Asleep until 7:30 AM` | **BỎ** - không còn dữ liệu ngủ |
 | `asleepUntil()` trong `timeline.ts` | **BỎ** |
-| `carriedIn` | **BỎ** — thay bằng quy tắc mục 6 |
+| `carriedIn` | **BỎ** - thay bằng quy tắc mục 6 |
 | Tham số `dayStart` của `coverageOfDay` | **Giữ**, nhưng nay là giờ của activity đầu tiên |
 | Heatmap vẽ theo giờ đồng hồ thật | **Giữ** |
 | `bedtimeScore`, `medianBedtime`, `lateNights`, `wakeSpreadMin`, `lostMorningBlocks` | **BỎ** |
@@ -396,10 +396,10 @@ Chỉ ẩn khi `done === 0 && target === 0` (VD Work vào Chủ nhật). Còn l�
 
 ---
 
-## 10. Stage 7 signals — sửa
+## 10. Stage 7 signals - sửa
 
 ### Bỏ hẳn
-- **Nhóm B (Sleep)** — toàn bộ
+- **Nhóm B (Sleep)** - toàn bộ
 - Nhóm F: `leisureNightsDelayingSleep`
 - Nhóm G: `fitnessAfterShortNights`, `learnAfterShortNights`, `sleepAfterLateWork`
 
@@ -431,11 +431,11 @@ Vẫn giữ quy tắc `sampleSize >= 3` cho nhóm G.
 | Heatmap legend | 4 màu |
 | History gauge | 5 cột → 4 cột (rộng hơn, dễ đọc hơn ở 320px) |
 | Analytics | Bỏ chip `Today`, mặc định `This week` (mục 8.1) |
-| Màn Targets | Bỏ dòng `Sleep 46.5h — fixed`. Tổng `89 / 89h` |
+| Màn Targets | Bỏ dòng `Sleep 46.5h - fixed`. Tổng `89 / 89h` |
 | Sheet đổi preset | Bỏ dòng Sleep |
 | Weekly Review | Bỏ dòng Sleep ở cả ba màn |
 | Voice prompt | Bỏ `sleep` khỏi danh sách category và khỏi mô tả lịch sinh hoạt |
-| Voice — câu nói về ngủ | AI trả `unknown` → toast `Sleep is no longer tracked.` Không im lặng bỏ qua |
+| Voice - câu nói về ngủ | AI trả `unknown` → toast `Sleep is no longer tracked.` Không im lặng bỏ qua |
 | History | Dòng tóm tắt đổi từ `Coverage 68%` sang `9.4h logged · 1.2h gaps` |
 | Analytics | Banner cảnh báo dùng câu chữ mới ở mục 3.2 |
 | README | Ghi ngày gỡ Sleep và lý do; ghi rõ không còn khái niệm coverage |
@@ -478,7 +478,7 @@ Rà toàn bộ ~419 test, bỏ mọi tham chiếu `sleep`. Sửa các giá trị
 
 `test/now-progress.test.ts`
 - `fill = min(1, actual / dailyTarget)`, không vượt 1
-- `dailyTarget === 0` → không vẽ dải, nhãn `0.0 / —`
+- `dailyTarget === 0` → không vẽ dải, nhãn `0.0 / -`
 - Vượt target → có đoạn hổ phách
 - Target lấy từ `dailyTargetFor(weekday, weekly)`, đúng ngày trong tuần
 
@@ -517,7 +517,7 @@ Rà toàn bộ ~419 test, bỏ mọi tham chiếu `sleep`. Sửa các giá trị
 | 13 | Export | Vẫn có record sleep cũ + ghi chú |
 | 14 | Heatmap | 4 màu trong legend |
 
-Mục 1, 6 và 8 là ba bài quan trọng nhất. Mục 1 chứng minh màn Now không cần cuộn —
+Mục 1, 6 và 8 là ba bài quan trọng nhất. Mục 1 chứng minh màn Now không cần cuộn -
 lý do chính của cả thay đổi này. Mục 6 chứng minh coverage đã đổi mẫu số đúng.
 Mục 8 chứng minh By day hết cắt.
 
@@ -549,7 +549,7 @@ Mục 8 chứng minh By day hết cắt.
 ## Quy tắc cho agent
 
 **Dừng và hỏi khi:**
-- Trước khi xoá — báo số record sẽ xoá, chờ xác nhận (mục 0)
+- Trước khi xoá - báo số record sẽ xoá, chờ xác nhận (mục 0)
 - Một test cũ fail mà không rõ nên sửa kỳ vọng hay sửa code
 
 **Không được:**

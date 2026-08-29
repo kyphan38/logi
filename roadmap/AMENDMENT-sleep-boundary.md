@@ -1,9 +1,9 @@
-# AMENDMENT — Xử lý giấc ngủ vắt qua ranh giới ngày
+# AMENDMENT - Xử lý giấc ngủ vắt qua ranh giới ngày
 
 > Áp dụng cho **Stage 4.5** (History timeline), **Stage 5** (heatmap),
 > **Stage 7** (signals). Đưa kèm khi giao các stage đó.
 >
-> Nếu Stage 4.5 đã làm xong thì đây là bản vá — sửa lại phần A2.
+> Nếu Stage 4.5 đã làm xong thì đây là bản vá - sửa lại phần A2.
 
 ---
 
@@ -23,7 +23,7 @@ Hai kiểu đêm ngủ điển hình của người dùng:
 | B | T3 được 7.25h | **T2 được 7.25h**, T3 được 0 |
 
 Mốc 00:00 **chẻ đôi đêm ngủ bình thường** thành hai ngày. Mốc 04:00 cho mỗi ngày
-logic đúng một đêm ngủ ở cả hai kiểu — đây chính là lý do nó tồn tại.
+logic đúng một đêm ngủ ở cả hai kiểu - đây chính là lý do nó tồn tại.
 
 Về ý nghĩa: đi ngủ 00:15 là *thức khuya của tối thứ Hai*, không phải *giấc ngủ của
 thứ Ba*. Gán về thứ Hai là đúng với cách con người nghĩ.
@@ -38,7 +38,7 @@ Không đổi. `logicalDate(startAt)`, không phải `endAt`, không phải đi�
 Record vẫn là **một** session 7h15m. Nó bị chẻ làm hai khối chỉ vì timeline cũ dùng
 **trục 24h tuyến tính**, nên phải cắt ở ranh giới 04:00.
 
-Stage 4.5 đã đổi sang **timeline co giãn** — bố cục danh sách, không phải trục tỉ lệ.
+Stage 4.5 đã đổi sang **timeline co giãn** - bố cục danh sách, không phải trục tỉ lệ.
 Trong bố cục đó **không có lý do gì phải cắt**.
 
 > Cơ chế `clippedEnd` / `continuedFromPrevious` đặc tả ở Stage 4.5 phần A2 là để chữa
@@ -70,7 +70,7 @@ Session thuộc `logicalDate` nào thì hiện **nguyên vẹn một hàng** ở
 
 ### 3.2 Dòng "còn đang ngủ" ở đầu ngày hôm sau
 Ngày hôm sau sẽ có một khoảng trống đầu ngày mà người dùng thực ra đang ngủ. Không
-được để nó thành `3h 30m untracked` — nhìn như quên log.
+được để nó thành `3h 30m untracked` - nhìn như quên log.
 
 Nếu ngày logic trước đó có session Sleep với `endAt` > 04:00 của ngày đang xem:
 
@@ -87,7 +87,7 @@ Nếu ngày logic trước đó có session Sleep với `endAt` > 04:00 của ng
 
 ### 3.3 Coverage
 Khoảng "còn đang ngủ" đầu ngày được trừ khỏi mẫu số coverage của ngày hôm sau. Nó
-không phải thời gian chưa log — nó đã được log, chỉ thuộc ngày khác.
+không phải thời gian chưa log - nó đã được log, chỉ thuộc ngày khác.
 
 ### Verify
 - Ngủ 22:00 T2 → 04:30 T3: timeline T2 hiện **một** hàng `10:00 PM – 4:30 AM → next
@@ -97,7 +97,7 @@ không phải thời gian chưa log — nó đã được log, chỉ thuộc ng�
 
 ---
 
-## 4. Heatmap (Stage 5) — khác hẳn
+## 4. Heatmap (Stage 5) - khác hẳn
 
 Heatmap **vẫn dùng trục tuyến tính** và **vẫn phải vẽ xuyên ranh giới**. Đây không
 mâu thuẫn với mục 3: hai chỗ phục vụ hai mục đích khác nhau.
@@ -106,7 +106,7 @@ mâu thuẫn với mục 3: hai chỗ phục vụ hai mục đích khác nhau.
 - Ô được tô theo thời gian thực tế diễn ra, bất kể record thuộc `logicalDate` nào
 - Ngủ 00:15 → 07:30 thứ Ba → tô các ô 00:00–07:00 của **cột thứ Ba**
 
-Vì mục đích của heatmap là trả lời *"khi nào trong ngày mình làm gì"* — nó phải phản
+Vì mục đích của heatmap là trả lời *"khi nào trong ngày mình làm gì"* - nó phải phản
 ánh giờ đồng hồ thật. Còn tổng giờ theo category thì vẫn tính theo ngày logic.
 
 Hai con số này sẽ **không khớp nhau** ở những ngày có ngủ muộn. Đó là đúng, không
@@ -151,7 +151,7 @@ Lấy trung vị trên `bedtimeScore` rồi đổi ngược về giờ hiển th
 Mốc 04:00 chỉ cách giờ dậy thường lệ 04:30 đúng **30 phút**.
 
 Nếu có hôm dậy lúc 03:45 và bắt đầu học ngay, session Learn đó sẽ bị gán vào **ngày
-hôm trước** — sai.
+hôm trước** - sai.
 
 Hiện tại chưa phải vấn đề vì bạn dậy 04:30. Nhưng nếu về sau dậy sớm hơn 04:00 thành
 thói quen, hạ `DAY_CUTOFF_HOUR` xuống **03:00**. Mốc 03:00 vẫn gán đúng giấc ngủ bắt
@@ -185,7 +185,7 @@ thói quen, hạ `DAY_CUTOFF_HOUR` xuống **03:00**. Mốc 03:00 vẫn gán đ�
 | Mốc ngày logic | **Giữ 04:00**, không đổi |
 | `logicalDate` tính từ | `startAt`, không đổi |
 | History timeline | **Không cắt block.** Hiện nguyên hàng + nhãn `→ next day` |
-| `clippedEnd` / `continuedFromPrevious` | **Bỏ** — chỉ cần cho trục tuyến tính |
+| `clippedEnd` / `continuedFromPrevious` | **Bỏ** - chỉ cần cho trục tuyến tính |
 | Đầu ngày hôm sau | Hàng `Asleep until 7:30 AM`, không tính untracked |
 | Heatmap | Vẫn tuyến tính, vẫn vẽ xuyên ranh giới, theo giờ đồng hồ thật |
 | `medianBedtime` | Quy đổi thang liên tục trước khi lấy trung vị |

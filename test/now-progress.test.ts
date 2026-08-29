@@ -46,12 +46,12 @@ test('vượt target → fill kẹp ở 1, cờ over bật', () => {
   assert.equal(w.over, true);
 });
 
-test('Chủ nhật: Work không có target → không vẽ dải, nhãn 0.0 / —', () => {
+test('Chủ nhật: Work không có target → không vẽ dải, nhãn 0.0 / -', () => {
   const w = tileOf(tilesOn(SUN, []), 'work');
   assert.equal(w.target, 0);
   assert.equal(w.noTarget, true);
   assert.equal(w.fill, 0);
-  assert.equal(w.label, '0.0 / —');
+  assert.equal(w.label, '0.0 / -');
 });
 
 test('có log mà ngày đó không target → vẫn không vẽ dải, số vẫn đúng', () => {
@@ -61,7 +61,7 @@ test('có log mà ngày đó không target → vẫn không vẽ dải, số v�
   const w = tileOf(tilesOn(SUN, acts), 'work');
   assert.equal(w.actual, 2.5);
   assert.equal(w.noTarget, true);
-  assert.equal(w.label, '2.5 / —');
+  assert.equal(w.label, '2.5 / -');
 });
 
 test('chưa có weekTarget → mọi nút đều noTarget, không đoán bừa', () => {
