@@ -15,7 +15,7 @@ import {
 } from '@/hooks/useActivities';
 import { actualHours, logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
 import { roundDown } from '@/lib/datetime';
-import { coverageOfDay, dayWindow, layoutDay } from '@/lib/timeline';
+import { asleepUntil, coverageOfDay, dayWindow, layoutDay } from '@/lib/timeline';
 import { daySummary, gaugeShape, type DayLine } from '@/lib/day-target';
 import { useWeekTarget } from '@/hooks/useTargets';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
@@ -84,14 +84,21 @@ export default function HistoryPage() {
   }, [strip.activities, nowMinute]);
   // Target của đúng tuần đang xem - tuần cũ có thể khác tuần này.
   const { target: weekTarget } = useWeekTarget(selectedWeek);
-  // Vẽ cả record kéo sang từ hôm trước; `totals` vẫn chỉ tính `activities`.
+  // Chỉ record của ngày này thành block. Giấc ngủ kéo sang từ hôm trước KHÔNG
+  // bị cắt làm hai nữa: nó hiện nguyên hàng ở ngày hôm trước, còn ở đây chỉ là
+  // một dòng mảnh "Asleep until ..." (AMENDMENT sleep-boundary §3.1-3.3).
   const { segments } = useMemo(
-    () => layoutDay([...carriedIn, ...activities], win, nowMinute),
-    [carriedIn, activities, win, nowMinute],
+    () => layoutDay(activities, win, nowMinute),
+    [activities, win, nowMinute],
   );
+  const asleep = useMemo(
+    () => asleepUntil(carriedIn, win, nowMinute),
+    [carriedIn, win, nowMinute],
+  );
+  // Đang ngủ thì ngày coi như bắt đầu lúc tỉnh dậy - không tính là untracked.
   const { trackedH, untrackedH, gaps } = useMemo(
-    () => coverageOfDay(segments, win, nowMinute),
-    [segments, win, nowMinute],
+    () => coverageOfDay(segments, win, nowMinute, asleep?.end ?? win.start),
+    [segments, win, nowMinute, asleep],
   );
 
   // Đối chiếu với target CẢ NGÀY của đúng ngày trong tuần đó - kể cả hôm nay.
@@ -157,7 +164,9 @@ export default function HistoryPage() {
             gaps={gaps}
             win={win}
             now={nowMinute}
+            asleep={asleep}
             onSelect={(a) => setSheet({ mode: 'edit', activity: a })}
+            onSelectDay={setSelected}
             onAdd={() => setSheet(newRecordDefaults(selected, today, nowMinute))}
           />
         )}

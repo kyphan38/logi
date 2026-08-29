@@ -95,6 +95,25 @@ than it would at home. The app does not store a time zone per record. For one
 person in one country this is fine; a trip of a few days will shift a few
 records by one day. Nothing breaks, the totals just move.
 
+**Sleep across the 04:00 line.** A session belongs to the logical day of its
+`startAt`. Sleep 22:00 Mon → 04:30 Tue is one whole row on **Monday**, marked
+`→ next day`; Tuesday shows a thin `Asleep until 4:30 AM` line instead, which is
+neither a block nor untracked time. Going to bed at 00:15 works the same way -
+that is late Monday night, not Tuesday's sleep.
+
+**The heatmap will not match the category totals on late-night days.** They
+answer different questions and this is on purpose. Category totals follow the
+**logical** day (04:00 → 04:00). The heatmap follows the **clock**: its columns
+are calendar days and its cells are filled by when the thing really happened, so
+sleep 00:15 → 07:30 Tuesday fills the 00:00–07:00 cells of the *Tuesday* column
+even though the record counts towards Monday.
+
+**Watch item: 04:00 is only 30 minutes before the usual 04:30 wake-up.** Wake at
+03:45 and start studying, and that Learn session lands on the **previous** day.
+Not a problem while the wake-up stays at 04:30. If waking before 04:00 becomes a
+habit, lower `DAY_CUTOFF_HOUR` to **03:00** - it still puts a 00:15 bedtime on
+the day before, but leaves more room for the morning.
+
 **Device clock set back.** Timers never show a negative number - elapsed time is
 clamped to `0:00`.
 

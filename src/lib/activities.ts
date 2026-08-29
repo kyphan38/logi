@@ -117,6 +117,19 @@ export function validateTimes(
   }
 }
 
+/**
+ * Có endAt = đã xong. Không có endAt = đang chạy. HAI THỨ NÀY ĐI CÙNG NHAU.
+ *
+ * Điền endAt mà quên đổi status là lỗi câm: History vẽ record đã kết thúc,
+ * còn màn Now vẫn đếm tiếp vì nó query theo `status == 'active'`.
+ * 'abandoned' giữ nguyên - bỏ dở vẫn là bỏ dở, dù có giờ kết thúc hay không.
+ */
+export function statusForTimes(endAt: number | null, status: ActivityStatus): ActivityStatus {
+  if (endAt !== null && (status === 'active' || status === 'scheduled')) return 'done';
+  if (endAt === null && status === 'done') return 'active';
+  return status;
+}
+
 // ------------------------------------------------------------
 // Đọc / ghi thấp tầng
 // ------------------------------------------------------------
@@ -263,9 +276,11 @@ export async function updateActivity(
   if (touchesTime) {
     const startAt = patch.startAt ?? current.startAt;
     const endAt = patch.endAt !== undefined ? patch.endAt : current.endAt;
-    const status = (patch.status ?? current.status) as ActivityStatus;
+    // Giờ đổi thì status phải theo. Người gọi không cần nhớ luật này.
+    const status = statusForTimes(endAt, (patch.status ?? current.status) as ActivityStatus);
     validateTimes(startAt, endAt, status);
 
+    next.status = status;
     next.startAt = startAt;
     next.endAt = endAt;
     Object.assign(next, derive(startAt, endAt));
@@ -352,7 +367,7 @@ export function subscribeActive(
     { includeMetadataChanges: true },
     (snap) => {
       const list = snap.docs.map((d) => toActivity(d.id, d.data())).sort(byStartAsc);
-      cb(list, metaOf(snap));
+      cb(onlyRunning(uid, list), metaOf(snap));
     },
     (e) => onError?.(e)
   );
@@ -362,9 +377,15 @@ export function subscribeActive(
  * Mọi activity của một ngày logic ("2026-08-26").
  *
  * Tham số thứ ba của cb là `carriedIn`: record thuộc ngày logic liền trước
- * nhưng còn kéo dài qua mốc 04:00 (VD ngủ 22:00 → 06:00). Chúng chỉ dùng để
- * vẽ timeline cho liền mạch - KHÔNG cộng vào tổng của ngày này, vì mọi
- * analytics đều tính theo `logicalDate`.
+ * nhưng còn kéo dài qua mốc 04:00 (VD ngủ 22:00 → 06:00). KHÔNG cộng vào tổng
+ * của ngày này, vì mọi analytics đều tính theo `logicalDate`.
+ *
+ * AMENDMENT sleep-boundary nói `subscribeByDate` nên query đúng một ngày.
+ * Vẫn giữ ngày hôm trước, vì hai chỗ cần nó và cả hai đều không vẽ block:
+ *   - History: dòng "Asleep until 7:30 AM" đầu ngày (`asleepUntil`)
+ *   - Now: thanh ngang TodayStrip dùng trục tuyến tính, phải vẽ liền mạch
+ * Timeline của History thì chỉ nhận `activities`, nên giấc ngủ không còn bị
+ * chẻ làm hai khối nữa - đúng tinh thần của amendment.
  */
 export function subscribeByDate(
   uid: string,
@@ -496,7 +517,27 @@ export async function listByRange(
 export async function listActive(uid: string): Promise<Activity[]> {
   const q = query(col(uid), where('status', '==', 'active'));
   const snap = isOffline() ? await getDocsFromCache(q) : await getDocs(q);
-  return snap.docs.map((d) => toActivity(d.id, d.data())).sort(byStartAsc);
+  return onlyRunning(uid, snap.docs.map((d) => toActivity(d.id, d.data())).sort(byStartAsc));
+}
+
+/**
+ * Đang chạy = chưa có endAt. Record `active` mà đã có endAt là dữ liệu hỏng
+ * (đường voice edit cũ điền endAt mà quên status) - lọc ra khỏi màn Now, rồi
+ * vá luôn dưới Firestore. Ghi xong nó tự rời query nên không lặp.
+ */
+function onlyRunning(uid: string, list: Activity[]): Activity[] {
+  const running = list.filter((a) => a.endAt === null);
+  if (running.length === list.length) return list;
+
+  for (const a of list) {
+    if (a.endAt === null) continue;
+    void updateDoc(ref(uid, a.id), {
+      status: 'done' satisfies ActivityStatus,
+      ...derive(a.startAt, a.endAt),
+      updatedAt: Date.now(),
+    }).catch(() => {});
+  }
+  return running;
 }
 
 /** Session active quá 15h → cần hỏi lại giờ kết thúc. KHÔNG tự xoá. */

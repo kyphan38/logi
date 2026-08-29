@@ -119,9 +119,17 @@ export async function applyVoice(
       if (cmd.endAt !== null) patch.endAt = cmd.endAt;
       await repo.updateActivity(uid, id, patch);
 
+      // "Yesterday I finished dinner at midnight" về đây chứ không về 'stop'.
+      // Câu nói kết thúc một session đang chạy thì phải báo là đã dừng.
+      const ended = before.endAt === null && cmd.endAt !== null;
+
       return {
         activityId: id,
-        message: cmd.category ? `Changed to ${name}.` : 'Updated.',
+        message: cmd.category
+          ? `Changed to ${name}.`
+          : ended
+            ? `Stopped ${CATEGORY_LABEL[before.category]}.`
+            : 'Updated.',
         undo: () =>
           repo.updateActivity(uid, id, {
             category: before.category,

@@ -65,6 +65,12 @@ export interface SleepSignals {
   shortNights: number;
   napCount: number;
   napHours: number;
+  /** Số đêm đi ngủ sau nửa đêm (bedtimeScore >= 24). */
+  lateNights: number;
+  /** Dao động giờ dậy, phút. */
+  wakeSpreadMin: number | null;
+  /** Số ngày dậy sau 07:00 - mất khối học buổi sáng. */
+  lostMorningBlocks: number;
 }
 
 export interface WorkSignals {
@@ -121,6 +127,8 @@ export interface LinkSignals {
   learnOnNormalDays: Link | null;
   fitnessAfterShortNights: Link | null;
   learnAfterShortNights: Link | null;
+  /** Học được bao nhiêu ở ngày sau một đêm dậy sau 07:00. */
+  learnAfterLateWake: Link | null;
   sleepAfterLateWork: Link | null;
   weekendLearnVsWeekendWork: { learn: number; work: number; sampleSize: number } | null;
   displacedBy: {
@@ -204,6 +212,20 @@ function minutesOfDay(ts: number): number {
 function nightAxis(min: number): number {
   return min < 720 ? min + 1440 : min;
 }
+
+/**
+ * Cùng trục đêm nhưng tính bằng GIỜ, để đọc và test cho dễ:
+ * 22:00 → 22.0, 00:15 → 24.25, 01:30 → 25.5.
+ */
+export function bedtimeScore(ts: number): number {
+  return nightAxis(minutesOfDay(ts)) / 60;
+}
+
+/** Dậy sau mốc này là mất khối học buổi sáng. */
+export const LATE_WAKE_MIN = 7 * 60;
+
+/** Đi ngủ từ nửa đêm trở đi - trên trục đêm là 24h. */
+const MIDNIGHT_SCORE_MIN = 24 * 60;
 
 /** Một session đã cắt gọn trong cửa sổ khoảng. */
 interface Sess {
@@ -469,6 +491,7 @@ function sleepNights(sessions: Sess[]): Night[] {
 function sleepSignals(sessions: Sess[], nights: Night[]): SleepSignals {
   const naps = sessions.filter((s) => s.category === 'sleep' && s.fullHours <= NAP_MAX_H);
   const beds = nights.map((n) => n.bedMin);
+  const wakes = nights.map((n) => n.wakeMin);
 
   return {
     nights: nights.length,
@@ -481,6 +504,9 @@ function sleepSignals(sessions: Sess[], nights: Night[]): SleepSignals {
     shortNights: nights.filter((n) => n.hours < SHORT_NIGHT_H).length,
     napCount: naps.length,
     napHours: naps.reduce((a, s) => a + s.minutes / 60, 0),
+    lateNights: nights.filter((n) => n.bedMin >= MIDNIGHT_SCORE_MIN).length,
+    wakeSpreadMin: wakes.length >= 2 ? Math.round(Math.max(...wakes) - Math.min(...wakes)) : null,
+    lostMorningBlocks: nights.filter((n) => n.wakeMin > LATE_WAKE_MIN).length,
   };
 }
 
@@ -754,6 +780,16 @@ function linkSignals(i: {
     afterShortLearn.push(next.learn);
   }
 
+  // Dậy sau 07:00 thì khối học sáng 04:30-06:30 coi như mất. Chỉ mô tả số giờ
+  // học của những ngày đó, không kết luận nhân quả.
+  const afterLateWakeLearn: number[] = [];
+  for (const n of nights) {
+    if (n.wakeMin <= LATE_WAKE_MIN) continue;
+    const next = byDay.get(addDays(n.day, 1));
+    if (!next) continue;
+    afterLateWakeLearn.push(next.learn);
+  }
+
   // Ngủ sau ngày có làm khuya.
   const lateWorkDays = new Set<string>();
   for (const s of sessions) {
@@ -778,6 +814,7 @@ function linkSignals(i: {
     learnOnNormalDays: link(normal),
     fitnessAfterShortNights: link(afterShortFitness),
     learnAfterShortNights: link(afterShortLearn),
+    learnAfterLateWake: link(afterLateWakeLearn),
     sleepAfterLateWork: link(sleepAfterLate),
     weekendLearnVsWeekendWork:
       weekendDays.length >= MIN_SAMPLE

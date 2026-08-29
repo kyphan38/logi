@@ -37,17 +37,18 @@ export function addDays(date: string, n: number): string {
 
 export interface Segment {
   activity: Activity;
-  /** Đã cắt gọn trong cửa sổ ngày. */
   start: number;
+  /** Giờ kết thúc THẬT, không cắt ở 04:00 hôm sau (xem AMENDMENT sleep). */
   end: number;
   lane: number;
-  /** true khi session tràn qua mốc 04:00 hôm sau. */
-  clippedEnd: boolean;
-  /**
-   * true khi session bắt đầu trước 04:00 - tức kéo sang từ ngày logic trước
-   * (VD ngủ 22:00 → 06:00). Vẽ ở đầu timeline để ngày không bị thủng lỗ.
-   */
-  continuedFromPrevious: boolean;
+  /** Giờ kết thúc rơi sang ngày lịch khác giờ bắt đầu → nhãn "→ next day". */
+  crossesMidnight: boolean;
+}
+
+/** Ngày lịch (không phải ngày logic) của một mốc thời gian. */
+function calendarDay(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
 export interface Layout {
@@ -72,9 +73,10 @@ export function layoutDay(activities: Activity[], win: DayWindow, now: number): 
   const sorted = [...activities].sort((a, b) => a.startAt - b.startAt);
 
   for (const a of sorted) {
-    const rawEnd = a.endAt ?? Math.min(now, win.end);
+    // Session chưa xong thì kéo tới bây giờ; đã xong thì giữ NGUYÊN giờ kết
+    // thúc thật, kể cả khi nó vượt 04:00 hôm sau. Một giấc ngủ là một hàng.
+    const end = a.endAt ?? Math.min(now, win.end);
     const start = Math.max(a.startAt, win.start);
-    const end = Math.min(rawEnd, win.end);
     if (end <= start) continue;
 
     let lane = lanes.findIndex((lastEnd) => lastEnd <= start);
@@ -86,8 +88,7 @@ export function layoutDay(activities: Activity[], win: DayWindow, now: number): 
       start,
       end,
       lane,
-      clippedEnd: rawEnd > win.end,
-      continuedFromPrevious: a.startAt < win.start,
+      crossesMidnight: calendarDay(a.startAt) !== calendarDay(end),
     });
   }
 
@@ -111,12 +112,23 @@ export interface Coverage {
  * Gộp các khoảng đã log rồi lấy phần bù → khoảng trống.
  * Với ngày hôm nay chỉ xét tới `now`; tương lai không tính là "untracked".
  */
-export function coverageOfDay(segments: Segment[], win: DayWindow, now: number): Coverage {
-  const limit = Math.min(win.end, Math.max(now, win.start));
+export function coverageOfDay(
+  segments: Segment[],
+  win: DayWindow,
+  now: number,
+  /**
+   * Ngày thực sự bắt đầu lúc nào. Mặc định là 04:00, nhưng nếu đầu ngày người
+   * dùng còn đang ngủ (giấc bắt đầu từ hôm trước) thì khoảng đó không phải
+   * "chưa log" - nó đã được log ở ngày khác. Trừ luôn khỏi mẫu số.
+   */
+  dayStart: number = win.start,
+): Coverage {
+  const from = Math.min(Math.max(dayStart, win.start), win.end);
+  const limit = Math.min(win.end, Math.max(now, from));
 
   const merged: Gap[] = [];
   for (const s of [...segments].sort((a, b) => a.start - b.start)) {
-    const start = s.start;
+    const start = Math.max(s.start, from);
     const end = Math.min(s.end, limit);
     if (end <= start) continue;
     const last = merged[merged.length - 1];
@@ -127,7 +139,7 @@ export function coverageOfDay(segments: Segment[], win: DayWindow, now: number):
   const trackedMs = merged.reduce((sum, m) => sum + (m.end - m.start), 0);
 
   const gaps: Gap[] = [];
-  let cursor = win.start;
+  let cursor = from;
   for (const m of merged) {
     if (m.start - cursor >= MIN_GAP_MS) gaps.push({ start: cursor, end: m.start });
     cursor = Math.max(cursor, m.end);
@@ -136,9 +148,42 @@ export function coverageOfDay(segments: Segment[], win: DayWindow, now: number):
 
   return {
     trackedH: trackedMs / 3_600_000,
-    untrackedH: Math.max(0, limit - win.start - trackedMs) / 3_600_000,
+    untrackedH: Math.max(0, limit - from - trackedMs) / 3_600_000,
     gaps,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Dòng "còn đang ngủ" ở đầu ngày (AMENDMENT sleep-boundary §3.2)
+// ---------------------------------------------------------------------------
+
+export interface AsleepRow {
+  /** Giờ tỉnh dậy, đã kẹp trong cửa sổ ngày đang xem. */
+  end: number;
+  /** Session ngủ đó - dùng để biết nó được log ở ngày nào. */
+  activity: Activity;
+}
+
+/**
+ * Giấc ngủ bắt đầu ở ngày logic trước mà kéo qua 04:00 của ngày đang xem.
+ * Trả về giờ tỉnh dậy để History vẽ một hàng mảnh "Asleep until 7:30 AM" thay
+ * vì một khoảng `3h 30m untracked` trông như quên log.
+ *
+ * KHÔNG phải là block: không bấm được, không tính vào tổng giờ của ngày này.
+ */
+export function asleepUntil(previous: Activity[], win: DayWindow, now: number): AsleepRow | null {
+  let best: AsleepRow | null = null;
+
+  for (const a of previous) {
+    if (a.category !== 'sleep') continue;
+    if (a.status === 'abandoned' || a.status === 'scheduled') continue;
+    if (a.startAt >= win.start) continue;
+    const end = Math.min(a.endAt ?? now, win.end);
+    if (end <= win.start) continue;
+    if (!best || end > best.end) best = { end, activity: a };
+  }
+
+  return best;
 }
 
 // ---------------------------------------------------------------------------
@@ -227,13 +272,11 @@ export function toPx(ts: number, win: DayWindow): number {
   return ((ts - win.start) / 3_600_000) * HOUR_PX;
 }
 
-/** "8:00–11:00 · 3h" */
-export function formatRange(start: number, end: number): string {
+/** "10:00 PM – 4:30 AM". Nhãn "→ next day" và thời lượng vẽ riêng ở Timeline. */
+export function formatClockRange(start: number, end: number): string {
   const t = (ts: number) =>
     new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  const h = (end - start) / 3_600_000;
-  const dur = h >= 1 ? `${+h.toFixed(1)}h` : `${Math.round(h * 60)}m`;
-  return `${t(start)}–${t(end)} · ${dur}`;
+  return `${t(start)} – ${t(end)}`;
 }
 
 export function formatGap(ms: number): string {

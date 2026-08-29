@@ -1,10 +1,15 @@
 // ---------------------------------------------------------------------------
-// logi - Heatmap 24h × ngày (Stage 5 Task 5)
+// logi - Heatmap 24h × ngày (Stage 5 Task 5, sửa bởi AMENDMENT sleep-boundary)
 //
 // Trả lời "KHI NÀO", không phải "BAO NHIÊU" - bao nhiêu đã có ở balance bars.
 //
-// Hàng đi từ 04:00 → 04:00 hôm sau, đúng biên của ngày logic. Nếu để 00:00 thì
-// giấc ngủ 22:00–06:00 sẽ bị cắt làm đôi và nằm ở hai cột khác nhau.
+// Cột = ngày LỊCH, hàng = giờ đồng hồ THẬT (00:00 → 23:00). Ô được tô theo lúc
+// việc đó thực sự diễn ra, bất kể record thuộc `logicalDate` nào: ngủ 00:15 →
+// 07:30 thứ Ba tô các ô 00:00–07:00 của cột thứ Ba.
+//
+// Vì vậy heatmap và tổng giờ theo category KHÔNG khớp nhau ở những ngày ngủ
+// muộn. Đó là đúng: tổng giờ tính theo ngày logic (mốc 04:00), còn heatmap
+// tính theo giờ đồng hồ. Hai câu hỏi khác nhau.
 //
 // KHÔNG co giãn hàng như timeline của History: ở đây mọi giờ phải cao bằng
 // nhau thì mắt mới so được "8h sáng hôm nay" với "8h sáng hôm qua".
@@ -12,7 +17,6 @@
 // File thuần: không React, không Firestore.
 // ---------------------------------------------------------------------------
 import { daysBetween, daysOf, type Range } from '@/lib/range';
-import { dayWindow } from '@/lib/timeline';
 import { CATEGORIES, type Activity, type Category } from '@/types/logi';
 
 /** Quá 14 ngày thì ô hẹp hơn 3px - vô nghĩa. */
@@ -20,6 +24,18 @@ export const MAX_HEATMAP_DAYS = 14;
 
 const HOUR_MS = 3_600_000;
 const MIN_MS = 60_000;
+
+/** "2026-08-25" → 00:00 giờ địa phương. */
+function startOfCalendarDay(date: string): number {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
+}
+
+/** Date → "2026-08-25" (ngày lịch, không phải ngày logic). */
+function dayKey(d: Date): string {
+  const p = (x: number) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
 
 export interface Cell {
   /** Category chiếm nhiều phút nhất trong giờ đó. null = không log gì. */
@@ -29,11 +45,11 @@ export interface Cell {
 }
 
 export interface Heatmap {
-  /** Ngày logic, theo thứ tự cột trái → phải. */
+  /** Ngày LỊCH, theo thứ tự cột trái → phải. */
   days: string[];
-  /** Nhãn hàng: "04:00" … "03:00". */
+  /** Nhãn hàng: "00:00" … "23:00". */
   hours: string[];
-  /** grid[hàng][cột] - hàng 0 là 04:00. */
+  /** grid[hàng][cột] - hàng 0 là 00:00. */
   grid: Cell[][];
 }
 
@@ -47,7 +63,7 @@ export function heatmapOf(
   now: number = Date.now()
 ): Heatmap {
   const days = daysOf(range);
-  const hours = Array.from({ length: 24 }, (_, i) => `${String((i + 4) % 24).padStart(2, '0')}:00`);
+  const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 
   // Phút của từng category cho từng ô, trước khi chọn ra người thắng.
   const acc: Record<Category, number>[][] = Array.from({ length: 24 }, () =>
@@ -55,30 +71,30 @@ export function heatmapOf(
   );
 
   const colOf = new Map(days.map((d, i) => [d, i]));
-  const winEnd = Math.min(dayWindow(range.to).end, now);
+  // Cột cuối đóng lúc 24:00 của ngày lịch đó, không phải 04:00 hôm sau.
+  const limit = Math.min(startOfCalendarDay(days[days.length - 1]) + 24 * HOUR_MS, now);
+  const first = startOfCalendarDay(days[0]);
 
   for (const a of activities) {
     if (a.status === 'abandoned' || a.status === 'scheduled') continue;
 
-    const s = a.startAt;
-    const e = Math.min(a.endAt ?? now, winEnd);
-    if (e <= s) continue;
+    const from = Math.max(a.startAt, first);
+    const to = Math.min(a.endAt ?? now, limit);
+    if (to <= from) continue;
 
-    // Đi theo từng cột: một session có thể vắt qua nhiều ngày logic.
-    for (const [d, col] of colOf) {
-      const win = dayWindow(d);
-      const from = Math.max(s, win.start);
-      const to = Math.min(e, win.end, winEnd);
-      if (to <= from) continue;
-
-      const firstRow = Math.floor((from - win.start) / HOUR_MS);
-      const lastRow = Math.ceil((to - win.start) / HOUR_MS) - 1;
-
-      for (let row = firstRow; row <= lastRow && row < 24; row++) {
-        const cellStart = win.start + row * HOUR_MS;
-        const overlap = Math.min(to, cellStart + HOUR_MS) - Math.max(from, cellStart);
-        if (overlap > 0) acc[row][col][a.category] += overlap / MIN_MS;
+    // Đi từng ô một giờ theo giờ đồng hồ thật - vắt qua nửa đêm là chuyện
+    // bình thường, chỉ là sang cột kế bên.
+    let t = from;
+    while (t < to) {
+      const d = new Date(t);
+      const cellStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()).getTime();
+      const cellEnd = cellStart + HOUR_MS;
+      const col = colOf.get(dayKey(d));
+      if (col !== undefined) {
+        const overlap = Math.min(to, cellEnd) - t;
+        if (overlap > 0) acc[d.getHours()][col][a.category] += overlap / MIN_MS;
       }
+      t = cellEnd;
     }
   }
 

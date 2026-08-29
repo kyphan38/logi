@@ -159,7 +159,7 @@ test('ngày thưa co lại nhỏ hơn nhiều so với khung 1440px cũ', () => 
   assert.ok(total < 800, `6 record vẫn cao ${total}px - phải vừa một màn hình`);
 });
 
-test('block kéo sang từ hôm trước giữ nguyên cờ continuedFromPrevious', () => {
+test('block kéo sang từ hôm trước vẫn vẽ được, cắt đầu tại 04:00', () => {
   const rows = rowsFor([
     act({
       id: 's',
@@ -169,6 +169,6 @@ test('block kéo sang từ hôm trước giữ nguyên cờ continuedFromPreviou
     }),
   ]);
   const first = blocks(rows)[0].blocks[0];
-  assert.equal(first.continuedFromPrevious, true);
   assert.equal(first.start, win.start, 'phải cắt gọn về 04:00');
+  assert.equal(first.crossesMidnight, true);
 });

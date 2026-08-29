@@ -53,7 +53,7 @@ test('layoutDay: hai block 5 phút liền nhau không đè lên nhau', () => {
   assert.equal(l.laneCount, 2, 'block quá ngắn nên phải tách lane cho dễ bấm');
 });
 
-test('layoutDay: session tràn qua 04:00 bị cắt và đánh dấu clippedEnd', () => {
+test('layoutDay: session tràn qua 04:00 KHÔNG bị cắt (một giấc ngủ = một hàng)', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-27', '10:00');
   const sleep = act({
@@ -62,8 +62,8 @@ test('layoutDay: session tràn qua 04:00 bị cắt và đánh dấu clippedEnd'
     endAt: at('2026-08-27', '06:00'),
   });
   const [s] = layoutDay([sleep], w, now).segments;
-  assert.equal(s.end, w.end);
-  assert.equal(s.clippedEnd, true);
+  assert.equal(s.end, at('2026-08-27', '06:00'), 'giữ nguyên giờ kết thúc thật');
+  assert.equal(s.crossesMidnight, true);
 });
 
 test('layoutDay: session đang chạy kết thúc ở now', () => {
@@ -72,7 +72,7 @@ test('layoutDay: session đang chạy kết thúc ở now', () => {
   const a = act({ startAt: at('2026-08-26', '14:00'), endAt: null });
   const [s] = layoutDay([a], w, now).segments;
   assert.equal(s.end, now);
-  assert.equal(s.clippedEnd, false);
+  assert.equal(s.crossesMidnight, false);
 });
 
 test('layoutDay: bỏ record nằm ngoài cửa sổ ngày', () => {
@@ -112,28 +112,13 @@ test('coverageOfDay chỉ báo khoảng trống từ 30 phút trở lên', () =>
   assert.equal(coverageOfDay(segments, w, now).gaps.length, 0, 'khoảng 20 phút bị bỏ qua');
 });
 
-// --- A2: record kéo sang từ ngày logic hôm trước ------------------------
-test('layoutDay: sleep 22:00 hôm trước → 06:00 hôm nay được vẽ, cờ continuedFromPrevious', () => {
-  const w = dayWindow('2026-08-26');
-  const now = at('2026-08-26', '12:00');
-  const sleep = act({
-    category: 'sleep',
-    startAt: at('2026-08-25', '22:00'),
-    endAt: at('2026-08-26', '06:00'),
-  });
-  const [s] = layoutDay([sleep], w, now).segments;
-  assert.equal(s.continuedFromPrevious, true);
-  assert.equal(s.clippedEnd, false);
-  assert.equal(s.start, w.start); // cắt đầu tại 04:00
-  assert.equal(s.end, at('2026-08-26', '06:00'));
-});
-
-test('layoutDay: record bình thường trong ngày → continuedFromPrevious = false', () => {
+// --- A2 (đã sửa bởi AMENDMENT sleep-boundary) --------------------------
+test('layoutDay: record bình thường trong ngày → crossesMidnight = false', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '12:00');
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
   const [s] = layoutDay([a], w, now).segments;
-  assert.equal(s.continuedFromPrevious, false);
+  assert.equal(s.crossesMidnight, false);
 });
 
 test('layoutDay: session hôm trước kết thúc trước 04:00 thì không vẽ', () => {

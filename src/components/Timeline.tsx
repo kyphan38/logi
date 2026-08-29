@@ -13,14 +13,16 @@ import { useMemo } from 'react';
 import { shortDate } from '@/lib/datetime';
 import {
   elasticRows,
+  formatClockRange,
   formatGap,
-  formatRange,
   GAP_ROW_PX,
+  type AsleepRow,
   type DayWindow,
   type Gap,
   type Segment,
 } from '@/lib/timeline';
 import { catInk, catTint } from '@/lib/category-style';
+import { logicalDate } from '@/lib/balance';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
 /** Cột giờ bên trái. */
@@ -37,35 +39,44 @@ export default function Timeline({
   gaps,
   win,
   now,
+  asleep,
   onSelect,
+  onSelectDay,
   onAdd,
 }: {
   segments: Segment[];
   gaps: Gap[];
   win: DayWindow;
   now: number;
+  /** Đầu ngày còn đang ngủ - giấc đó thuộc ngày hôm trước. */
+  asleep?: AsleepRow | null;
   onSelect: (a: Activity) => void;
+  onSelectDay?: (date: string) => void;
   onAdd: () => void;
 }) {
   const rows = useMemo(() => elasticRows(segments, gaps), [segments, gaps]);
 
   if (segments.length === 0) {
     return (
-      <div className="w-full rounded-md border border-dashed border-line-strong px-4 py-10 text-center">
-        <p className="text-sm text-ink-muted">Nothing tracked on this day.</p>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="mt-3 min-h-11 rounded-sm border border-line px-4 text-sm font-medium transition active:scale-[0.99]"
-        >
-          + Add record
-        </button>
+      <div className="w-full space-y-2">
+        {asleep ? <Asleep row={asleep} onSelectDay={onSelectDay} /> : null}
+        <div className="rounded-md border border-dashed border-line-strong px-4 py-10 text-center">
+          <p className="text-sm text-ink-muted">Nothing tracked on this day.</p>
+          <button
+            type="button"
+            onClick={onAdd}
+            className="mt-3 min-h-11 rounded-sm border border-line px-4 text-sm font-medium transition active:scale-[0.99]"
+          >
+            + Add record
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="w-full space-y-2 overflow-x-hidden">
+      {asleep ? <Asleep row={asleep} onSelectDay={onSelectDay} /> : null}
       {rows.map((row) =>
         row.kind === 'gap' ? (
           <div key={row.key} className="flex items-stretch" style={{ height: GAP_ROW_PX }}>
@@ -116,9 +127,6 @@ function Block({
       className={[
         'flex min-w-0 flex-1 flex-col justify-center overflow-hidden rounded-md',
         'px-2 py-1 text-left transition active:scale-[0.99]',
-        // Kéo sang từ hôm trước / bị cắt lúc 04:00: nhắc bằng viền đứt một phía.
-        s.continuedFromPrevious ? 'border-t border-dashed border-line-strong' : '',
-        s.clippedEnd ? 'border-b border-dashed border-line-strong' : '',
       ].join(' ')}
       style={{
         // Viền TRÁI 3px màu gốc - đủ để nhận ra category, không cần viền bao quanh.
@@ -138,11 +146,49 @@ function Block({
       <span
         className={`block truncate text-[11px] tabular-nums ${zero ? 'text-ink-muted' : 'opacity-80'}`}
       >
-        {s.continuedFromPrevious ? `cont. from ${shortDate(s.activity.startAt)} · ` : ''}
-        {zero ? '0m' : formatRange(s.start, s.end)}
+        {zero ? '0m' : formatClockRange(s.start, s.end)}
+        {/* Ngủ 22:00 → 04:30: một block duy nhất, chỉ ghi chú là qua ngày. */}
+        {!zero && s.crossesMidnight ? (
+          <span className="text-ink-muted"> → next day</span>
+        ) : null}
+        {zero ? '' : ` · ${formatGap(s.end - s.start)}`}
         {running ? ' · running' : ''}
       </span>
     </button>
+  );
+}
+
+/**
+ * Hàng mảnh đầu ngày: "Asleep until 7:30 AM (logged Aug 25)".
+ * Không phải block - không bấm được, không tính vào tổng của ngày này. Chỉ
+ * ngày trong ngoặc là bấm được, để nhảy sang ngày đã log giấc ngủ đó.
+ */
+function Asleep({
+  row,
+  onSelectDay,
+}: {
+  row: AsleepRow;
+  onSelectDay?: (date: string) => void;
+}) {
+  const day = logicalDate(row.activity.startAt);
+  return (
+    <div className="flex items-stretch">
+      <div className={`${LABEL_W} shrink-0`} />
+      <div className="flex min-w-0 flex-1 items-center gap-1 rounded-md bg-surface-0 px-3 py-1.5 text-[11px] text-ink-muted">
+        <span className="truncate">Asleep until {hhmm(row.end)}</span>
+        {onSelectDay ? (
+          <button
+            type="button"
+            onClick={() => onSelectDay(day)}
+            className="shrink-0 underline decoration-dotted underline-offset-2"
+          >
+            (logged {shortDate(row.activity.startAt)})
+          </button>
+        ) : (
+          <span className="shrink-0">(logged {shortDate(row.activity.startAt)})</span>
+        )}
+      </div>
+    </div>
   );
 }
 

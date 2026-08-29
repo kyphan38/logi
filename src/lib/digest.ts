@@ -92,6 +92,9 @@ export function buildDigest(s: Signals): Digest {
   put(sleep, 'nightsUnder6h', s.sleep.shortNights);
   put(sleep, 'naps', s.sleep.napCount);
   put(sleep, 'napHours', s.sleep.napHours);
+  put(sleep, 'nightsAfterMidnight', s.sleep.lateNights);
+  put(sleep, 'wakeTimeSpreadMin', s.sleep.wakeSpreadMin);
+  put(sleep, 'daysWakingAfter7', s.sleep.lostMorningBlocks);
   d.sleep = sleep;
 
   const work: Digest = {};
@@ -161,6 +164,7 @@ export function buildDigest(s: Signals): Digest {
   put(links, 'learnHoursOnOtherDays', linkOf(s.links.learnOnNormalDays));
   put(links, 'fitnessHoursAfterNightsUnder6h', linkOf(s.links.fitnessAfterShortNights));
   put(links, 'learnHoursAfterNightsUnder6h', linkOf(s.links.learnAfterShortNights));
+  put(links, 'learnHoursAfterWakingAfter7', linkOf(s.links.learnAfterLateWake));
   put(links, 'sleepHoursAfterWorkPast20', linkOf(s.links.sleepAfterLateWork));
   if (s.links.weekendLearnVsWeekendWork && s.links.weekendLearnVsWeekendWork.sampleSize >= MIN_SAMPLE) {
     const w = s.links.weekendLearnVsWeekendWork;

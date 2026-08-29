@@ -5,6 +5,7 @@ import {
   validateTimes,
   assertCategory,
   isStaleScheduled,
+  statusForTimes,
   SCHEDULED_MAX_AGE_MS,
   ActivityError,
 } from '@/lib/activities';
@@ -73,6 +74,31 @@ test('validateTimes: record scheduled được phép ở tương lai', () => {
 test('validateTimes: startAt không phải số → end-before-start (invalid)', () => {
   const now = at('2026-08-26', '12:00');
   assert.throws(() => validateTimes(NaN, now, 'done', now), ActivityError);
+});
+
+// ------------------------------------------------------------
+// endAt và status luôn đi cùng nhau
+// ------------------------------------------------------------
+
+test('statusForTimes: điền endAt cho session đang chạy → done', () => {
+  assert.equal(statusForTimes(at('2026-08-29', '00:00'), 'active'), 'done');
+});
+
+test('statusForTimes: hẹn giờ mà có endAt → done', () => {
+  assert.equal(statusForTimes(at('2026-08-29', '00:00'), 'scheduled'), 'done');
+});
+
+test('statusForTimes: xoá endAt của record done → chạy lại (Undo)', () => {
+  assert.equal(statusForTimes(null, 'done'), 'active');
+});
+
+test('statusForTimes: abandoned giữ nguyên, có giờ kết thúc hay không', () => {
+  assert.equal(statusForTimes(at('2026-08-29', '00:00'), 'abandoned'), 'abandoned');
+  assert.equal(statusForTimes(null, 'abandoned'), 'abandoned');
+});
+
+test('statusForTimes: đang chạy và chưa có endAt thì không đổi gì', () => {
+  assert.equal(statusForTimes(null, 'active'), 'active');
 });
 
 test('assertCategory chặn category lạ', () => {

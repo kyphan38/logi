@@ -12,15 +12,15 @@ function full(from: string, to: string): Range {
   return { from, to, kind: 'custom', isPartial: false };
 }
 
-/** Hàng 0 là 04:00 → giờ h nằm ở hàng (h - 4 + 24) % 24. */
-const row = (h: number) => (h - 4 + 24) % 24;
+/** Hàng 0 là 00:00 → giờ đồng hồ thật là chính nó (AMENDMENT sleep-boundary). */
+const row = (h: number) => h;
 
 test('Session 8:00–11:00 → tô đúng 3 ô đầy', () => {
   const acts = [act({ startAt: at(D, '08:00'), endAt: at(D, '11:00'), category: 'work' })];
   const { grid, hours } = heatmapOf(acts, full(D, D), NOW);
 
-  assert.equal(hours[0], '04:00');
-  assert.equal(hours[23], '03:00');
+  assert.equal(hours[0], '00:00');
+  assert.equal(hours[23], '23:00');
 
   for (const h of [8, 9, 10]) {
     assert.equal(grid[row(h)][0].category, 'work');
@@ -49,8 +49,7 @@ test('hai category trong cùng một giờ → ô lấy category nhiều phút h
   assert.equal(grid[row(9)][0].minutes, 45);
 });
 
-test('Sleep 22:00 → 06:00 nằm gọn trong MỘT cột, đúng ranh giới ngày logic', () => {
-  // Ngày logic 2026-08-24 chạy từ 04:00 T2 tới 04:00 T3.
+test('Sleep 22:00 → 06:00 vẽ xuyên nửa đêm, theo giờ đồng hồ thật', () => {
   const acts = [
     act({ startAt: at('2026-08-24', '22:00'), endAt: at(D, '06:00'), category: 'sleep' }),
   ];
@@ -58,15 +57,30 @@ test('Sleep 22:00 → 06:00 nằm gọn trong MỘT cột, đúng ranh giới ng
 
   assert.deepEqual(days, ['2026-08-24', '2026-08-25']);
 
-  // 22:00, 23:00, 00:00…03:00 thuộc cột ngày 24.
-  for (const h of [22, 23, 0, 1, 2, 3]) {
+  // 22:00 và 23:00 vẫn là ngày lịch 24.
+  for (const h of [22, 23]) {
     assert.equal(grid[row(h)][0].category, 'sleep', `giờ ${h} phải là sleep ở cột 0`);
   }
-  // 04:00 và 05:00 đã sang ngày logic 25 → cột 1.
-  for (const h of [4, 5]) {
+  // Qua nửa đêm là sang cột 25, kể cả khi record thuộc ngày logic 24.
+  for (const h of [0, 1, 2, 3, 4, 5]) {
     assert.equal(grid[row(h)][1].category, 'sleep', `giờ ${h} phải là sleep ở cột 1`);
     assert.equal(grid[row(h)][0].category, null);
   }
+});
+
+test('Sleep 00:15 → 07:30 tô các ô 00:00–07:00 của ĐÚNG cột ngày lịch đó', () => {
+  // Record thuộc ngày logic 2026-08-24 (bắt đầu sau 00:00, trước 04:00).
+  const acts = [
+    act({ startAt: at(D, '00:15'), endAt: at(D, '07:30'), category: 'sleep' }),
+  ];
+  const { grid } = heatmapOf(acts, full('2026-08-24', D), NOW);
+
+  for (const h of [0, 1, 2, 3, 4, 5, 6, 7]) {
+    assert.equal(grid[row(h)][1].category, 'sleep', `giờ ${h} phải là sleep ở cột 25`);
+  }
+  assert.equal(grid[row(0)][1].minutes, 45);
+  assert.equal(grid[row(7)][1].minutes, 30);
+  assert.equal(grid[row(8)][1].category, null);
 });
 
 test('phần vượt ra ngoài khoảng bị cắt', () => {
@@ -74,10 +88,10 @@ test('phần vượt ra ngoài khoảng bị cắt', () => {
     act({ startAt: at('2026-08-24', '22:00'), endAt: at(D, '06:00'), category: 'sleep' }),
   ];
   const { grid } = heatmapOf(acts, full('2026-08-24', '2026-08-24'), NOW);
-  // Chỉ còn 1 cột; 04:00–06:00 của ngày sau không có chỗ để rơi vào.
+  // Chỉ còn 1 cột; 00:00–06:00 của ngày lịch sau không có chỗ để rơi vào.
   assert.equal(grid.length, 24);
-  assert.equal(grid[row(3)][0].category, 'sleep');
-  assert.equal(grid[row(4)][0].category, null);
+  assert.equal(grid[row(23)][0].category, 'sleep');
+  assert.equal(grid[row(0)][0].category, null);
 });
 
 test('session đang chạy chỉ tô tới now', () => {

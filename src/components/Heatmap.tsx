@@ -8,6 +8,9 @@
 //
 // Trên mobile KHÔNG có hover, nên chi tiết phải mở bằng cách chạm - chạm vào ô
 // thì hiện một dòng ngay dưới lưới, không dùng tooltip bay.
+//
+// Cột là ngày LỊCH và hàng là giờ đồng hồ thật (00:00 → 23:00), khác với tổng
+// giờ theo category (tính theo ngày logic, mốc 04:00). Xem heatmap.ts.
 // ---------------------------------------------------------------------------
 import { useState } from 'react';
 
