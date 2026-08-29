@@ -17,7 +17,11 @@ export const metadata: Metadata = {
   title: "logi",
   description: "Personal time-audit app.",
   // iOS đọc apple-touch-icon khi Add to Home Screen; nó không đọc manifest icons.
-  icons: { apple: "/apple-touch-icon.png" },
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: { capable: true, title: "logi", statusBarStyle: "black-translucent" },
 };
 

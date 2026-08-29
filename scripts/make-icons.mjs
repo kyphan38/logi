@@ -1,24 +1,30 @@
 // ---------------------------------------------------------------------------
 // logi - Sinh icon PWA (Stage 6 Task 2)
 //
-// Không dùng thư viện vẽ ảnh: icon chỉ là vài hình chữ nhật, viết thẳng PNG
+// Không dùng thư viện vẽ ảnh: icon chỉ là vài thanh bo tròn, viết thẳng PNG
 // bằng zlib còn nhẹ hơn kéo về một dependency chỉ để chạy một lần.
+//
+// Hình phải khớp `public/favicon.svg` (bộ icon dùng chung cho mọi app trong
+// ws/app): nền accent đặc, 4 thanh sóng âm màu trắng vẽ trên lưới 24x24.
+// PNG cố tình vẽ tràn viền (không bo góc) vì Android/iOS tự cắt theo mặt nạ
+// của hệ điều hành - bo sẵn sẽ lòi ra viền trắng.
 //
 // Chạy lại:  node scripts/make-icons.mjs
 // ---------------------------------------------------------------------------
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-const BG = [10, 10, 10];
-// Bốn cột theo màu category, đúng thứ tự trong CATEGORY_COLOR.
+const BG = [0xd9, 0x77, 0x06]; // accent của logi (amber 600)
+const FG = [0xff, 0xff, 0xff];
+
+// Toạ độ trên lưới 24x24, giống hệt các <path> trong favicon.svg.
+const STROKE = 2.4;
 const BARS = [
-  [0x63, 0x66, 0xf1], // learn
-  [0xf5, 0x9e, 0x0b], // work
-  [0x10, 0xb9, 0x81], // fitness
-  [0xec, 0x48, 0x99], // leisure
+  { x: 5.0, y0: 9.5, y1: 14.5 },
+  { x: 9.7, y0: 6.0, y1: 18.0 },
+  { x: 14.3, y0: 8.5, y1: 15.5 },
+  { x: 19.0, y0: 4.5, y1: 19.5 },
 ];
-/** Chiều cao từng cột, theo tỉ lệ vùng vẽ. */
-const HEIGHTS = [1, 0.62, 0.84, 0.44];
 
 function crc32(buf) {
   let c = ~0;
@@ -41,17 +47,26 @@ function chunk(type, data) {
 function png(size) {
   // Vùng an toàn cho icon maskable: nội dung nằm trong 60% giữa, vì iOS và
   // Android đều cắt góc theo hình dạng riêng của hệ điều hành.
-  const pad = Math.round(size * 0.2);
-  const inner = size - pad * 2;
-  const gap = Math.round(inner * 0.07);
-  const barW = Math.round((inner - gap * (BARS.length - 1)) / BARS.length);
+  const pad = size * 0.2;
+  const unit = (size - pad * 2) / 24;
+  const to = (v) => pad + v * unit;
+  const r = (STROKE / 2) * unit;
+
+  // Thanh bo tròn = hình chữ nhật cộng hai nửa tròn ở hai đầu.
+  const caps = BARS.map((b) => ({
+    cx: to(b.x),
+    top: to(b.y0) + r,
+    bot: to(b.y1) - r,
+    r,
+  }));
 
   const px = (x, y) => {
-    for (let i = 0; i < BARS.length; i++) {
-      const x0 = pad + i * (barW + gap);
-      const h = Math.round(inner * HEIGHTS[i]);
-      const y0 = pad + inner - h;
-      if (x >= x0 && x < x0 + barW && y >= y0 && y < pad + inner) return BARS[i];
+    for (const c of caps) {
+      const dx = x + 0.5 - c.cx;
+      if (Math.abs(dx) > c.r) continue;
+      if (y + 0.5 >= c.top && y + 0.5 <= c.bot) return FG;
+      const dy = y + 0.5 < c.top ? y + 0.5 - c.top : y + 0.5 - c.bot;
+      if (dx * dx + dy * dy <= c.r * c.r) return FG;
     }
     return BG;
   };
@@ -62,10 +77,10 @@ function png(size) {
   for (let y = 0; y < size; y++) {
     raw[o++] = 0;
     for (let x = 0; x < size; x++) {
-      const [r, g, b] = px(x, y);
-      raw[o++] = r;
-      raw[o++] = g;
-      raw[o++] = b;
+      const [rr, gg, bb] = px(x, y);
+      raw[o++] = rr;
+      raw[o++] = gg;
+      raw[o++] = bb;
     }
   }
 
@@ -87,5 +102,5 @@ mkdirSync('public/icons', { recursive: true });
 for (const size of [192, 512, 180]) {
   const file = size === 180 ? 'public/apple-touch-icon.png' : `public/icons/icon-${size}.png`;
   writeFileSync(file, png(size));
-  console.log(`${file}  ${size}×${size}`);
+  console.log(`${file}  ${size}x${size}`);
 }
