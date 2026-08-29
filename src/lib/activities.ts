@@ -380,12 +380,13 @@ export function subscribeActive(
  * nhưng còn kéo dài qua mốc 04:00 (VD ngủ 22:00 → 06:00). KHÔNG cộng vào tổng
  * của ngày này, vì mọi analytics đều tính theo `logicalDate`.
  *
- * AMENDMENT sleep-boundary nói `subscribeByDate` nên query đúng một ngày.
- * Vẫn giữ ngày hôm trước, vì hai chỗ cần nó và cả hai đều không vẽ block:
- *   - History: dòng "Asleep until 7:30 AM" đầu ngày (`asleepUntil`)
- *   - Now: thanh ngang TodayStrip dùng trục tuyến tính, phải vẽ liền mạch
- * Timeline của History thì chỉ nhận `activities`, nên giấc ngủ không còn bị
- * chẻ làm hai khối nữa - đúng tinh thần của amendment.
+ * AMENDMENT sleep-boundary nói `subscribeByDate` nên query đúng một ngày. Vẫn
+ * giữ ngày hôm trước, vì History cần nó cho dòng "Asleep until 7:30 AM" đầu
+ * ngày (`asleepUntil`) - một dòng chữ, không phải block.
+ *
+ * KHÔNG chỗ nào được vẽ `carriedIn` thành block. Timeline của History và thanh
+ * ngang TodayStrip đều chỉ nhận `activities`, nên giấc ngủ không còn bị chẻ làm
+ * hai khối nữa - đúng tinh thần của amendment.
  */
 export function subscribeByDate(
   uid: string,

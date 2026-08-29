@@ -60,7 +60,7 @@ export default function NowPage() {
 
   const { activities: active, loading: activeLoading, pendingIds } = useActiveActivities();
   const { activities: scheduled, pendingIds: scheduledPending } = useScheduledActivities();
-  const { activities: todayActivities, carriedIn: todayCarriedIn } = useDayActivities(today);
+  const { activities: todayActivities } = useDayActivities(today);
   const { toasts, push, dismiss } = useToasts();
 
   // Chuyển tuần. Không có cron nên nó phải bám vào lúc người dùng mở app.
@@ -308,13 +308,10 @@ export default function NowPage() {
         onFocusRunning={focusRunning}
       />
 
-      {todayActivities.length > 0 || todayCarriedIn.length > 0 ? (
-        <TodayStrip
-          today={today}
-          activities={todayActivities}
-          carriedIn={todayCarriedIn}
-          now={nowMinute}
-        />
+      {/* Giấc ngủ tràn từ hôm trước không được truyền xuống: nó thuộc ngày hôm
+          trước, và thanh chỉ bắt đầu từ record đầu tiên của hôm nay. */}
+      {todayActivities.length > 0 ? (
+        <TodayStrip today={today} activities={todayActivities} now={nowMinute} />
       ) : !activeLoading && active.length === 0 ? (
         <p className="text-sm text-zinc-400 dark:text-zinc-500">
           Nothing tracked yet. Tap a category to start.

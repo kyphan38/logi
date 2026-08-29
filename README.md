@@ -101,6 +101,12 @@ records by one day. Nothing breaks, the totals just move.
 neither a block nor untracked time. Going to bed at 00:15 works the same way -
 that is late Monday night, not Tuesday's sleep.
 
+**The Today strip on Now starts at your first record, not at 04:00.** Last
+night's sleep belongs to yesterday, so the strip never draws it. Wake at 06:15
+and start work at 08:10, and the strip runs 08:10 → now; its `logged · elapsed`
+line means "since you started today". The full logical-day coverage - including
+the untracked stretch between waking and your first record - is in History.
+
 **The heatmap will not match the category totals on late-night days.** They
 answer different questions and this is on purpose. Category totals follow the
 **logical** day (04:00 → 04:00). The heatmap follows the **clock**: its columns

@@ -8,10 +8,16 @@ import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity, type Category } from '@/
 // -----------------------------------------------------------------------------
 // logi - Thanh ngang "hôm nay" trên màn Now (Stage 4.6)
 //
-// Cùng dữ liệu với Timeline của History, nhưng nằm ngang và cao 24px: trục là
-// khoảng đã trôi qua của ngày logic (04:00 → bây giờ), block là record, khoảng
-// trống là chưa log. Trong block là số giờ; dưới thanh là mốc bắt đầu + việc,
-// kèm giờ kết thúc khi sau đó không có gì được log.
+// Cùng dữ liệu với Timeline của History, nhưng nằm ngang và cao 24px: block là
+// record, khoảng trống là chưa log. Trong block là số giờ; dưới thanh là mốc
+// bắt đầu + việc, kèm giờ kết thúc khi sau đó không có gì được log.
+//
+// Trục bắt đầu từ record ĐẦU TIÊN của ngày, không phải 04:00 (AMENDMENT
+// sleep-boundary). Giấc ngủ đêm qua thuộc về ngày hôm trước, nên nó không được
+// vẽ ở đây - vẽ thì thanh sẽ nói "sleep 04:00 → 06:15", đúng thứ mà History đã
+// bỏ. Ngày ở màn này bắt đầu khi người dùng bắt đầu làm gì đó, nên "elapsed" là
+// khoảng từ record đầu tiên tới bây giờ. Con số coverage đầy đủ của ngày logic
+// nằm ở History.
 //
 // Không có scroll, không bấm được - đây là ảnh chụp nhanh, muốn sửa thì sang
 // History.
@@ -66,29 +72,30 @@ interface Block {
 export default function TodayStrip({
   today,
   activities,
-  carriedIn,
   now,
 }: {
   today: string;
-  /** Record của ngày logic hôm nay. */
+  /** Record của ngày logic hôm nay. Không gồm giấc ngủ tràn từ hôm trước. */
   activities: Activity[];
-  /** Session tràn qua mốc 04:00 - vẽ cho liền mạch, không tính vào tổng. */
-  carriedIn: Activity[];
   now: number;
 }) {
   const view = useMemo(() => {
     const win = dayWindow(today);
-    // Sát 04:00 thì span ~ 0 → chia cho 0. Cho tối thiểu 1 phút.
-    const end = Math.min(Math.max(now, win.start + 60_000), win.end);
-    const span = end - win.start;
-    const pct = (ts: number) => ((ts - win.start) / span) * 100;
+    const { segments, laneCount } = layoutDay(activities, win, now);
 
-    const { segments, laneCount } = layoutDay([...carriedIn, ...activities], win, now);
-    const { trackedH, gaps } = coverageOfDay(segments, win, now);
+    // Ngày ở đây bắt đầu từ record đầu tiên. layoutDay đã sắp theo giờ bắt đầu.
+    const dayStart = segments.length > 0 ? segments[0].start : win.start;
+    // Record vừa mới bắt đầu thì span ~ 0 → chia cho 0. Cho tối thiểu 1 phút.
+    const end = Math.min(Math.max(now, dayStart + 60_000), win.end);
+    const span = end - dayStart;
+    const pct = (ts: number) => ((ts - dayStart) / span) * 100;
 
-    // Mỗi khoảng trống bắt đầu tại đúng lúc ngừng log. Bỏ khoảng đầu ngày (nó
-    // bắt đầu từ 04:00, không phải từ một record nào).
-    const stops = gaps.filter((g) => g.start > win.start).map((g) => g.start);
+    // dayStart cũng là mẫu số của coverage: khoảng trước record đầu tiên không
+    // phải "chưa log", nó nằm ngoài ngày mà thanh này đang kể.
+    const { trackedH, gaps } = coverageOfDay(segments, win, now, dayStart);
+
+    // Mỗi khoảng trống bắt đầu tại đúng lúc ngừng log.
+    const stops = gaps.filter((g) => g.start > dayStart).map((g) => g.start);
     const stopAt = (ts: number) => stops.find((s) => Math.abs(s - ts) < 60_000) ?? null;
 
     const blocks: Block[] = segments.map((s) => {
@@ -128,10 +135,11 @@ export default function TodayStrip({
       ticks,
       laneCount,
       trackedMs: trackedH * 3_600_000,
+      dayStart,
       span,
       hasStop: ticks.some((t) => t.stoppedAt !== null),
     };
-  }, [today, activities, carriedIn, now]);
+  }, [today, activities, now]);
 
   if (view.blocks.length === 0) return null;
 
@@ -150,7 +158,7 @@ export default function TodayStrip({
       <div
         className="relative h-6 w-full overflow-hidden rounded-md bg-surface-2"
         role="img"
-        aria-label={`${logged} logged out of ${elapsed} elapsed today`}
+        aria-label={`${logged} logged out of ${elapsed} since ${hhmm(view.dayStart)}`}
       >
         {view.blocks.map((b) => (
           <span
