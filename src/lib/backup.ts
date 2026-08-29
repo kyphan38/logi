@@ -12,7 +12,7 @@
 import { logicalDate, logicalWeekday } from '@/lib/balance';
 import type { JsonExport } from '@/lib/export';
 import { daysBetween } from '@/lib/range';
-import type { Activity, Category } from '@/types/logi';
+import { CATEGORIES, type Activity, type Category } from '@/types/logi';
 
 // ------------------------------------------------------------
 // Nhắc export
@@ -175,6 +175,12 @@ export interface RestorePlan {
   add: Activity[];
   /** Đã có sẵn - bỏ qua, KHÔNG ghi đè. */
   skip: number;
+  /**
+   * Record thuộc category đã ngưng dùng - bỏ qua.
+   * File export cũ vẫn còn 'sleep'. Không lọc thì Restore sẽ dựng lại đúng
+   * thứ vừa xoá, mà Firestore rules cũng chặn, người dùng chỉ thấy lỗi câm.
+   */
+  retired: number;
 }
 
 /**
@@ -187,8 +193,13 @@ export function planRestore(file: BackupFile, existingIds: ReadonlySet<string>):
   const add: Activity[] = [];
   const seen = new Set<string>();
   let skip = 0;
+  let retired = 0;
 
   for (const a of file.activities) {
+    if (!(CATEGORIES as readonly string[]).includes(a.category)) {
+      retired++;
+      continue;
+    }
     if (existingIds.has(a.id) || seen.has(a.id)) {
       skip++;
       continue;
@@ -196,7 +207,7 @@ export function planRestore(file: BackupFile, existingIds: ReadonlySet<string>):
     seen.add(a.id);
     add.push(a);
   }
-  return { add, skip };
+  return { add, skip, retired };
 }
 
 /** Gõ đúng chữ này mới cho chạy. */

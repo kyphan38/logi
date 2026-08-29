@@ -14,7 +14,8 @@ service cloud.firestore {
     }
 
     function validCategory(c) {
-      return c in ['learn', 'work', 'fitness', 'sleep', 'leisure'];
+      // 'sleep' đã ngưng dùng (AMENDMENT-remove-sleep). Rules chặn ghi mới.
+      return c in ['learn', 'work', 'fitness', 'leisure'];
     }
 
     function validActivity(d) {

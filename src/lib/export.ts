@@ -87,8 +87,20 @@ export function toCsv(activities: Activity[]): string {
   return BOM + lines.join('\r\n') + '\r\n';
 }
 
+/**
+ * Ngày ngưng category 'sleep' (AMENDMENT-remove-sleep mục 4.4).
+ * File export CŨ tải về trước ngày này là bản duy nhất còn giữ lịch sử sleep.
+ */
+export const SLEEP_RETIRED_ON = '2026-08-29';
+
 export interface JsonExport {
   exportedAt: string;
+  /**
+   * Vì sao file mới không còn record 'sleep' nào.
+   * Không bắt buộc: file export CŨ không có field này, mà Restore vẫn
+   * phải đọc được chúng.
+   */
+  note?: string;
   range: { from: string; to: string };
   weekTargets: { week: string; weekly: Record<Category, number> }[];
   activities: Activity[];
@@ -112,6 +124,7 @@ export function toJson(
 ): string {
   const out: JsonExport = {
     exportedAt: isoWithOffset(now),
+    note: `sleep category was retired on ${SLEEP_RETIRED_ON}`,
     range: { from: range.from, to: range.to },
     weekTargets: [...weekTargets.entries()]
       .sort(([a], [b]) => a.localeCompare(b))

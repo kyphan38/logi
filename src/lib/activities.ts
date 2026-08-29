@@ -22,6 +22,7 @@ import {
   where,
   writeBatch,
   type DocumentData,
+  type QueryDocumentSnapshot,
   type Unsubscribe,
 } from 'firebase/firestore';
 
@@ -159,6 +160,30 @@ function toActivity(id: string, d: DocumentData): Activity {
     createdAt: d.createdAt ?? d.startAt,
     updatedAt: d.updatedAt ?? d.startAt,
   };
+}
+
+/**
+ * Bộ lọc phòng thủ - AMENDMENT-remove-sleep mục 4.2.
+ *
+ * Record 'sleep' đã bị xoá khỏi Firestore, nhưng bản cache offline trên máy
+ * có thể còn, hoặc có record đang chờ sync lúc script xoá chạy. Lọc ở client
+ * sau khi nhận snapshot: thêm điều kiện `where` vào query sẽ cần index mới
+ * mà không được gì.
+ */
+const RETIRED_CATEGORIES: readonly string[] = ['sleep'];
+
+function isRetired(d: DocumentData): boolean {
+  return RETIRED_CATEGORIES.includes(d.category as string);
+}
+
+/** Map snapshot → Activity[], bỏ mọi category đã ngưng dùng. */
+function mapDocs(docs: QueryDocumentSnapshot[]): Activity[] {
+  const out: Activity[] = [];
+  for (const d of docs) {
+    if (isRetired(d.data())) continue;
+    out.push(toActivity(d.id, d.data()));
+  }
+  return out;
 }
 
 /**
@@ -366,7 +391,7 @@ export function subscribeActive(
     q,
     { includeMetadataChanges: true },
     (snap) => {
-      const list = snap.docs.map((d) => toActivity(d.id, d.data())).sort(byStartAsc);
+      const list = mapDocs(snap.docs).sort(byStartAsc);
       cb(onlyRunning(uid, list), metaOf(snap));
     },
     (e) => onError?.(e)
@@ -408,6 +433,7 @@ export function subscribeByDate(
       const carriedIn: Activity[] = [];
       const now = Date.now();
       for (const d of snap.docs) {
+        if (isRetired(d.data())) continue;
         const a = toActivity(d.id, d.data());
         if (a.logicalDate === date) own.push(a);
         else if ((a.endAt ?? now) > winStart) carriedIn.push(a);
@@ -434,8 +460,7 @@ export function subscribeByWeek(
     { includeMetadataChanges: true },
     (snap) => {
       // Bỏ record 'scheduled': đó là dự định, chưa phải giờ đã sống.
-      const list = snap.docs
-        .map((d) => toActivity(d.id, d.data()))
+      const list = mapDocs(snap.docs)
         .filter((a) => a.status !== 'scheduled');
       cb(list, metaOf(snap));
     },
@@ -475,8 +500,7 @@ export function subscribeByRange(
     q,
     { includeMetadataChanges: true },
     (snap) => {
-      const list = snap.docs
-        .map((d) => toActivity(d.id, d.data()))
+      const list = mapDocs(snap.docs)
         // 'scheduled' là dự định, chưa phải giờ đã sống → không vào chart.
         .filter((a) => a.status !== 'scheduled' && inRange(a.logicalDate, range))
         .sort(byStartAsc);
@@ -508,8 +532,7 @@ export async function listByRange(
         );
 
   const snap = await getDocs(q);
-  return snap.docs
-    .map((d) => toActivity(d.id, d.data()))
+  return mapDocs(snap.docs)
     .filter((a) => a.status !== 'scheduled' && inRange(a.logicalDate, range))
     .sort(byStartAsc);
 }
@@ -518,7 +541,7 @@ export async function listByRange(
 export async function listActive(uid: string): Promise<Activity[]> {
   const q = query(col(uid), where('status', '==', 'active'));
   const snap = isOffline() ? await getDocsFromCache(q) : await getDocs(q);
-  return onlyRunning(uid, snap.docs.map((d) => toActivity(d.id, d.data())).sort(byStartAsc));
+  return onlyRunning(uid, mapDocs(snap.docs).sort(byStartAsc));
 }
 
 /**
@@ -559,7 +582,7 @@ export async function listRecent(uid: string, n = 5): Promise<Activity[]> {
     fsLimit(n)
   );
   const snap = isOffline() ? await getDocsFromCache(q) : await getDocs(q);
-  return snap.docs.map((d) => toActivity(d.id, d.data()));
+  return mapDocs(snap.docs);
 }
 
 /**
@@ -619,6 +642,7 @@ export async function promoteScheduled(uid: string, now: number = Date.now()): P
   );
   const snap = isOffline() ? await getDocsFromCache(q) : await getDocs(q);
   for (const d of snap.docs) {
+    if (isRetired(d.data())) continue;
     const a = toActivity(d.id, d.data());
     await updateDoc(ref(uid, a.id), {
       status: 'active' satisfies ActivityStatus,
@@ -644,7 +668,7 @@ export function subscribeScheduled(
     q,
     { includeMetadataChanges: true },
     (snap) => {
-      const list = snap.docs.map((d) => toActivity(d.id, d.data()));
+      const list = mapDocs(snap.docs);
       cb(list, metaOf(snap));
     },
     (e) => onError?.(e)
@@ -661,7 +685,14 @@ export function subscribeRecentDates(
   const q = query(col(uid), where('logicalDate', '>=', sinceDate));
   return onSnapshot(
     q,
-    (snap) => cb(new Set(snap.docs.map((d) => d.data().logicalDate as string))),
+    (snap) =>
+      cb(
+        new Set(
+          snap.docs
+            .filter((d) => !isRetired(d.data()))
+            .map((d) => d.data().logicalDate as string)
+        )
+      ),
     (e) => onError?.(e)
   );
 }
@@ -679,7 +710,7 @@ export function subscribeRecentDates(
 export async function listAll(uid: string): Promise<Activity[]> {
   const q = query(col(uid), orderBy('startAt', 'asc'));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => toActivity(d.id, d.data()));
+  return mapDocs(snap.docs);
 }
 
 /** Record cũ nhất - để biết dữ liệu đã tích được bao lâu. Đọc đúng 1 doc. */
