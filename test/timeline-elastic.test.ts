@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   blockHeight,
-  coverageOfDay,
+  dayGaps,
   dayWindow,
   elasticRows,
   layoutDay,
@@ -18,10 +18,10 @@ const DATE = '2026-08-27'; // thứ Năm
 const win = dayWindow(DATE);
 const END_OF_DAY = at('2026-08-28', '04:00');
 
-/** layoutDay → coverageOfDay → elasticRows, đúng như màn hình đang chạy. */
+/** layoutDay → dayGaps → elasticRows, đúng như màn hình đang chạy. */
 function rowsFor(activities: Parameters<typeof layoutDay>[0], now = END_OF_DAY): Row[] {
   const { segments } = layoutDay(activities, win, now);
-  const { gaps } = coverageOfDay(segments, win, now);
+  const { gaps } = dayGaps(segments, win, now);
   return elasticRows(segments, gaps);
 }
 

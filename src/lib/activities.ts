@@ -29,7 +29,6 @@ import {
 import { db } from '@/lib/firebase-client';
 import { logicalDate, logicalWeek, findStale } from '@/lib/balance';
 import { inRange, queryPlan } from '@/lib/range';
-import { addDays, dayWindow } from '@/lib/timeline';
 import {
   CATEGORIES,
   MAX_SESSION_MIN,
@@ -401,44 +400,25 @@ export function subscribeActive(
 /**
  * Mọi activity của một ngày logic ("2026-08-26").
  *
- * Tham số thứ ba của cb là `carriedIn`: record thuộc ngày logic liền trước
- * nhưng còn kéo dài qua mốc 04:00 (VD ngủ 22:00 → 06:00). KHÔNG cộng vào tổng
- * của ngày này, vì mọi analytics đều tính theo `logicalDate`.
+ * Query đúng MỘT ngày. Trước đây còn lấy thêm ngày liền trước để vẽ dòng
+ * "Asleep until 7:30 AM"; bỏ Sleep rồi thì không còn ai cần
+ * (AMENDMENT-remove-sleep mục 6 + mục 9).
  *
- * AMENDMENT sleep-boundary nói `subscribeByDate` nên query đúng một ngày. Vẫn
- * giữ ngày hôm trước, vì History cần nó cho dòng "Asleep until 7:30 AM" đầu
- * ngày (`asleepUntil`) - một dòng chữ, không phải block.
- *
- * KHÔNG chỗ nào được vẽ `carriedIn` thành block. Timeline của History và thanh
- * ngang TodayStrip đều chỉ nhận `activities`, nên giấc ngủ không còn bị chẻ làm
- * hai khối nữa - đúng tinh thần của amendment.
+ * Session vắt qua nửa đêm (VD Leisure 22:00 -> 01:00) thuộc ngày logic của
+ * `startAt`, và được vẽ nguyên khối trên chính ngày đó - không cắt.
  */
 export function subscribeByDate(
   uid: string,
   date: string,
-  cb: (activities: Activity[], meta: SnapMeta, carriedIn: Activity[]) => void,
+  cb: (activities: Activity[], meta: SnapMeta) => void,
   onError?: (e: unknown) => void
 ): Unsubscribe {
-  const winStart = dayWindow(date).start;
-  const q = query(
-    col(uid),
-    where('logicalDate', 'in', [addDays(date, -1), date]),
-    orderBy('startAt', 'asc')
-  );
+  const q = query(col(uid), where('logicalDate', '==', date), orderBy('startAt', 'asc'));
   return onSnapshot(
     q,
     { includeMetadataChanges: true },
     (snap) => {
-      const own: Activity[] = [];
-      const carriedIn: Activity[] = [];
-      const now = Date.now();
-      for (const d of snap.docs) {
-        if (isRetired(d.data())) continue;
-        const a = toActivity(d.id, d.data());
-        if (a.logicalDate === date) own.push(a);
-        else if ((a.endAt ?? now) > winStart) carriedIn.push(a);
-      }
-      cb(own, metaOf(snap), carriedIn);
+      cb(mapDocs(snap.docs), metaOf(snap));
     },
     (e) => onError?.(e)
   );

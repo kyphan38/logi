@@ -101,6 +101,14 @@ console.log(`\n=== ĐỐI CHIẾU ===`);
 console.log(`  DB   : ${grandTotal} record sleep`);
 console.log(`  File : ${backupSleep.length} record sleep`);
 
+// Sau khi xoá xong, DB = 0 mà file vẫn còn record. Đó là kết quả MONG MUỐN,
+// không phải lệch. Cổng an toàn bên dưới chỉ dành cho lúc TRƯỚC khi xoá.
+if (grandTotal === 0) {
+  console.log(`\n=== ĐÃ XOÁ XONG ===`);
+  console.log(`DB không còn record sleep. File export giữ ${backupSleep.length} record làm lịch sử.`);
+  process.exit(0);
+}
+
 if (backupSleep.length !== grandTotal) {
   console.log(`\n*** LỆCH ${Math.abs(grandTotal - backupSleep.length)} record - DỪNG. ***`);
   console.log(`Bản export không đủ. Xuất lại bằng "All time" rồi chạy lại script này.`);

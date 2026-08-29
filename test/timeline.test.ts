@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayWindow, addDays, layoutDay, coverageOfDay, toPx, HOUR_PX } from '@/lib/timeline';
+import { dayWindow, addDays, layoutDay, dayGaps, toPx, HOUR_PX } from '@/lib/timeline';
 import { act, at, H } from './_helpers.ts';
 
 test('dayWindow chạy từ 04:00 tới 04:00 hôm sau', () => {
@@ -82,34 +82,66 @@ test('layoutDay: bỏ record nằm ngoài cửa sổ ngày', () => {
   assert.equal(layoutDay([a], w, now).segments.length, 0);
 });
 
-// --- Coverage --------------------------------------------------------
+// --- Khoảng trống trong ngày (AMENDMENT-remove-sleep mục 6) -----------
 
-test('coverageOfDay gộp phần chồng nhau khi tính trackedH', () => {
+test('dayGaps gộp phần chồng nhau khi tính trackedH', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '12:00');
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
   const b = act({ id: 'b', startAt: at('2026-08-26', '10:00'), endAt: at('2026-08-26', '12:00') });
   const { segments } = layoutDay([a, b], w, now);
-  const c = coverageOfDay(segments, w, now);
+  const c = dayGaps(segments, w, now);
   assert.equal(c.trackedH, 3, '09:00–12:00 = 3h, không phải 4h');
-  assert.equal(c.untrackedH, 5, '04:00–09:00 chưa log');
+  assert.equal(c.gapH, 0, '04:00–09:00 nằm trước record đầu tiên → không tính');
 });
 
-test('coverageOfDay không tính tương lai là untracked', () => {
+test('dayGaps: phần trước record đầu và sau record cuối không thành gap', () => {
   const w = dayWindow('2026-08-26');
-  const now = at('2026-08-26', '05:00');
-  const c = coverageOfDay([], w, now);
-  assert.equal(c.trackedH, 0);
-  assert.equal(c.untrackedH, 1, 'chỉ 04:00–05:00, 19h còn lại là tương lai');
+  const now = at('2026-08-28', '12:00'); // đang xem ngày cũ
+  const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
+  const c = dayGaps(layoutDay([a], w, now).segments, w, now);
+  assert.equal(c.gapH, 0);
+  assert.equal(c.gaps.length, 0, 'không có dòng "17h untracked" ở cuối');
+  assert.equal(c.from, at('2026-08-26', '09:00'));
+  assert.equal(c.to, at('2026-08-26', '11:00'));
 });
 
-test('coverageOfDay chỉ báo khoảng trống từ 30 phút trở lên', () => {
+test('dayGaps: hôm nay thì mép phải kéo tới now → khoảng vừa trôi qua là gap', () => {
+  const w = dayWindow('2026-08-26');
+  const now = at('2026-08-26', '12:00');
+  const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
+  const c = dayGaps(layoutDay([a], w, now).segments, w, now);
+  assert.equal(c.gapH, 1, '11:00 → 12:00 đúng là chưa log');
+  assert.equal(c.gaps.length, 1);
+});
+
+test('dayGaps: khoảng GIỮA hai record thì vẫn tính', () => {
+  const w = dayWindow('2026-08-26');
+  const now = at('2026-08-26', '18:00');
+  const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
+  const b = act({ id: 'b', startAt: at('2026-08-26', '14:00'), endAt: at('2026-08-26', '18:00') });
+  const c = dayGaps(layoutDay([a, b], w, now).segments, w, now);
+  assert.equal(c.trackedH, 6);
+  assert.equal(c.gapH, 3, '11:00 → 14:00');
+  assert.equal(c.gaps.length, 1);
+});
+
+test('dayGaps: ngày trống hoàn toàn → không có mốc nào', () => {
+  const w = dayWindow('2026-08-26');
+  const c = dayGaps([], w, at('2026-08-26', '05:00'));
+  assert.equal(c.trackedH, 0);
+  assert.equal(c.gapH, 0);
+  assert.equal(c.from, null);
+  assert.equal(c.to, null);
+});
+
+test('dayGaps chỉ báo khoảng trống từ 30 phút trở lên', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '12:00');
   const a = act({ startAt: at('2026-08-26', '04:00'), endAt: at('2026-08-26', '09:00') });
   const b = act({ id: 'b', startAt: at('2026-08-26', '09:20'), endAt: at('2026-08-26', '12:00') });
   const { segments } = layoutDay([a, b], w, now);
-  assert.equal(coverageOfDay(segments, w, now).gaps.length, 0, 'khoảng 20 phút bị bỏ qua');
+  assert.equal(dayGaps(segments, w, now).gaps.length, 0, 'khoảng 20 phút bị bỏ qua');
 });
 
 // --- A2 (đã sửa bởi AMENDMENT sleep-boundary) --------------------------

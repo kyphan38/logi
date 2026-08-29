@@ -15,7 +15,7 @@ import {
 } from '@/hooks/useActivities';
 import { actualHours, logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
 import { roundDown } from '@/lib/datetime';
-import { asleepUntil, coverageOfDay, dayWindow, layoutDay } from '@/lib/timeline';
+import { dayGaps, dayWindow, layoutDay } from '@/lib/timeline';
 import { daySummary, gaugeShape, type DayLine } from '@/lib/day-target';
 import { useWeekTarget } from '@/hooks/useTargets';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
@@ -51,7 +51,7 @@ export default function HistoryPage() {
 
   const [selected, setSelected] = useState(() => logicalDate(Date.now()));
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
-  const { activities, carriedIn, totals, overlap, loading } = useDayActivities(selected);
+  const { activities, totals, overlap, loading } = useDayActivities(selected);
   const { toasts, push, dismiss } = useToasts();
 
   const win = useMemo(() => dayWindow(selected), [selected]);
@@ -84,21 +84,17 @@ export default function HistoryPage() {
   }, [strip.activities, nowMinute]);
   // Target của đúng tuần đang xem - tuần cũ có thể khác tuần này.
   const { target: weekTarget } = useWeekTarget(selectedWeek);
-  // Chỉ record của ngày này thành block. Giấc ngủ kéo sang từ hôm trước KHÔNG
-  // bị cắt làm hai nữa: nó hiện nguyên hàng ở ngày hôm trước, còn ở đây chỉ là
-  // một dòng mảnh "Asleep until ..." (AMENDMENT sleep-boundary §3.1-3.3).
+  // Chỉ record của ngày này thành block. Session vắt qua nửa đêm không bị cắt:
+  // nó hiện nguyên khối ở ngày logic của `startAt`.
   const { segments } = useMemo(
     () => layoutDay(activities, win, nowMinute),
     [activities, win, nowMinute],
   );
-  const asleep = useMemo(
-    () => asleepUntil(carriedIn, win, nowMinute),
-    [carriedIn, win, nowMinute],
-  );
-  // Đang ngủ thì ngày coi như bắt đầu lúc tỉnh dậy - không tính là untracked.
-  const { trackedH, untrackedH, gaps } = useMemo(
-    () => coverageOfDay(segments, win, nowMinute, asleep?.end ?? win.start),
-    [segments, win, nowMinute, asleep],
+  // Khoảng trống chỉ tính GIỮA activity đầu và cuối (mục 6): hai đầu ngày không
+  // còn ai log nữa nên không thể gọi là "quên log".
+  const { trackedH, gapH, gaps } = useMemo(
+    () => dayGaps(segments, win, nowMinute),
+    [segments, win, nowMinute],
   );
 
   // Đối chiếu với target CẢ NGÀY của đúng ngày trong tuần đó - kể cả hôm nay.
@@ -150,7 +146,7 @@ export default function HistoryPage() {
         <SummaryGauge
           lines={summary}
           trackedH={trackedH}
-          untrackedH={untrackedH}
+          gapH={gapH}
           overlap={overlap}
         />
       </header>
@@ -164,9 +160,7 @@ export default function HistoryPage() {
             gaps={gaps}
             win={win}
             now={nowMinute}
-            asleep={asleep}
             onSelect={(a) => setSheet({ mode: 'edit', activity: a })}
-            onSelectDay={setSelected}
             onAdd={() => setSheet(newRecordDefaults(selected, today, nowMinute))}
           />
         )}
@@ -204,12 +198,12 @@ export default function HistoryPage() {
 function SummaryGauge({
   lines,
   trackedH,
-  untrackedH,
+  gapH,
   overlap,
 }: {
   lines: DayLine[];
   trackedH: number;
-  untrackedH: number;
+  gapH: number;
   overlap: number;
 }) {
   const h = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
@@ -220,7 +214,7 @@ function SummaryGauge({
     return (
       <div className="mt-3 text-xs tabular-nums text-ink-soft">
         <p>
-          Tracked {h(trackedH)}h · Untracked {h(untrackedH)}h
+          Logged {h(trackedH)}h{gapH > 0 ? ` · ${h(gapH)}h gaps` : ''}
         </p>
         {overlap > 0 ? <p className="mt-0.5 text-ink-muted">{h(overlap)}h overlap</p> : null}
       </div>

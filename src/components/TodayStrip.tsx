@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { coverageOfDay, dayWindow, layoutDay } from '@/lib/timeline';
+import { dayGaps, dayWindow, layoutDay } from '@/lib/timeline';
 import { formatDuration } from '@/lib/datetime';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
@@ -90,9 +90,9 @@ export default function TodayStrip({
     const span = end - dayStart;
     const pct = (ts: number) => ((ts - dayStart) / span) * 100;
 
-    // dayStart cũng là mẫu số của coverage: khoảng trước record đầu tiên không
-    // phải "chưa log", nó nằm ngoài ngày mà thanh này đang kể.
-    const { trackedH, gaps } = coverageOfDay(segments, win, now, dayStart);
+    // dayGaps() cũng lấy mốc từ record đầu tiên: khoảng trước nó không phải
+    // "chưa log", nó nằm ngoài ngày mà thanh này đang kể.
+    const { trackedH, gaps } = dayGaps(segments, win, now);
 
     // Mỗi khoảng trống bắt đầu tại đúng lúc ngừng log.
     const stops = gaps.filter((g) => g.start > dayStart).map((g) => g.start);
