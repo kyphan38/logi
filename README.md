@@ -102,30 +102,31 @@ than it would at home. The app does not store a time zone per record. For one
 person in one country this is fine; a trip of a few days will shift a few
 records by one day. Nothing breaks, the totals just move.
 
-**Sleep across the 04:00 line.** A session belongs to the logical day of its
-`startAt`. Sleep 22:00 Mon → 04:30 Tue is one whole row on **Monday**, marked
-`→ next day`; Tuesday shows a thin `Asleep until 4:30 AM` line instead, which is
-neither a block nor untracked time. Going to bed at 00:15 works the same way -
-that is late Monday night, not Tuesday's sleep.
+**Sessions across the 04:00 line.** A session belongs to the logical day of its
+`startAt`. A film from 22:00 Mon → 01:00 Tue is one whole row on **Monday**,
+marked `→ next day`. Late OT works the same way - a shift that ends 00:15 is
+late Monday night, not Tuesday work.
 
-**The Today strip on Now starts at your first record, not at 04:00.** Last
-night's sleep belongs to yesterday, so the strip never draws it. Wake at 06:15
-and start work at 08:10, and the strip runs 08:10 → now; its `logged · elapsed`
-line means "since you started today". The full logical-day coverage - including
-the untracked stretch between waking and your first record - is in History.
+**History never shows untracked time outside your day.** The untracked gaps are
+drawn only between your first and your last record of that day. The app does not
+track sleep, so it makes no guess about the hours before you started or after
+you stopped.
 
 **The heatmap will not match the category totals on late-night days.** They
 answer different questions and this is on purpose. Category totals follow the
 **logical** day (04:00 → 04:00). The heatmap follows the **clock**: its columns
 are calendar days and its cells are filled by when the thing really happened, so
-sleep 00:15 → 07:30 Tuesday fills the 00:00–07:00 cells of the *Tuesday* column
-even though the record counts towards Monday.
+a Learn block 22:00 Mon → 00:30 Tue also fills the 00:00 cell of the *Tuesday*
+column even though the record counts towards Monday.
 
-**Watch item: 04:00 is only 30 minutes before the usual 04:30 wake-up.** Wake at
-03:45 and start studying, and that Learn session lands on the **previous** day.
-Not a problem while the wake-up stays at 04:30. If waking before 04:00 becomes a
-habit, lower `DAY_CUTOFF_HOUR` to **03:00** - it still puts a 00:15 bedtime on
-the day before, but leaves more room for the morning.
+**Watch item: 04:00 is only 30 minutes before the usual 04:30 wake-up.** The
+04:00 line was first drawn for sleep, but it still earns its place: the 04:30
+study block must land on the right day, and a film or OT past midnight must
+count towards the day before. Wake at 03:45 and start studying, though, and that
+Learn session lands on the **previous** day. Not a problem while the wake-up
+stays at 04:30. If waking before 04:00 becomes a habit, lower `DAY_CUTOFF_HOUR`
+to **03:00** - it still puts a 00:15 finish on the day before, but leaves more
+room for the morning.
 
 **Device clock set back.** Timers never show a negative number - elapsed time is
 clamped to `0:00`.
@@ -239,8 +240,9 @@ About **1,600 tokens per run** on `gemini-3.5-flash-lite` (roughly 1,200 in,
 
 - The result is cached in `users/{uid}/insights/{from_to}`, keyed by
   `digestHash`. Same data, same range → no API call at all.
-- `canAnalyze()` blocks the call entirely below 3 elapsed days or below 55%
-  coverage. A guess from 40% of the truth is worse than no guess.
+- `canAnalyze()` blocks the call entirely below 3 elapsed days, or when the log
+  is too thin - big gaps inside your active hours, or too few days with any
+  record. A guess from 40% of the truth is worse than no guess.
 
 `Refresh` forces a new call. Editing a record changes the hash, so the next run
 is real. Only the 20 newest insights are kept per user.
