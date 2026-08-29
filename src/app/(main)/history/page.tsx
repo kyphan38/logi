@@ -214,7 +214,7 @@ function SummaryGauge({
     return (
       <div className="mt-3 text-xs tabular-nums text-ink-soft">
         <p>
-          Logged {h(trackedH)}h{gapH > 0 ? ` · ${h(gapH)}h gaps` : ''}
+          {h(trackedH)}h logged{gapH > 0 ? ` · ${h(gapH)}h gaps` : ''}
         </p>
         {overlap > 0 ? <p className="mt-0.5 text-ink-muted">{h(overlap)}h overlap</p> : null}
       </div>

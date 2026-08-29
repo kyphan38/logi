@@ -123,7 +123,11 @@ test('rebalance: kéo work lên vẫn giữ tổng = TOTAL_BUDGET', () => {
   const next = rebalance(BASELINE_WEEKLY, 'work', BASELINE_WEEKLY.work + 8);
   const total = CATEGORIES.reduce((s, c) => s + next[c], 0);
   assert.ok(Math.abs(total - TOTAL_BUDGET) < 0.11, `tổng = ${total}`);
-  assert.equal(next.sleep, BASELINE_WEEKLY.sleep, 'sleep không bị đụng vào');
+  // 8h thêm cho Work được chia đều cho 3 category còn lại, không ai bị bỏ qua.
+  for (const c of CATEGORIES) {
+    if (c === 'work') continue;
+    assert.ok(next[c] < BASELINE_WEEKLY[c], `${c} phải giảm`);
+  }
 });
 
 test('applyDebt không trả nhiều hơn số nợ', () => {

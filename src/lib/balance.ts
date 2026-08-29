@@ -92,16 +92,6 @@ export function overlapHours(activities: Activity[], now: number = Date.now()): 
   return overlap / 3_600_000;
 }
 
-/**
- * @deprecated Mẫu số 168h không còn nghĩa sau khi bỏ Sleep - 89h/168h = 53%
- * là điểm tuyệt đối mà vẫn dưới ngưỡng 55%. Dùng `logQuality()` ở
- * `@/lib/log-quality`. Hàm này sẽ bị xoá cùng các nơi gọi nó.
- */
-export function coverage(activities: Activity[], now?: number): number {
-  const total = Object.values(actualHours(activities, now)).reduce((a, b) => a + b, 0);
-  return (total - overlapHours(activities, now)) / 168;
-}
-
 // ------------------------------------------------------------
 // 3. Expected - pro-rate theo LỊCH, không chia đều
 // ------------------------------------------------------------

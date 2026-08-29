@@ -11,14 +11,13 @@
 //
 // Thuần: dùng được cả ở client lẫn server. Test bằng `node --test`.
 // ---------------------------------------------------------------------------
+import { isThin } from '@/lib/log-quality';
 import { MIN_SAMPLE, type Link, type Signals } from '@/lib/signals';
 import { CATEGORIES, type Category } from '@/types/logi';
 
 /** Digest là JSON tự do - model đọc key, không có schema cứng. */
 export type Digest = Record<string, unknown>;
 
-/** Coverage dưới mức này thì mọi kết luận đều không đáng tin. */
-export const COVERAGE_FLOOR = 0.55;
 /** Ít hơn ngần này ngày thì chưa có gì để so sánh. */
 export const MIN_DAYS = 3;
 /** Mục tiêu của plan. Vượt là dấu hiệu digest đang phình ra dữ liệu thô. */
@@ -59,7 +58,11 @@ export function buildDigest(s: Signals): Digest {
     days: s.dayCount,
     loggedDays: s.elapsedDays,
     preset: s.preset ?? 'unknown',
-    coveragePct: pct(s.coverage),
+    // Ba con số thô thay cho một tỉ lệ trên nền 24h (mục 3.2). Model đọc được
+    // "log 62h, hở 9h" chứ không đọc được "68%" nghĩa là gì.
+    trackedHours: r1(s.logQuality.trackedHours),
+    gapHours: r1(s.logQuality.gapHours),
+    daysWithLog: s.logQuality.loggedDays,
     overlapHours: r1(s.overlapHours),
     sessions: s.recordCount,
   };
@@ -235,10 +238,12 @@ export function canAnalyze(s: Signals): Gate {
       hint: 'Try a wider range.',
     };
   }
-  if (s.coverage < COVERAGE_FLOOR) {
+  // Log quá thưa thì mọi kết luận đều dựa trên một phần nhỏ sự thật.
+  if (isThin(s.logQuality)) {
+    const q = s.logQuality;
     return {
       ok: false,
-      reason: `Only ${pct(s.coverage)}% of this period is logged.`,
+      reason: `Only ${q.loggedDays} of ${q.totalDays} days are logged well enough.`,
       hint: 'Log more of your day, then try again.',
     };
   }

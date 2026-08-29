@@ -25,6 +25,17 @@ test('một ngày, hai session liền kề → không có gap', () => {
   assert.equal(q.gapRatio, 0);
 });
 
+test('06:00→08:00 và 09:00→17:00: tracked 10h, gap 1h, span 11h', () => {
+  const acts = [
+    act({ startAt: at(DAY, '06:00'), endAt: at(DAY, '08:00') }),
+    act({ startAt: at(DAY, '09:00'), endAt: at(DAY, '17:00'), id: 'b' }),
+  ];
+  const q = logQuality(acts, { from: DAY, to: DAY }, LATER);
+  assert.equal(q.trackedHours, 10);
+  assert.equal(q.gapHours, 1);
+  assert.equal(q.activeSpanHours, 11);
+});
+
 test('giờ trước session đầu và sau session cuối không tính vào đâu cả', () => {
   // Log 08:00-17:00. Cả đêm trước lẫn tối sau đều không phải "quên log".
   const acts = [act({ startAt: at(DAY, '08:00'), endAt: at(DAY, '17:00') })];
@@ -151,4 +162,24 @@ test('dòng tóm tắt đọc được', () => {
   ];
   const q = logQuality(acts, { from: DAY, to: DAY }, LATER);
   assert.equal(logQualityLine(q), '5h logged · 4h gaps · 1 of 1 days');
+});
+
+test('3/7 ngày có log → cảnh báo vì tỉ lệ dưới 0.6', () => {
+  const acts = [];
+  for (const d of [24, 25, 26]) {
+    const day = `2026-08-${d}`;
+    acts.push(act({ startAt: at(day, '08:00'), endAt: at(day, '17:00'), id: `a${d}` }));
+  }
+  const q = logQuality(acts, { from: '2026-08-24', to: '2026-08-30' }, at('2026-08-31', '12:00'));
+  assert.equal(q.loggedDays, 3);
+  assert.equal(q.totalDays, 7);
+  assert.equal(q.gapRatio, 0); // từng ngày kín, nhưng 4 ngày trống thì số này vô nghĩa
+  assert.equal(isThin(q), true);
+});
+
+test('hôm nay: activeSpan dừng ở now, không kéo tới cuối ngày', () => {
+  const now = at('2026-08-29', '15:00');
+  const acts = [act({ startAt: at('2026-08-29', '09:00'), endAt: at('2026-08-29', '10:00') })];
+  const q = dayLogQuality(acts, '2026-08-29', now);
+  assert.equal(q.activeSpanHours, 6); // 09:00 → 15:00, KHÔNG phải 09:00 → 04:00
 });

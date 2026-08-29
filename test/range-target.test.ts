@@ -29,15 +29,15 @@ const r1 = (x: number) => Math.round(x * 10) / 10;
 // Bài quan trọng nhất của Stage 5
 // ---------------------------------------------------------------------------
 
-test('T2→T6 preset Normal → Work 48h, KHÔNG phải 34.3h (chia đều)', () => {
+test('T2→T6 preset Normal → Work 43h, KHÔNG phải 30.7h (chia đều)', () => {
   const range = full(MON, FRI);
   const exp = expectedForRange(range, map([weekOf(MON), NORMAL]), at(SUN, '12:00'));
 
-  // 9.0 + 10.5 + 9.0 + 10.5 + 9.0 - T3/T5 có thêm 1.5h commute.
-  assert.equal(r1(exp.work), 48);
+  // 8.0 + 9.5 + 8.0 + 9.5 + 8.0 - T3/T5 có thêm 1.5h commute.
+  assert.equal(r1(exp.work), 43);
 
-  // Cái bẫy: 48 × 5/7 = 34.3h. Nếu số này xuất hiện thì thuật toán sai.
-  assert.notEqual(r1(exp.work), 34.3);
+  // Cái bẫy: 43 × 5/7 = 30.7h. Nếu số này xuất hiện thì thuật toán sai.
+  assert.notEqual(r1(exp.work), 30.7);
 });
 
 test('cả tuần T2→CN → đúng bằng target tuần', () => {
@@ -75,8 +75,8 @@ test('khoảng vắt hai tuần khác preset → tổng bằng tổng hai phần
   for (const c of Object.keys(NORMAL) as Category[]) {
     assert.equal(r1(both[c]), r1(a[c] + b[c]), c);
   }
-  // Crunch (62h) + Normal (48h) - không phải hai lần cùng một bộ.
-  assert.equal(r1(both.work), 110);
+  // Crunch (57h) + Normal (43h) - không phải hai lần cùng một bộ.
+  assert.equal(r1(both.work), 100);
 });
 
 test('KHÔNG dùng chung một weekTarget cho cả khoảng vắt tuần', () => {
@@ -86,7 +86,7 @@ test('KHÔNG dùng chung một weekTarget cho cả khoảng vắt tuần', () =>
   const allCrunch = expectedForRange(full(MON, '2026-09-06'), map([wA, CRUNCH], [wB, CRUNCH]), at('2026-09-14', '12:00'));
 
   assert.notEqual(r1(mixed.work), r1(allCrunch.work));
-  assert.equal(r1(allCrunch.work), 124);
+  assert.equal(r1(allCrunch.work), 114);
 });
 
 test('tuần không có weekTarget → rơi về PRESETS.normal', () => {
@@ -94,7 +94,7 @@ test('tuần không có weekTarget → rơi về PRESETS.normal', () => {
   const empty = expectedForRange(range, new Map(), at(SUN, '12:00'));
   const explicit = expectedForRange(range, map([weekOf(MON), NORMAL]), at(SUN, '12:00'));
 
-  assert.equal(r1(empty.work), 48);
+  assert.equal(r1(empty.work), 43);
   for (const c of Object.keys(NORMAL) as Category[]) {
     assert.equal(r1(empty[c]), r1(explicit[c]), c);
   }
@@ -103,7 +103,7 @@ test('tuần không có weekTarget → rơi về PRESETS.normal', () => {
 test('chỉ tuần thiếu mới rơi về Normal, tuần có target vẫn giữ nguyên', () => {
   const wA = weekOf(MON);
   const exp = expectedForRange(full(MON, '2026-09-06'), map([wA, CRUNCH]), at('2026-09-14', '12:00'));
-  assert.equal(r1(exp.work), 62 + 48);
+  assert.equal(r1(exp.work), 57 + 43);
 });
 
 // ---------------------------------------------------------------------------
@@ -116,15 +116,15 @@ test('isPartial giữa ngày → chỉ target hôm nay bị cắt theo dayProgre
   const range: Range = { from: MON, to: '2026-08-26', kind: 'this_week', isPartial: true };
   const exp = expectedForRange(range, map([weekOf(MON), NORMAL]), now);
 
-  // T2 (9.0) + T3 (10.5) đủ, T4 (9.0) chỉ một nửa → 24
-  assert.equal(r1(exp.work), 24);
+  // T2 (8.0) + T3 (9.5) đủ, T4 (8.0) chỉ một nửa → 21.5
+  assert.equal(r1(exp.work), 21.5);
 });
 
 test('isPartial = false → hôm nay vẫn tính target đầy đủ (Last week không bị cắt)', () => {
   const now = at('2026-08-26', '16:00');
   const range: Range = { from: MON, to: '2026-08-26', kind: 'custom', isPartial: false };
   const exp = expectedForRange(range, map([weekOf(MON), NORMAL]), now);
-  assert.equal(r1(exp.work), 28.5); // 9 + 10.5 + 9
+  assert.equal(r1(exp.work), 25.5); // 8 + 9.5 + 8
 });
 
 test('KHÔNG pro-rate ngày quá khứ', () => {
@@ -132,7 +132,7 @@ test('KHÔNG pro-rate ngày quá khứ', () => {
   const now = at('2026-08-26', '16:00');
   const range: Range = { from: MON, to: '2026-08-25', kind: 'custom', isPartial: false };
   const exp = expectedForRange(range, map([weekOf(MON), NORMAL]), now);
-  assert.equal(r1(exp.work), 19.5); // 9 + 10.5, không bị nhân 0.5
+  assert.equal(r1(exp.work), 17.5); // 8 + 9.5, không bị nhân 0.5
 });
 
 test('custom một ngày lúc 02:00 sáng → là ngày hôm trước, đã trôi 22/24 giờ', () => {
@@ -144,7 +144,7 @@ test('custom một ngày lúc 02:00 sáng → là ngày hôm trước, đã trô
   assert.ok(range.isPartial);
 
   const exp = expectedForRange(range, map([weekOf(MON), NORMAL]), now);
-  assert.equal(r1(exp.work), r1(9 * (22 / 24)));
+  assert.equal(r1(exp.work), r1(8 * (22 / 24)));
 });
 
 // ---------------------------------------------------------------------------
@@ -159,7 +159,7 @@ test('Last week luôn là tuần đầy đủ, không pro-rate', () => {
   assert.equal(range.isPartial, false);
 
   const exp = expectedForRange(range, map([weekOf(MON), NORMAL]), now);
-  assert.equal(r1(exp.work), 48);
+  assert.equal(r1(exp.work), 43);
 });
 
 test('This week giữa tuần → khoảng dừng ở hôm nay và được pro-rate', () => {

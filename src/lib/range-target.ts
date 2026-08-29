@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// logi - Target & coverage cho MỘT KHOẢNG bất kỳ (Stage 5 Task 2)
+// logi - Target & giờ thực tế cho MỘT KHOẢNG bất kỳ (Stage 5 Task 2)
 //
 // Đây là phần dễ sai nhất của Stage 5. Ba cái bẫy:
 //
@@ -11,7 +11,7 @@
 //  3. Chỉ ngày hôm nay mới bị pro-rate, và chỉ khi `isPartial`. Ngày quá khứ
 //     luôn tính target đầy đủ.
 //
-// `coverage()` của balance.ts chia cứng cho 168h nên không dùng lại được ở đây.
+// Chất lượng log của một khoảng nằm ở `@/lib/log-quality`, không ở đây.
 // File thuần: không React, không Firestore.
 // ---------------------------------------------------------------------------
 import {
@@ -69,21 +69,6 @@ export function expectedForRange(
 }
 
 /**
- * Tổng số giờ THỰC của khoảng, tính theo ngày logic.
- * Ngày hôm nay chỉ tính tới `now` - phần chưa sống thì không thể log được.
- */
-export function realHoursOfRange(range: Range, now: number = Date.now()): number {
-  const today = logicalDate(now);
-  let h = 0;
-  for (const d of daysOf(range)) {
-    if (d === today) h += 24 * dayProgress(now);
-    else if (d < today) h += 24;
-    // Ngày tương lai (chỉ xảy ra nếu ai đó dựng range tay) không cộng gì.
-  }
-  return h;
-}
-
-/**
  * Hợp (union) các khoảng đã log, cắt gọn trong cửa sổ khoảng.
  * Dùng union thay vì "tổng trừ overlap" để giờ chồng nhau chỉ đếm một lần,
  * kể cả khi ba session chồng lên nhau cùng lúc.
@@ -117,23 +102,6 @@ function loggedHours(activities: Activity[], range: Range, now: number): number 
   if (curEnd > curStart) total += curEnd - curStart;
 
   return total / H_MS;
-}
-
-/**
- * Phần của khoảng thực sự được log, 0..1.
- *
- * Coverage mục tiêu ~70% (kế hoạch 129.5h/168h; phần còn lại là ăn uống, đi
- * lại - không log). Dưới 55% thì mọi kết luận khác đều không đáng tin, nên
- * chỉ số này phải hiện TRƯỚC các chart.
- */
-export function coverageForRange(
-  activities: Activity[],
-  range: Range,
-  now: number = Date.now()
-): number {
-  const real = realHoursOfRange(range, now);
-  if (real <= 0) return 0;
-  return loggedHours(activities, range, now) / real;
 }
 
 /**
@@ -210,7 +178,7 @@ export function deviationsForRange(
 
 /**
  * Giờ bị đếm hai lần trong khoảng (VD vừa Work vừa Learn).
- * Cũng cắt theo cửa sổ khoảng, để khớp với `coverageForRange`.
+ * Cũng cắt theo cửa sổ khoảng, để khớp với `loggedHours`.
  */
 export function overlapForRange(
   activities: Activity[],

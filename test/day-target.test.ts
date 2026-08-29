@@ -15,9 +15,9 @@ const zero = () =>
 
 // --- dailyTargetFor ---------------------------------------------------------
 
-test('dailyTargetFor: thứ Ba preset Normal → Work 10.5 (9h + 1.5h commute)', () => {
+test('dailyTargetFor: thứ Ba preset Normal → Work 9.5 (8h + 1.5h commute)', () => {
   const t = dailyTargetFor(TUE, PRESETS.normal.weekly);
-  assert.equal(+t.work.toFixed(2), 10.5, 'không được ra 9.0');
+  assert.equal(+t.work.toFixed(2), 9.5, 'không được ra 8.0');
   assert.equal(+t.learn.toFixed(2), 3.0);
 });
 
@@ -100,13 +100,13 @@ test('daySummary: hôm nay target pro-rate theo dayProgress', () => {
   const full = daySummary(actual, PRESETS.normal.weekly, TUE, 1);
   const half = daySummary(actual, PRESETS.normal.weekly, TUE, 0.5);
   const w = (ls: typeof full) => ls.find((l) => l.category === 'work')!.target;
-  assert.equal(+w(full).toFixed(2), 10.5);
-  assert.equal(+w(half).toFixed(2), 5.25, '10h sáng mà so cả ngày thì cái gì cũng thiếu');
+  assert.equal(+w(full).toFixed(2), 9.5);
+  assert.equal(+w(half).toFixed(2), 4.75, '10h sáng mà so cả ngày thì cái gì cũng thiếu');
 });
 
 test('daySummary: dưới 50% target → low; đạt hoặc vượt → không low', () => {
   const weekly = PRESETS.normal.weekly;
-  const target = dailyTargetFor(TUE, weekly).work; // 10.5
+  const target = dailyTargetFor(TUE, weekly).work; // 9.5
 
   const under = daySummary({ ...zero(), work: target * LOW_RATIO - 0.1 }, weekly, TUE);
   assert.equal(under.find((l) => l.category === 'work')!.low, true);

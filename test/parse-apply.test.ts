@@ -88,7 +88,7 @@ describe('applyVoice - mỗi intent gọi đúng hàm', () => {
   it('schedule → startActivity với status "scheduled"', async () => {
     const s = spyRepo();
     const start = NOW + 4 * H;
-    await applyVoice(UID, cmd({ intent: 'schedule', category: 'sleep', startAt: start }), s.repo);
+    await applyVoice(UID, cmd({ intent: 'schedule', category: 'fitness', startAt: start }), s.repo);
 
     const args = s.first('startActivity')?.args as [string, Record<string, unknown>];
     assert.deepEqual(s.names(), ['startActivity']);

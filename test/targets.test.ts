@@ -90,7 +90,7 @@ test('rebalance: kéo Work lên thì các category khác tự giảm, tổng gi�
   const out = rebalance(PRESETS.normal.weekly, 'work', 51);
   assert.equal(out.work, 51);
   assert.ok(Math.abs(total(out) - TOTAL_BUDGET) < 0.11, `tổng = ${total(out)}`);
-  assert.equal(out.sleep, PRESETS.normal.weekly.sleep, 'Sleep không bị đụng tới');
+  assert.ok(out.fitness >= 4.5, 'sàn Fitness 4.5h vẫn được tôn trọng');
 });
 
 test('rebalance: không đẩy category nào xuống dưới HARD_FLOOR', () => {

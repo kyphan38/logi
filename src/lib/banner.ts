@@ -30,10 +30,15 @@ export interface BannerLine {
  * Dưới ngần này thì mọi category đều ra -99% và banner chỉ gây nản chứ không
  * mang tin. Đầu tuần hay tuần mới nghỉ phép đều rơi vào đây.
  */
-export const MIN_COVERAGE = 0.2;
+export const MIN_LOGGED_RATIO = 0.2;
 
-/** Đã log được bao nhiêu phần so với lượng lẽ ra phải có tới lúc này. */
-export function coverage(
+/**
+ * Đã log được bao nhiêu phần so với lượng lẽ ra phải có TỚI LÚC NÀY.
+ *
+ * Mẫu số là target của chính người dùng, không phải 24h/ngày - nên nó vẫn có
+ * nghĩa sau khi bỏ Sleep, khác với hàm chia cứng cho 168h đã xoá (mục 3.2).
+ */
+export function loggedRatio(
   activities: Activity[],
   weekly: Record<Category, number>,
   now: number = Date.now()
@@ -85,7 +90,7 @@ export function pickBalance(
 
   // Tuần gần như trống: nói thẳng là chưa đủ dữ liệu, đừng bắn -99% vào mặt
   // người dùng. Kiểm tra TRƯỚC conflict vì conflict cũng vô nghĩa khi trống.
-  if (coverage(activities, weekly, now) < MIN_COVERAGE) {
+  if (loggedRatio(activities, weekly, now) < MIN_LOGGED_RATIO) {
     return {
       kind: 'sparse',
       text: 'Not enough logged this week to compare.',

@@ -13,11 +13,8 @@
 // ---------------------------------------------------------------------------
 import { logicalDate } from '@/lib/balance';
 import { dailyTargetFor } from '@/lib/day-target';
-import {
-  actualForRange,
-  coverageForRange,
-  overlapForRange,
-} from '@/lib/range-target';
+import { logQuality, type LogQuality } from '@/lib/log-quality';
+import { actualForRange, overlapForRange } from '@/lib/range-target';
 import { daysBetween, daysOf, rangeLabel, weekOf, weekdayOf, type Range } from '@/lib/range';
 import { addDays, dayWindow } from '@/lib/timeline';
 import {
@@ -155,7 +152,8 @@ export interface Signals {
   /** Số ngày đã thực sự sống trong khoảng - ngày mai không thể có zeroDays. */
   elapsedDays: number;
   preset: PresetId | null;
-  coverage: number;
+  /** Chất lượng log của khoảng (mục 3.2). Thay cho tỉ lệ trên nền 24h cũ. */
+  logQuality: LogQuality;
   overlapHours: number;
   recordCount: number;
   hasPrevious: boolean;
@@ -381,7 +379,7 @@ export function computeSignals(
     dayCount: days.length,
     elapsedDays: elapsed.length,
     preset,
-    coverage: coverageForRange(activities, range, now),
+    logQuality: logQuality(activities, range, now),
     overlapHours: overlapForRange(activities, range, now),
     recordCount: sessions.length,
     hasPrevious: previous != null,

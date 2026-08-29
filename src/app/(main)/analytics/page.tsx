@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import BalanceBars, { categoryOrder } from '@/components/BalanceBars';
-import CoverageNote from '@/components/CoverageNote';
+import LogQualityNote from '@/components/LogQualityNote';
 import ExportSheet from '@/components/ExportSheet';
 import Heatmap from '@/components/Heatmap';
 import InsightPanel from '@/components/InsightPanel';
@@ -15,16 +15,14 @@ import { useTick } from '@/hooks/useActivities';
 import { fetchAllTime, useExportNudge } from '@/hooks/useBackup';
 import { useRangeData } from '@/hooks/useRangeData';
 import { bucketMode } from '@/lib/bucket';
+import { isThin, logQuality } from '@/lib/log-quality';
 import { buildRange, rangeLabel, type Range } from '@/lib/range';
 import {
   actualForRange,
-  coverageForRange,
   deviationsForRange,
   expectedForRange,
   overlapForRange,
 } from '@/lib/range-target';
-
-const COVERAGE_FLOOR = 0.55;
 
 export default function AnalyticsPage() {
   // Ngày logic đổi lúc 04:00 nên phút là đủ mịn; giây chỉ làm chart nháy.
@@ -45,7 +43,7 @@ export default function AnalyticsPage() {
     const byCat = new Map(deviationsForRange(actual, expected).map((d) => [d.category, d]));
     return {
       rows: categoryOrder().map((c) => byCat.get(c)!),
-      coverage: coverageForRange(activities, range, now),
+      quality: logQuality(activities, range, now),
       overlap: overlapForRange(activities, range, now),
       logged: Object.values(actual).reduce((a, b) => a + b, 0),
     };
@@ -109,13 +107,13 @@ export default function AnalyticsPage() {
           {/* Bảng đứng trước - câu hỏi hay gặp nhất là "khoảng này tôi thế nào". */}
           <RangeTable activities={activities} range={range} weekTargets={weekTargets} now={now} />
 
-          {/* Coverage đứng TRƯỚC mọi chart: log được 40% thời gian thì các con
+          {/* Chất lượng log đứng TRƯỚC mọi chart: log thưa thì các con
               số bên dưới không nói lên điều gì, phải biết trước khi đọc. */}
-          <CoverageNote coverage={view.coverage} overlap={view.overlap} />
+          <LogQualityNote quality={view.quality} overlap={view.overlap} />
 
           <section className="flex flex-col gap-3">
             <h2 className="text-[13px] font-medium text-ink-soft">Balance</h2>
-            <BalanceBars rows={view.rows} showDeviation={view.coverage >= COVERAGE_FLOOR} />
+            <BalanceBars rows={view.rows} showDeviation={!isThin(view.quality)} />
           </section>
 
           {/* Khoảng một ngày: By day một cột và When một cột đều không nói lên

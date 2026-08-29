@@ -102,7 +102,7 @@ test('không chồng giờ → mỗi record một hàng, mỗi hàng 1 lane', ()
 
 test('layoutDay: ngày không chồng giờ thì laneCount = 1 (không sinh sliver)', () => {
   const day = [
-    act({ id: 's', category: 'sleep', startAt: at(DATE, '23:00'), endAt: at('2026-08-28', '06:00') }),
+    act({ id: 's', category: 'work', startAt: at(DATE, '23:00'), endAt: at('2026-08-28', '06:00') }),
     act({ id: 'w1', category: 'work', startAt: at(DATE, '08:00'), endAt: at(DATE, '12:00') }),
     act({ id: 'w2', category: 'work', startAt: at(DATE, '13:00'), endAt: at(DATE, '17:30') }),
     act({ id: 'f', category: 'fitness', startAt: at(DATE, '18:00'), endAt: at(DATE, '19:00') }),
@@ -146,7 +146,7 @@ test('các hàng xếp đúng thứ tự thời gian', () => {
 test('ngày thưa co lại nhỏ hơn nhiều so với khung 1440px cũ', () => {
   const rows = rowsFor(
     [
-      act({ id: 's', category: 'sleep', startAt: at(DATE, '04:00'), endAt: at(DATE, '06:40') }),
+      act({ id: 's', category: 'leisure', startAt: at(DATE, '04:00'), endAt: at(DATE, '06:40') }),
       act({ id: 'w1', category: 'work', startAt: at(DATE, '08:00'), endAt: at(DATE, '12:00') }),
       act({ id: 'w2', category: 'work', startAt: at(DATE, '13:00'), endAt: at(DATE, '17:30') }),
       act({ id: 'f', category: 'fitness', startAt: at(DATE, '18:00'), endAt: at(DATE, '19:00') }),
@@ -163,7 +163,7 @@ test('block kéo sang từ hôm trước vẫn vẽ được, cắt đầu tại
   const rows = rowsFor([
     act({
       id: 's',
-      category: 'sleep',
+      category: 'work',
       startAt: at('2026-08-26', '22:00'),
       endAt: at(DATE, '06:00'),
     }),

@@ -15,6 +15,7 @@ import { useInsight } from '@/hooks/useInsight';
 import { useReviewData } from '@/hooks/useReview';
 import { extremeNote } from '@/lib/digest';
 import { lookupMetric } from '@/lib/insight-sanitize';
+import { logQualityLine } from '@/lib/log-quality';
 import { planNextWeek, weekRange } from '@/lib/review';
 import { markReviewed, setupNextWeek } from '@/lib/targets';
 import { addWeeks } from '@/lib/week';
@@ -113,7 +114,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
               <>
                 <BalanceBars rows={summary.rows} showDeviation />
                 <p className="text-[13px] tabular-nums text-ink-muted">
-                  Coverage {Math.round(summary.coverage * 100)}%
+                  {logQualityLine(summary.quality)}
                 </p>
               </>
             )}

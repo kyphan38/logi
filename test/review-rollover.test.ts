@@ -30,7 +30,7 @@ function target(week: string, wt: Partial<WeekTarget> = {}): WeekTarget {
   return {
     week,
     preset: 'normal',
-    weekly: { sleep: 46.5, work: 43, learn: 31, fitness: 9, leisure: 6 },
+    weekly: { work: 43, learn: 31, fitness: 9, leisure: 6 },
     debtApplied: {},
     changedAt: SUNDAY,
     lateChange: false,

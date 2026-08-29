@@ -175,14 +175,12 @@ test('khoảng dưới 3 ngày → chặn', () => {
   assert.match(g.reason!, /at least 3 days/);
 });
 
-test('coverage thấp → chặn và nêu đúng phần trăm', () => {
-  // 7 ngày, chỉ log 4h mỗi ngày → coverage ~17%.
-  const acts = ['24', '25', '26', '27', '28', '29', '30'].map((d) =>
-    s('work', `2026-08-${d}`, '08:00', '12:00')
-  );
+test('log quá thưa → chặn và nêu đúng số ngày', () => {
+  // 7 ngày trong khoảng, chỉ 3 ngày có log → dưới ngưỡng 60%.
+  const acts = ['24', '25', '26'].map((d) => s('work', `2026-08-${d}`, '08:00', '17:00'));
   const g = canAnalyze(sig(acts));
   assert.equal(g.ok, false);
-  assert.match(g.reason!, /^Only \d+% of this period is logged\.$/);
+  assert.match(g.reason!, /^Only 3 of 7 days are logged well enough\.$/);
   assert.match(g.hint!, /Log more/);
 });
 

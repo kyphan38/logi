@@ -49,9 +49,9 @@ test('hai category trong cùng một giờ → ô lấy category nhiều phút h
   assert.equal(grid[row(9)][0].minutes, 45);
 });
 
-test('Sleep 22:00 → 06:00 vẽ xuyên nửa đêm, theo giờ đồng hồ thật', () => {
+test('ca đêm 22:00 → 06:00 vẽ xuyên nửa đêm, theo giờ đồng hồ thật', () => {
   const acts = [
-    act({ startAt: at('2026-08-24', '22:00'), endAt: at(D, '06:00'), category: 'sleep' }),
+    act({ startAt: at('2026-08-24', '22:00'), endAt: at(D, '06:00'), category: 'work' }),
   ];
   const { grid, days } = heatmapOf(acts, full('2026-08-24', D), NOW);
 
@@ -59,24 +59,24 @@ test('Sleep 22:00 → 06:00 vẽ xuyên nửa đêm, theo giờ đồng hồ th�
 
   // 22:00 và 23:00 vẫn là ngày lịch 24.
   for (const h of [22, 23]) {
-    assert.equal(grid[row(h)][0].category, 'sleep', `giờ ${h} phải là sleep ở cột 0`);
+    assert.equal(grid[row(h)][0].category, 'work', `giờ ${h} phải là work ở cột 0`);
   }
   // Qua nửa đêm là sang cột 25, kể cả khi record thuộc ngày logic 24.
   for (const h of [0, 1, 2, 3, 4, 5]) {
-    assert.equal(grid[row(h)][1].category, 'sleep', `giờ ${h} phải là sleep ở cột 1`);
+    assert.equal(grid[row(h)][1].category, 'work', `giờ ${h} phải là work ở cột 1`);
     assert.equal(grid[row(h)][0].category, null);
   }
 });
 
-test('Sleep 00:15 → 07:30 tô các ô 00:00–07:00 của ĐÚNG cột ngày lịch đó', () => {
+test('session 00:15 → 07:30 tô các ô 00:00–07:00 của ĐÚNG cột ngày lịch đó', () => {
   // Record thuộc ngày logic 2026-08-24 (bắt đầu sau 00:00, trước 04:00).
   const acts = [
-    act({ startAt: at(D, '00:15'), endAt: at(D, '07:30'), category: 'sleep' }),
+    act({ startAt: at(D, '00:15'), endAt: at(D, '07:30'), category: 'work' }),
   ];
   const { grid } = heatmapOf(acts, full('2026-08-24', D), NOW);
 
   for (const h of [0, 1, 2, 3, 4, 5, 6, 7]) {
-    assert.equal(grid[row(h)][1].category, 'sleep', `giờ ${h} phải là sleep ở cột 25`);
+    assert.equal(grid[row(h)][1].category, 'work', `giờ ${h} phải là work ở cột 25`);
   }
   assert.equal(grid[row(0)][1].minutes, 45);
   assert.equal(grid[row(7)][1].minutes, 30);
@@ -85,12 +85,12 @@ test('Sleep 00:15 → 07:30 tô các ô 00:00–07:00 của ĐÚNG cột ngày l
 
 test('phần vượt ra ngoài khoảng bị cắt', () => {
   const acts = [
-    act({ startAt: at('2026-08-24', '22:00'), endAt: at(D, '06:00'), category: 'sleep' }),
+    act({ startAt: at('2026-08-24', '22:00'), endAt: at(D, '06:00'), category: 'work' }),
   ];
   const { grid } = heatmapOf(acts, full('2026-08-24', '2026-08-24'), NOW);
   // Chỉ còn 1 cột; 00:00–06:00 của ngày lịch sau không có chỗ để rơi vào.
   assert.equal(grid.length, 24);
-  assert.equal(grid[row(23)][0].category, 'sleep');
+  assert.equal(grid[row(23)][0].category, 'work');
   assert.equal(grid[row(0)][0].category, null);
 });
 

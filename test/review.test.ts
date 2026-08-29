@@ -11,6 +11,7 @@ import {
   reviewDueWeek,
   weekRange,
 } from '@/lib/review';
+import type { LogQuality } from '@/lib/log-quality';
 import type { RangeDeviation } from '@/lib/range-target';
 import type { Category, PresetId } from '@/types/logi';
 import { act, at } from './_helpers.ts';
@@ -89,7 +90,7 @@ test('đúng tối Chủ nhật → isPartial true, target hôm đó được pr
 // Màn 1 - số liệu
 // ------------------------------------------------------------
 
-test('review tuần đã xong: Work expected đúng 48h, không phải 34.3h', () => {
+test('review tuần đã xong: Work expected đúng 43h, không phải 30.7h', () => {
   const s = buildReview({
     week: W35,
     activities: [],
@@ -98,8 +99,8 @@ test('review tuần đã xong: Work expected đúng 48h, không phải 34.3h', (
     now: at('2026-08-31', '10:00'),
   });
   const work = s.rows.find((x) => x.category === 'work')!;
-  assert.equal(r1(work.expected), 48);
-  assert.notEqual(r1(work.expected), 34.3);
+  assert.equal(r1(work.expected), 43);
+  assert.notEqual(r1(work.expected), 30.7);
 });
 
 test('title có số tuần và khoảng ngày', () => {
@@ -141,11 +142,23 @@ const noteBase = {
   now: at('2026-08-31', '10:00'),
 };
 
+/** LogQuality giả - chỉ hai con số mà `pickNotes` thật sự đọc. */
+function q(loggedDays: number, totalDays = 7): LogQuality {
+  return {
+    trackedHours: loggedDays * 9,
+    gapHours: 0,
+    activeSpanHours: loggedDays * 9,
+    loggedDays,
+    totalDays,
+    gapRatio: 0,
+  };
+}
+
 test('không có gì đáng nói → một dòng balanced', () => {
   const notes = pickNotes({
     ...noteBase,
     rows: [row('work', 43, 43, 'ok')],
-    coverage: 0.8,
+    quality: q(7),
   });
   assert.deepEqual(notes, [BALANCED]);
 });
@@ -154,7 +167,7 @@ test('tối đa hai dòng', () => {
   const notes = pickNotes({
     ...noteBase,
     rows: [row('learn', 22.4, 31, 'under'), row('work', 51.2, 43, 'over')],
-    coverage: 0.2,
+    quality: q(1),
     history: Array(6).fill({ preset: 'crunch' as PresetId }),
   });
   assert.equal(notes.length, 2);
@@ -164,7 +177,7 @@ test('lệch lớn nhất theo giờ được chọn trước', () => {
   const notes = pickNotes({
     ...noteBase,
     rows: [row('leisure', 9, 6, 'over'), row('work', 51.2, 43, 'over')],
-    coverage: 0.8,
+    quality: q(7),
   });
   assert.match(notes[0], /Work/);
 });
@@ -173,18 +186,18 @@ test('flag ok không bao giờ thành note', () => {
   const notes = pickNotes({
     ...noteBase,
     rows: [row('work', 44, 43, 'ok')],
-    coverage: 0.8,
+    quality: q(7),
   });
   assert.deepEqual(notes, [BALANCED]);
 });
 
-test('coverage thấp được nêu số', () => {
-  const notes = pickNotes({ ...noteBase, rows: [], coverage: 0.41 });
-  assert.match(notes[0], /41% of the week is logged/);
+test('log quá thưa được nêu số ngày', () => {
+  const notes = pickNotes({ ...noteBase, rows: [], quality: q(3) });
+  assert.match(notes[0], /Only 3 of 7 days are logged well enough/);
 });
 
-test('coverage đủ → không nhắc', () => {
-  const notes = pickNotes({ ...noteBase, rows: [], coverage: 0.71 });
+test('log đủ dày → không nhắc', () => {
+  const notes = pickNotes({ ...noteBase, rows: [], quality: q(6) });
   assert.deepEqual(notes, [BALANCED]);
 });
 
@@ -197,7 +210,7 @@ test('crunch streak 4/6 được nêu', () => {
     { preset: 'normal' as PresetId },
     { preset: 'crunch' as PresetId },
   ];
-  const notes = pickNotes({ ...noteBase, rows: [], coverage: 0.8, history });
+  const notes = pickNotes({ ...noteBase, rows: [], quality: q(7), history });
   assert.match(notes[0], /Crunch: 4 of the last 6 weeks/);
 });
 
@@ -209,7 +222,7 @@ test('OT cuối tuần được ưu tiên lên đầu', () => {
     ...noteBase,
     activities: acts,
     rows: [row('work', 51.2, 43, 'over')],
-    coverage: 0.8,
+    quality: q(7),
   });
   assert.equal(notes.length, 2);
   assert.match(notes[0], /cuối tuần/);
@@ -238,7 +251,7 @@ test('có nợ → nêu rõ số giờ cộng thêm (50% theo DEBT_CARRYOVER_RAT
 test('weekly của plan giữ nguyên tổng ngân sách', () => {
   const p = planNextWeek(W35, 'deep_learn', { learn: 6 });
   const total = Object.values(p.weekly).reduce((a, b) => a + b, 0);
-  assert.equal(r1(total), 140.5);
+  assert.equal(r1(total), 89);
 });
 
 test('tuần đã qua → chỉ xem, không cho đặt preset', () => {

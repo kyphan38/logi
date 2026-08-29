@@ -53,15 +53,15 @@ test('layoutDay: hai block 5 phút liền nhau không đè lên nhau', () => {
   assert.equal(l.laneCount, 2, 'block quá ngắn nên phải tách lane cho dễ bấm');
 });
 
-test('layoutDay: session tràn qua 04:00 KHÔNG bị cắt (một giấc ngủ = một hàng)', () => {
+test('layoutDay: session tràn qua 04:00 KHÔNG bị cắt (một ca đêm = một hàng)', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-27', '10:00');
-  const sleep = act({
-    category: 'sleep',
+  const night = act({
+    category: 'work',
     startAt: at('2026-08-26', '22:00'),
     endAt: at('2026-08-27', '06:00'),
   });
-  const [s] = layoutDay([sleep], w, now).segments;
+  const [s] = layoutDay([night], w, now).segments;
   assert.equal(s.end, at('2026-08-27', '06:00'), 'giữ nguyên giờ kết thúc thật');
   assert.equal(s.crossesMidnight, true);
 });

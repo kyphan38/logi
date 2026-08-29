@@ -1,7 +1,7 @@
 // ============================================================
 // logi - Chất lượng log (AMENDMENT-remove-sleep mục 3.2)
 //
-// Thay cho coverage(). Không có mẫu số 24h, không giả định gì về giấc ngủ.
+// Không có mẫu số 24h, không giả định gì về giấc ngủ.
 // Chỉ đo khoảng trống GIỮA các hoạt động đã log.
 //
 // File thuần: không React, không Firestore, không DOM.
@@ -109,7 +109,7 @@ export function logQuality(
   };
 }
 
-/** Cùng định nghĩa, phạm vi một ngày logic. Thay cho coverageOfDay(). */
+/** Cùng định nghĩa, phạm vi một ngày logic. */
 export function dayLogQuality(
   activities: Activity[],
   date: string,

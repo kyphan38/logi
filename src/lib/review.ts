@@ -17,11 +17,11 @@ import {
   logicalWeekday,
   weekendConflict,
 } from '@/lib/balance';
+import { isThin, logQuality, type LogQuality } from '@/lib/log-quality';
 import type { Range } from '@/lib/range';
 import { rangeLabel } from '@/lib/range';
 import {
   actualForRange,
-  coverageForRange,
   deviationsForRange,
   expectedForRange,
   type RangeDeviation,
@@ -114,7 +114,7 @@ export interface ReviewSummary {
   title: string;
   range: Range;
   rows: RangeDeviation[];
-  coverage: number;
+  quality: LogQuality;
   /** Tối đa hai dòng. */
   notes: string[];
 }
@@ -133,15 +133,15 @@ export function buildReview(input: ReviewInput): ReviewSummary {
   const actual = actualForRange(activities, range, now);
   const expected = expectedForRange(range, weekTargets, now);
   const rows = deviationsForRange(actual, expected);
-  const cov = coverageForRange(activities, range, now);
+  const quality = logQuality(activities, range, now);
 
   return {
     week,
     title: reviewTitle(week, range),
     range,
     rows,
-    coverage: cov,
-    notes: pickNotes({ activities, rows, coverage: cov, weekTargets, week, history, now }),
+    quality,
+    notes: pickNotes({ activities, rows, quality, weekTargets, week, history, now }),
   };
 }
 
@@ -152,7 +152,7 @@ export function buildReview(input: ReviewInput): ReviewSummary {
 export interface NoteInput {
   activities: Activity[];
   rows: RangeDeviation[];
-  coverage: number;
+  quality: LogQuality;
   weekTargets: Map<string, Weekly>;
   week: string;
   history: { preset: PresetId }[];
@@ -167,7 +167,7 @@ export const BALANCED = 'A balanced week.';
  * Nêu số, không khuyên bảo.
  */
 export function pickNotes(input: NoteInput): string[] {
-  const { activities, rows, coverage, weekTargets, week, history } = input;
+  const { activities, rows, quality, weekTargets, week, history } = input;
   const out: string[] = [];
 
   // 1. OT cuối tuần ăn vào giờ học - thứ đáng nói nhất.
@@ -187,9 +187,9 @@ export function pickNotes(input: NoteInput): string[] {
     );
   }
 
-  // 3. Log quá ít thì mấy con số trên không đáng tin - phải nói ra.
-  if (coverage < 0.55 && out.length < 2) {
-    out.push(`Only ${Math.round(coverage * 100)}% of the week is logged.`);
+  // 3. Log quá thưa thì mấy con số trên không đáng tin - phải nói ra.
+  if (isThin(quality) && out.length < 2) {
+    out.push(`Only ${quality.loggedDays} of ${quality.totalDays} days are logged well enough.`);
   }
 
   // 4. Crunch liên tục là dấu hiệu baseline sai, không phải tuần bận.

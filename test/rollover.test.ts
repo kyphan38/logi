@@ -98,20 +98,18 @@ test('weekLabel: nhãn ngắn cho card', () => {
   assert.equal(weekLabel('2026-W35'), 'W35');
 });
 
-// --- Trả nợ mà vẫn giữ ngân sách 135.5h ------------------------------
+// --- Trả nợ mà vẫn giữ ngân sách 89h ---------------------------------
 
-test('settleWithinBudget: trả nợ Learn nhưng tổng vẫn đúng 135.5h', () => {
+test('settleWithinBudget: trả nợ Learn nhưng tổng vẫn đúng 89h', () => {
   const out = settleWithinBudget(PRESETS.normal.weekly, { learn: 6 });
   assert.equal(total(out), TOTAL_BUDGET);
   assert.equal(out.learn, 37, 'Learn phải nhận đủ 6h nợ');
-  assert.equal(out.sleep, 46.5, 'Sleep không bao giờ bị lấy đi');
   assert.ok(validateTargets(out).ok, validateTargets(out).errors.join(' '));
 });
 
 test('settleWithinBudget: không cắt xuống dưới sàn cứng', () => {
   const out = settleWithinBudget(PRESETS.normal.weekly, { learn: 10, fitness: 8 });
   assert.ok(out.fitness >= 4.5);
-  assert.equal(out.sleep, 46.5);
   assert.ok(validateTargets(out).ok, validateTargets(out).errors.join(' '));
 });
 
@@ -135,7 +133,7 @@ test('reapplyDebt: đổi preset không tiêu thêm nợ', () => {
 });
 
 test('roundToBudget: sai số dấu phẩy động không làm validateTargets trượt', () => {
-  const messy: Weekly = { sleep: 46.5, work: 43.333333, learn: 31.333333, fitness: 8.9, leisure: 5.5 };
+  const messy: Weekly = { work: 43.333333, learn: 31.333333, fitness: 8.966667, leisure: 5.7 };
   const out = roundToBudget(messy);
   assert.equal(total(out), TOTAL_BUDGET);
   assert.ok(validateTargets(out).ok);

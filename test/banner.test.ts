@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { deviations, expectedHours, logicalWeekday } from '@/lib/balance';
-import { coverage, MIN_COVERAGE, pickBalance } from '@/lib/banner';
+import { loggedRatio, MIN_LOGGED_RATIO, pickBalance } from '@/lib/banner';
 import { CATEGORIES, PRESETS, type Activity } from '@/types/logi';
 import { act, at, H } from './_helpers.ts';
 
@@ -39,12 +39,12 @@ test('không có target → ẩn hẳn banner', () => {
 
 /**
  * Một tuần đúng y kế hoạch tính tới `now`, rồi cộng/trừ ở một category.
- * Cần nền này vì nếu bỏ trống, Sleep luôn là category lệch nhiều nhất
- * và mọi test khác sẽ chỉ đo Sleep.
+ * Cần nền này vì nếu bỏ trống, mọi category đều lệch và test sẽ đo nhầm
+ * category không liên quan.
  */
 function onPlan(now: number, tweak: Partial<Record<Activity['category'], number>> = {}) {
   const exp = expectedHours(WEEKLY, now);
-  return (['work', 'learn', 'fitness', 'sleep', 'leisure'] as const).map((c) =>
+  return (['work', 'learn', 'fitness', 'leisure'] as const).map((c) =>
     block(MON, c, Math.max(0, exp[c] + (tweak[c] ?? 0)))
   );
 }
@@ -103,15 +103,15 @@ test('coverage < 20% → sparse, dù lệch to tới đâu', () => {
   const total = CATEGORIES.reduce((a, c) => a + exp[c], 0);
   // Log đúng 10% lượng lẽ ra phải có.
   const line = pickBalance([block(MON, 'work', total * 0.1)], WEEKLY, WED_2041);
-  assert.ok(coverage([block(MON, 'work', total * 0.1)], WEEKLY, WED_2041) < MIN_COVERAGE);
+  assert.ok(loggedRatio([block(MON, 'work', total * 0.1)], WEEKLY, WED_2041) < MIN_LOGGED_RATIO);
   assert.equal(line?.kind, 'sparse');
 });
 
-test('coverage >= 20% → quay lại so sánh bình thường', () => {
+test('logged ratio >= 20% → quay lại so sánh bình thường', () => {
   const exp = expectedHours(WEEKLY, WED_2041);
   const total = CATEGORIES.reduce((a, c) => a + exp[c], 0);
-  const acts = [block(MON, 'sleep', total * 0.5)];
-  assert.ok(coverage(acts, WEEKLY, WED_2041) >= MIN_COVERAGE);
+  const acts = [block(MON, 'work', total * 0.5)];
+  assert.ok(loggedRatio(acts, WEEKLY, WED_2041) >= MIN_LOGGED_RATIO);
   assert.notEqual(pickBalance(acts, WEEKLY, WED_2041)?.kind, 'sparse');
 });
 
