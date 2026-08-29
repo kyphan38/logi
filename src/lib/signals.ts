@@ -20,7 +20,14 @@ import {
 } from '@/lib/range-target';
 import { daysBetween, daysOf, rangeLabel, weekOf, weekdayOf, type Range } from '@/lib/range';
 import { addDays, dayWindow } from '@/lib/timeline';
-import { CATEGORIES, PRESETS, type Activity, type Category, type PresetId } from '@/types/logi';
+import {
+  CATEGORIES,
+  DAY_CUTOFF_HOUR,
+  PRESETS,
+  type Activity,
+  type Category,
+  type PresetId,
+} from '@/types/logi';
 
 const H = 3_600_000;
 const MIN = 60_000;
@@ -28,12 +35,17 @@ const MIN = 60_000;
 /** Dưới ngần này mẫu thì mọi liên hệ chéo đều là ngẫu nhiên → trả `null`. */
 export const MIN_SAMPLE = 3;
 
-/** Đêm ngắn: dưới 6h. */
-export const SHORT_NIGHT_H = 6;
-/** Ngủ dài hơn mốc này mới tính là "đêm"; ngắn hơn là nap. */
-export const NAP_MAX_H = 4;
 /** Ngày Work nhiều: trên 9h. Dùng cho nhóm G và `skippedAfterWorkDays`. */
 export const HIGH_WORK_H = 9;
+
+/**
+ * Không còn dữ liệu ngủ (AMENDMENT-remove-sleep mục 10), nên dùng HOẠT ĐỘNG
+ * KHUYA làm chỉ báo gián tiếp. Hoạt động cuối cùng kết thúc lúc 22:00 hay 01:00
+ * nói lên khá nhiều, dù không chính xác bằng giờ đi ngủ thật.
+ */
+export const LATE_NIGHT_MIN = 23 * 60;
+/** Bắt đầu ngày trước mốc này là dậy sớm. */
+export const EARLY_START_MIN = 6 * 60;
 
 // ---------------------------------------------------------------------------
 // Kiểu dữ liệu
@@ -53,24 +65,23 @@ export interface CatStat {
   zeroDays: number;
 }
 
-export interface SleepSignals {
-  nights: number;
-  /** Phút trên "trục đêm": 22:00 = 1320, 00:30 = 1470. Digest mới đổi ra HH:MM. */
-  medianBedtime: number | null;
-  /** Phút trong ngày. */
-  medianWakeTime: number | null;
-  bedtimeSpreadMin: number | null;
-  nightsAfter23: number;
-  medianSleepDuration: number | null;
-  shortNights: number;
-  napCount: number;
-  napHours: number;
-  /** Số đêm đi ngủ sau nửa đêm (bedtimeScore >= 24). */
-  lateNights: number;
-  /** Dao động giờ dậy, phút. */
-  wakeSpreadMin: number | null;
-  /** Số ngày dậy sau 07:00 - mất khối học buổi sáng. */
-  lostMorningBlocks: number;
+/**
+ * Nhóm B - Nhịp ngày, thay cho nhóm Sleep cũ.
+ *
+ * Mọi con số ở đây đo HOẠT ĐỘNG ĐÃ LOG, không suy ra giấc ngủ. App không biết
+ * người dùng ngủ lúc nào và không được đoán.
+ */
+export interface NightSignals {
+  /** Số ngày có bất kỳ activity nào chạm mốc sau 23:00. */
+  lateNightActivityDays: number;
+  /** Trung vị giờ kết thúc activity cuối cùng, phút trên trục ngày logic. */
+  lastActivityMedian: number | null;
+  /** Dao động của giờ đó, phút. */
+  lastActivitySpreadMin: number | null;
+  /** Số ngày có activity đầu tiên bắt đầu trước 06:00. */
+  earlyStartDays: number;
+  /** Số ngày có log, dùng làm mẫu số khi đọc bốn con số trên. */
+  daysWithActivity: number;
 }
 
 export interface WorkSignals {
@@ -110,7 +121,6 @@ export interface FitnessSignals {
 export interface LeisureSignals {
   hours: number;
   lateLeisureHours: number;
-  leisureNightsDelayingSleep: number;
   longestBlockMin: number | null;
   weekdayLeisureHours: number;
   weekendLeisureHours: number;
@@ -125,11 +135,8 @@ export interface Link {
 export interface LinkSignals {
   learnOnHighWorkDays: Link | null;
   learnOnNormalDays: Link | null;
-  fitnessAfterShortNights: Link | null;
-  learnAfterShortNights: Link | null;
-  /** Học được bao nhiêu ở ngày sau một đêm dậy sau 07:00. */
-  learnAfterLateWake: Link | null;
-  sleepAfterLateWork: Link | null;
+  /** Học được bao nhiêu ở ngày SAU một ngày còn hoạt động sau 23:00. */
+  learnAfterLateNights: Link | null;
   weekendLearnVsWeekendWork: { learn: number; work: number; sampleSize: number } | null;
   displacedBy: {
     up: Category;
@@ -153,7 +160,7 @@ export interface Signals {
   recordCount: number;
   hasPrevious: boolean;
   byCategory: Record<Category, CatStat>;
-  sleep: SleepSignals;
+  night: NightSignals;
   work: WorkSignals;
   learn: LearnSignals;
   fitness: FitnessSignals;
@@ -205,27 +212,17 @@ function minutesOfDay(ts: number): number {
 }
 
 /**
- * Trục đêm: giờ trước trưa được đẩy sang ngày hôm sau.
- * 22:00 → 1320, 00:30 → 1470. Không có bước này thì trung vị của
- * [23:50, 00:10] ra 12:00 trưa - sai hoàn toàn.
+ * Trục NGÀY LOGIC: phút trong ngày, nhưng giờ trước mốc cắt 04:00 được đẩy
+ * sang cuối. 06:00 → 360, 23:30 → 1410, 01:00 → 1500.
+ *
+ * Cần trục này để so sánh hai mốc thời gian trong cùng một ngày logic. Không
+ * có nó thì "hoạt động cuối cùng lúc 01:00" ra 60 phút, hoá ra sớm hơn cả
+ * 06:00 sáng - sai hoàn toàn. Giá trị luôn nằm trong [240, 1679] nên trung vị
+ * và độ dao động đều đúng thứ tự.
  */
-function nightAxis(min: number): number {
-  return min < 720 ? min + 1440 : min;
+function dayAxis(min: number): number {
+  return min < DAY_CUTOFF_HOUR * 60 ? min + 1440 : min;
 }
-
-/**
- * Cùng trục đêm nhưng tính bằng GIỜ, để đọc và test cho dễ:
- * 22:00 → 22.0, 00:15 → 24.25, 01:30 → 25.5.
- */
-export function bedtimeScore(ts: number): number {
-  return nightAxis(minutesOfDay(ts)) / 60;
-}
-
-/** Dậy sau mốc này là mất khối học buổi sáng. */
-export const LATE_WAKE_MIN = 7 * 60;
-
-/** Đi ngủ từ nửa đêm trở đi - trên trục đêm là 24h. */
-const MIDNIGHT_SCORE_MIN = 24 * 60;
 
 /** Một session đã cắt gọn trong cửa sổ khoảng. */
 interface Sess {
@@ -374,7 +371,7 @@ export function computeSignals(
     };
   }
 
-  const nights = sleepNights(sessions);
+  const edges = dayEdges(sessions);
   const preset = presetOf(range, weekTargets);
 
   return {
@@ -389,12 +386,12 @@ export function computeSignals(
     recordCount: sessions.length,
     hasPrevious: previous != null,
     byCategory,
-    sleep: sleepSignals(sessions, nights),
+    night: nightSignals(edges),
     work: workSignals(sessions, byDay, elapsed),
     learn: learnSignals(sessions, byDay, elapsed, weekTargets, range, today),
     fitness: fitnessSignals(sessions, byDay, elapsed, days.length, today),
-    leisure: leisureSignals(sessions, nights),
-    links: linkSignals({ byDay, elapsed, nights, sessions, actual, prevActual, previous }),
+    leisure: leisureSignals(sessions),
+    links: linkSignals({ byDay, elapsed, edges, actual, prevActual, previous }),
   };
 }
 
@@ -460,53 +457,60 @@ function hoursByDay(sessions: Sess[], days: string[]): Map<string, Record<Catego
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm B - Sleep
+// Nhóm B - Nhịp ngày (thay nhóm Sleep)
 // ---------------------------------------------------------------------------
 
-interface Night {
-  /** Ngày logic của đêm: ngủ 23:40 và ngủ 00:30 cùng thuộc một đêm. */
+/** Một ngày logic có log, rút gọn còn hai đầu mút. */
+interface DayEdges {
   day: string;
-  bedMin: number; // trục đêm
-  wakeMin: number;
-  hours: number;
+  /** Phút bắt đầu của activity SỚM NHẤT, trên trục ngày logic. */
+  firstStartMin: number;
+  /** Phút kết thúc của activity MUỘN NHẤT, trên trục ngày logic. */
+  lastEndMin: number;
+  /** Có activity nào chạm mốc sau 23:00 không. */
+  late: boolean;
 }
 
-function sleepNights(sessions: Sess[]): Night[] {
-  const best = new Map<string, Night>();
+/**
+ * Hai đầu mút của mỗi ngày logic.
+ *
+ * Gộp theo `s.day` (ngày logic của `startAt`), đúng quy tắc mục 7: session
+ * 23:00 → 01:00 thuộc trọn ngày hôm trước, nên nó kéo dài `lastEndMin` của
+ * ngày đó chứ không mở đầu ngày hôm sau.
+ */
+function dayEdges(sessions: Sess[]): DayEdges[] {
+  const map = new Map<string, DayEdges>();
+
   for (const s of sessions) {
-    if (s.category !== 'sleep' || s.fullHours <= NAP_MAX_H) continue;
-    const n: Night = {
-      day: s.day,
-      bedMin: nightAxis(minutesOfDay(s.rawStart)),
-      wakeMin: minutesOfDay(s.rawEnd),
-      hours: s.fullHours,
-    };
-    // Hiếm khi có hai giấc dài cùng một đêm; nếu có thì lấy giấc dài hơn.
-    const prev = best.get(s.day);
-    if (!prev || n.hours > prev.hours) best.set(s.day, n);
+    // Cả hai đầu đều trên trục ngày logic: có thế mới so sánh được 05:00 với
+    // 01:00 của cùng một ngày.
+    const startMin = dayAxis(minutesOfDay(s.rawStart));
+    const endMin = dayAxis(minutesOfDay(s.rawEnd));
+    const late = endMin >= LATE_NIGHT_MIN;
+
+    const prev = map.get(s.day);
+    if (!prev) {
+      map.set(s.day, { day: s.day, firstStartMin: startMin, lastEndMin: endMin, late });
+      continue;
+    }
+    prev.firstStartMin = Math.min(prev.firstStartMin, startMin);
+    prev.lastEndMin = Math.max(prev.lastEndMin, endMin);
+    prev.late = prev.late || late;
   }
-  return [...best.values()].sort((a, b) => (a.day < b.day ? -1 : 1));
+
+  return [...map.values()].sort((a, b) => (a.day < b.day ? -1 : 1));
 }
 
-function sleepSignals(sessions: Sess[], nights: Night[]): SleepSignals {
-  const naps = sessions.filter((s) => s.category === 'sleep' && s.fullHours <= NAP_MAX_H);
-  const beds = nights.map((n) => n.bedMin);
-  const wakes = nights.map((n) => n.wakeMin);
+function nightSignals(edges: DayEdges[]): NightSignals {
+  const ends = edges.map((e) => e.lastEndMin);
 
   return {
-    nights: nights.length,
-    medianBedtime: round0(median(beds)),
-    medianWakeTime: round0(median(nights.map((n) => n.wakeMin))),
-    bedtimeSpreadMin:
-      beds.length >= 2 ? Math.round(Math.max(...beds) - Math.min(...beds)) : null,
-    nightsAfter23: nights.filter((n) => n.bedMin >= 23 * 60).length,
-    medianSleepDuration: round1(median(nights.map((n) => n.hours))),
-    shortNights: nights.filter((n) => n.hours < SHORT_NIGHT_H).length,
-    napCount: naps.length,
-    napHours: naps.reduce((a, s) => a + s.minutes / 60, 0),
-    lateNights: nights.filter((n) => n.bedMin >= MIDNIGHT_SCORE_MIN).length,
-    wakeSpreadMin: wakes.length >= 2 ? Math.round(Math.max(...wakes) - Math.min(...wakes)) : null,
-    lostMorningBlocks: nights.filter((n) => n.wakeMin > LATE_WAKE_MIN).length,
+    lateNightActivityDays: edges.filter((e) => e.late).length,
+    lastActivityMedian: round0(median(ends)),
+    lastActivitySpreadMin:
+      ends.length >= 2 ? Math.round(Math.max(...ends) - Math.min(...ends)) : null,
+    earlyStartDays: edges.filter((e) => e.firstStartMin < EARLY_START_MIN).length,
+    daysWithActivity: edges.length,
   };
 }
 
@@ -554,9 +558,11 @@ function workSignals(
   for (const s of sessions) {
     if (s.category !== 'work') continue;
     const dayKey = logicalDate(s.rawStart);
-    const endMin = nightAxis(minutesOfDay(s.rawEnd));
+    const endMin = dayAxis(minutesOfDay(s.rawEnd));
     ends.set(dayKey, Math.max(ends.get(dayKey) ?? 0, endMin));
-    if (minutesOfDay(s.rawStart) < OFFICE_START) starts.add(dayKey);
+    // Cùng trục với `endMin`: ca làm bắt đầu 01:00 là làm khuya, không phải
+    // đi làm sớm.
+    if (dayAxis(minutesOfDay(s.rawStart)) < OFFICE_START) starts.add(dayKey);
   }
   const endList = [...ends.values()];
 
@@ -706,9 +712,8 @@ function fitnessSignals(
 // ---------------------------------------------------------------------------
 
 const LATE_LEISURE = 22 * 60;
-const BEDTIME_LATE = 23 * 60;
 
-function leisureSignals(sessions: Sess[], nights: Night[]): LeisureSignals {
+function leisureSignals(sessions: Sess[]): LeisureSignals {
   const lei = sessions.filter((s) => s.category === 'leisure');
   const durations = lei.map((s) => s.minutes);
 
@@ -718,22 +723,11 @@ function leisureSignals(sessions: Sess[], nights: Night[]): LeisureSignals {
     [0, 4 * 60],
   ];
 
-  const lateDays = new Set<string>();
-  for (const s of lei) {
-    let mins = 0;
-    for (const seg of calSegments(s.start, s.end)) {
-      for (const [a, b] of lateWindows) mins += overlapMin(seg, a, b);
-    }
-    if (mins > 0) lateDays.add(logicalDate(Math.max(s.start, s.rawStart)));
-  }
-
-  const lateBed = new Set(nights.filter((n) => n.bedMin >= BEDTIME_LATE).map((n) => n.day));
-
   return {
     hours: lei.reduce((a, s) => a + s.minutes / 60, 0),
     lateLeisureHours: hoursInWindows(sessions, 'leisure', lateWindows),
-    // Phải có CẢ HAI: xem khuya mà vẫn ngủ đúng giờ thì không tính.
-    leisureNightsDelayingSleep: [...lateDays].filter((d) => lateBed.has(d)).length,
+    // `leisureNightsDelayingSleep` đã bỏ (mục 10): không còn dữ liệu ngủ để nói
+    // rằng xem khuya làm ngủ muộn. `lateLeisureHours` là con số thô còn đúng.
     longestBlockMin: durations.length ? Math.round(Math.max(...durations)) : null,
     weekdayLeisureHours: hoursInWindows(sessions, 'leisure', [[0, 1440]], (w) => !isWeekend(w)),
     weekendLeisureHours: hoursInWindows(sessions, 'leisure', [[0, 1440]], isWeekend),
@@ -752,13 +746,12 @@ function link(values: number[]): Link | null {
 function linkSignals(i: {
   byDay: Map<string, Record<Category, number>>;
   elapsed: string[];
-  nights: Night[];
-  sessions: Sess[];
+  edges: DayEdges[];
   actual: Record<Category, number>;
   prevActual: Record<Category, number> | null;
   previous: PreviousPeriod | undefined;
 }): LinkSignals {
-  const { byDay, elapsed, nights, sessions, actual, prevActual } = i;
+  const { byDay, elapsed, edges, actual, prevActual } = i;
 
   const high: number[] = [];
   const normal: number[] = [];
@@ -768,37 +761,16 @@ function linkSignals(i: {
     (row.work > HIGH_WORK_H ? high : normal).push(row.learn);
   }
 
-  // Ngày SAU một đêm ngắn. Mốc cắt 04:00 làm việc này gọn: đêm ngủ 23:00
-  // của ngày d thuộc ngày d, còn ngày tỉnh táo tiếp theo là d+1.
-  const shortNights = nights.filter((n) => n.hours < SHORT_NIGHT_H);
-  const afterShortFitness: number[] = [];
-  const afterShortLearn: number[] = [];
-  for (const n of shortNights) {
-    const next = byDay.get(addDays(n.day, 1));
+  // Ngày SAU một ngày còn hoạt động sau 23:00. Thay cho `learnAfterShortNights`
+  // cũ: không còn dữ liệu ngủ, nhưng "hôm qua thức khuya" vẫn đo được.
+  // Chỉ mô tả, không kết luận nhân quả.
+  const afterLateNightLearn: number[] = [];
+  for (const e of edges) {
+    if (!e.late) continue;
+    const next = byDay.get(addDays(e.day, 1));
     if (!next) continue;
-    afterShortFitness.push(next.fitness);
-    afterShortLearn.push(next.learn);
+    afterLateNightLearn.push(next.learn);
   }
-
-  // Dậy sau 07:00 thì khối học sáng 04:30-06:30 coi như mất. Chỉ mô tả số giờ
-  // học của những ngày đó, không kết luận nhân quả.
-  const afterLateWakeLearn: number[] = [];
-  for (const n of nights) {
-    if (n.wakeMin <= LATE_WAKE_MIN) continue;
-    const next = byDay.get(addDays(n.day, 1));
-    if (!next) continue;
-    afterLateWakeLearn.push(next.learn);
-  }
-
-  // Ngủ sau ngày có làm khuya.
-  const lateWorkDays = new Set<string>();
-  for (const s of sessions) {
-    if (s.category !== 'work') continue;
-    for (const seg of calSegments(s.start, s.end)) {
-      for (const [a, b] of LATE_WINDOWS) if (overlapMin(seg, a, b) > 0) lateWorkDays.add(s.day);
-    }
-  }
-  const sleepAfterLate = nights.filter((n) => lateWorkDays.has(n.day)).map((n) => n.hours);
 
   const weekendDays = elapsed.filter((d) => isWeekend(weekdayOf(d)));
   let wLearn = 0;
@@ -812,10 +784,7 @@ function linkSignals(i: {
   return {
     learnOnHighWorkDays: link(high),
     learnOnNormalDays: link(normal),
-    fitnessAfterShortNights: link(afterShortFitness),
-    learnAfterShortNights: link(afterShortLearn),
-    learnAfterLateWake: link(afterLateWakeLearn),
-    sleepAfterLateWork: link(sleepAfterLate),
+    learnAfterLateNights: link(afterLateNightLearn),
     weekendLearnVsWeekendWork:
       weekendDays.length >= MIN_SAMPLE
         ? {

@@ -64,7 +64,7 @@ export function buildDigest(s: Signals): Digest {
     sessions: s.recordCount,
   };
 
-  // Đủ cả 5 category, kể cả category không có gì bất thường - model cần thấy
+  // Đủ cả 4 category, kể cả category không có gì bất thường - model cần thấy
   // toàn cảnh mới chọn đúng cái đáng nói.
   const totals: Digest = {};
   for (const c of CATEGORIES) {
@@ -82,20 +82,20 @@ export function buildDigest(s: Signals): Digest {
   }
   d.totals = totals;
 
-  const sleep: Digest = {};
-  put(sleep, 'nights', s.sleep.nights);
-  put(sleep, 'medianBedtime', s.sleep.medianBedtime === null ? null : hhmm(s.sleep.medianBedtime));
-  put(sleep, 'medianWakeTime', s.sleep.medianWakeTime === null ? null : hhmm(s.sleep.medianWakeTime));
-  put(sleep, 'bedtimeSpreadMin', s.sleep.bedtimeSpreadMin);
-  put(sleep, 'nightsAfter23', s.sleep.nightsAfter23);
-  put(sleep, 'medianNightHours', s.sleep.medianSleepDuration);
-  put(sleep, 'nightsUnder6h', s.sleep.shortNights);
-  put(sleep, 'naps', s.sleep.napCount);
-  put(sleep, 'napHours', s.sleep.napHours);
-  put(sleep, 'nightsAfterMidnight', s.sleep.lateNights);
-  put(sleep, 'wakeTimeSpreadMin', s.sleep.wakeSpreadMin);
-  put(sleep, 'daysWakingAfter7', s.sleep.lostMorningBlocks);
-  d.sleep = sleep;
+  // Không có dữ liệu ngủ (AMENDMENT-remove-sleep mục 10). Mọi key ở đây nói về
+  // GIỜ LOG, không phải giờ ngủ. Tên key phải nói rõ điều đó, nếu không model
+  // sẽ đọc `lastActivity` thành "giờ đi ngủ" rồi khuyên về giấc ngủ.
+  const dayShape: Digest = {};
+  put(dayShape, 'daysWithAnyLog', s.night.daysWithActivity);
+  put(dayShape, 'daysWithActivityAfter23', s.night.lateNightActivityDays);
+  put(
+    dayShape,
+    'medianLastActivityEnd',
+    s.night.lastActivityMedian === null ? null : hhmm(s.night.lastActivityMedian)
+  );
+  put(dayShape, 'lastActivityEndSpreadMin', s.night.lastActivitySpreadMin);
+  put(dayShape, 'daysStartingBefore6', s.night.earlyStartDays);
+  d.dayShape = dayShape;
 
   const work: Digest = {};
   put(work, 'outsideOfficeHours', s.work.otHours);
@@ -152,7 +152,6 @@ export function buildDigest(s: Signals): Digest {
   const leisure: Digest = {};
   put(leisure, 'hours', s.leisure.hours);
   put(leisure, 'after22Hours', s.leisure.lateLeisureHours);
-  put(leisure, 'nightsWithLateLeisureAndLateBedtime', s.leisure.leisureNightsDelayingSleep);
   put(leisure, 'longestBlockMin', s.leisure.longestBlockMin);
   put(leisure, 'weekdayHours', s.leisure.weekdayLeisureHours);
   put(leisure, 'weekendHours', s.leisure.weekendLeisureHours);
@@ -162,10 +161,7 @@ export function buildDigest(s: Signals): Digest {
   const links: Digest = {};
   put(links, 'learnHoursOnDaysWorkOver9h', linkOf(s.links.learnOnHighWorkDays));
   put(links, 'learnHoursOnOtherDays', linkOf(s.links.learnOnNormalDays));
-  put(links, 'fitnessHoursAfterNightsUnder6h', linkOf(s.links.fitnessAfterShortNights));
-  put(links, 'learnHoursAfterNightsUnder6h', linkOf(s.links.learnAfterShortNights));
-  put(links, 'learnHoursAfterWakingAfter7', linkOf(s.links.learnAfterLateWake));
-  put(links, 'sleepHoursAfterWorkPast20', linkOf(s.links.sleepAfterLateWork));
+  put(links, 'learnHoursAfterDaysActiveAfter23', linkOf(s.links.learnAfterLateNights));
   if (s.links.weekendLearnVsWeekendWork && s.links.weekendLearnVsWeekendWork.sampleSize >= MIN_SAMPLE) {
     const w = s.links.weekendLearnVsWeekendWork;
     links.weekendLearnVsWork = { learnHours: r1(w.learn), workHours: r1(w.work), n: w.sampleSize };
@@ -253,8 +249,6 @@ export function canAnalyze(s: Signals): Gate {
 // Dữ liệu cực đoan (Task 8)
 // ---------------------------------------------------------------------------
 
-/** Ngủ trung vị dưới mức này thì nói thêm một câu. */
-export const EXTREME_SLEEP_H = 5;
 /** Work quy đổi ra một tuần, trên mức này thì nói thêm một câu. */
 export const EXTREME_WORK_H_PER_WEEK = 70;
 
@@ -277,13 +271,8 @@ function num(o: unknown, ...path: string[]): number | null {
 export function extremeNote(digest: Digest): string | null {
   const days = num(digest, 'period', 'days') ?? 0;
 
-  const median = num(digest, 'sleep', 'medianNightHours');
-  if (median !== null && median < EXTREME_SLEEP_H) {
-    const floor = num(digest, 'totals', 'sleep', 'targetHours');
-    const tail = floor === null ? 'your own target' : `your own floor of ${Math.round(floor)}h`;
-    return `Median night was ${median}h. That is well below ${tail}. Worth a rest week.`;
-  }
-
+  // Câu về giấc ngủ đã bỏ cùng category `sleep` (AMENDMENT-remove-sleep mục 10).
+  // App không đo giấc ngủ nữa nên không được nói gì về nó.
   const work = num(digest, 'totals', 'work', 'hours');
   if (work !== null && days >= 1) {
     const perWeek = (work / days) * 7;

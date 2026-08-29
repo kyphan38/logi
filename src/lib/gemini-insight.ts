@@ -30,7 +30,7 @@ export const INSIGHT_SCHEMA = {
           },
           metric: {
             type: 'string',
-            description: 'The digest key this is based on, e.g. "sleep.medianBedtime".',
+            description: 'The digest key this is based on, e.g. "learn.morningHours".',
           },
           severity: { type: 'string', enum: ['info', 'notable', 'important'] },
         },
@@ -64,7 +64,8 @@ export const INSIGHT_SCHEMA = {
 // ------------------------------------------------------------
 
 /**
- * Chín quy tắc dưới đây là bản dịch nguyên văn của plan Stage 7.
+ * Mười quy tắc dưới đây là bản dịch của plan Stage 7; quy tắc 10 thêm vào ở
+ * AMENDMENT-remove-sleep mục 10.
  * Sửa prompt thì phải chạy lại `test/insight-sanitize.test.ts` và đọc tay
  * vài kết quả - prompt lỏng ra là sanitize phải bỏ nhiều hơn.
  */
@@ -73,7 +74,7 @@ export const INSIGHT_SYSTEM_PROMPT = `You analyse a personal time-audit digest a
 The user is a DevOps engineer in Vietnam. Typical schedule: wake 04:30,
 self-study until 06:30; work 08:00-17:00 Mon-Fri, in office Tue and Thu
 (45 min commute each way, counted as work); workout 18:00-19:30;
-study again 20:30-22:00; sleep at 22:00. Weekends are meant for study
+study again 20:30-22:00. Weekends are meant for study
 but often get taken by unplanned work OT.
 
 RULES - these are absolute:
@@ -90,9 +91,12 @@ RULES - these are absolute:
    Raw totals are already visible in the charts.
 7. If a correlation signal is present, note its sample size and that
    it is only an association.
-8. Suggestion must be one concrete, small action. Not "sleep more" -
+8. Suggestion must be one concrete, small action. Not "rest more" -
    something like "protect the 20:30 study block on Tue and Thu".
 9. If something is going well, say so in \`positive\`. One sentence.
+10. The app does NOT track sleep. Never mention sleep, bedtime, rest,
+    or tiredness, and never infer them from late or early activity.
+    \`dayShape\` is about when logging starts and stops, nothing more.
 
 READING THE DIGEST:
 - Hours are hours. Fields ending in "Min" are minutes. Fields ending in
@@ -100,8 +104,10 @@ READING THE DIGEST:
 - Clock times are "HH:MM" in the user's local time. Copy them as they are.
 - "n" is the sample size of an association. Small n means weak evidence.
 - A field that is absent was not measurable. Do not guess it.
-- Categories are learn, work, fitness, sleep, leisure. All five are in
+- Categories are learn, work, fitness, leisure. All four are in
   the digest so you can compare them, not so you list them all.
+- \`dayShape\` describes the clock edges of logged days: when the first
+  activity started and when the last one ended. It is not sleep data.
 
 Write in English. Be brief. No preamble, no closing summary.`;
 

@@ -6,7 +6,7 @@
 //
 //   1. Mọi số trong `body` phải có mặt trong digest (sai số 0.15)
 //   2. Câu nhân quả → bỏ. Một tuần dữ liệu không chứng minh được A gây ra B
-//   3. Từ y tế, từ phán xét → bỏ
+//   3. Từ y tế, từ phán xét, từ về giấc ngủ → bỏ
 //   4. Quá 4 nhận xét → cắt còn 4. Bỏ hết → câu mặc định
 //
 // Thuần: không mạng, không Firestore. Test bằng `node --test`.
@@ -102,7 +102,37 @@ const JUDGING = [
   'guilty',
 ];
 
-const BANNED = [...CAUSAL, ...MEDICAL, ...JUDGING];
+/**
+ * Giấc ngủ: app KHÔNG đo (AMENDMENT-remove-sleep mục 10).
+ *
+ * `dayShape` cho model biết giờ log cuối cùng trong ngày. Từ đó suy ra giờ đi
+ * ngủ là chuyện rất dễ làm và luôn sai - người dùng có thể đọc sách hai tiếng
+ * sau khi tắt app. Prompt đã cấm, đây là chốt chặn thứ hai.
+ */
+const SLEEP_TALK = [
+  'sleep',
+  'sleeping',
+  'slept',
+  'asleep',
+  'bedtime',
+  'bed time',
+  'wake-up',
+  'wake up',
+  'woke',
+  'nap',
+  'naps',
+  'rested',
+  'well-rested',
+  'tired',
+  'tiredness',
+  'exhausted',
+  'exhaustion',
+  'fatigue',
+  'fatigued',
+  'overnight',
+];
+
+const BANNED = [...CAUSAL, ...MEDICAL, ...JUDGING, ...SLEEP_TALK];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const BANNED_RE = new RegExp(`\\b(${BANNED.map(escape).join('|')})\\b`, 'i');
@@ -124,8 +154,8 @@ interface Allowed {
 /**
  * Giờ đến từ ĐỊNH NGHĨA chứ không phải từ dữ liệu: lịch sinh hoạt trong system
  * prompt (04:30 dậy, 20:30 học) và các mốc mà chính chỉ số mang tên
- * (`nightsAfter23`, `after22Hours`). Không cho phép thì model nói đúng
- * "four nights after 23:00" vẫn bị bỏ oan.
+ * (`daysWithActivityAfter23`, `after22Hours`). Không cho phép thì model nói
+ * đúng "four days with activity after 23:00" vẫn bị bỏ oan.
  */
 export const ANCHOR_TIMES = [
   '04:00',
@@ -224,7 +254,7 @@ export interface MetricHit {
   value: unknown;
 }
 
-/** `"sleep.medianBedtime"` hoặc chỉ `"medianBedtime"` đều tra được. */
+/** `"dayShape.earlyStartDays"` hoặc chỉ `"earlyStartDays"` đều tra được. */
 export function lookupMetric(digest: Digest, metric: string): MetricHit | null {
   const key = metric.trim();
   if (!key) return null;

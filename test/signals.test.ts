@@ -104,55 +104,63 @@ test('A: không có kỳ trước thì deltaVsPrevious là null, có thì ra hi�
 });
 
 // ------------------------------------------------------------
-// Nhóm B - Sleep
+// Nhóm B - Nhịp ngày (thay Sleep, AMENDMENT-remove-sleep mục 10)
 // ------------------------------------------------------------
 
-test('B: medianBedtime và bedtimeSpreadMin qua 5 đêm khác giờ', () => {
+test('B: lastActivityMedian lấy giờ kết thúc muộn nhất của từng ngày', () => {
   const g = sig([
-    s('sleep', MON, '22:00', '05:00', TUE),
-    s('sleep', TUE, '23:00', '05:00', WED),
-    s('sleep', WED, '23:30', '05:30', THU),
-    s('sleep', SUN, '00:30', '06:00', SUN), // ngủ sau nửa đêm → vẫn là đêm thứ Bảy
-    s('sleep', FRI, '21:30', '05:00', SAT),
+    s('work', MON, '08:00', '17:00'),
+    s('learn', MON, '20:00', '21:00'), // MON kết thúc 21:00
+    s('learn', TUE, '20:00', '22:00'), // TUE kết thúc 22:00
+    s('leisure', WED, '20:00', '23:30'), // WED kết thúc 23:30
   ]);
-  assert.equal(g.sleep.nights, 5);
-  // Trục đêm: 1290, 1320, 1380, 1410, 1470 → trung vị 1380 = 23:00
-  assert.equal(g.sleep.medianBedtime, 23 * 60);
-  assert.equal(g.sleep.bedtimeSpreadMin, 1470 - 1290);
-  assert.equal(g.sleep.nightsAfter23, 3);
-  assert.equal(g.sleep.medianWakeTime, 5 * 60);
+  assert.equal(g.night.daysWithActivity, 3);
+  // 1260, 1320, 1410 → trung vị 1320 = 22:00
+  assert.equal(g.night.lastActivityMedian, 22 * 60);
+  assert.equal(g.night.lastActivitySpreadMin, 1410 - 1260);
 });
 
-test('B: giấc vắt qua nửa đêm thuộc về đêm hôm trước', () => {
-  const g = sig([s('sleep', WED, '00:30', '06:00', WED)]);
-  assert.equal(g.sleep.nights, 1);
-  // 00:30 ngày 26 nằm trước mốc cắt 04:00 → giờ đi ngủ nằm trên trục đêm.
-  assert.equal(g.sleep.medianBedtime, 1440 + 30);
-  assert.equal(g.sleep.nightsAfter23, 1);
-  // Giấc chạy qua mốc 04:00 nên rơi vào hai ngày logic: 25 và 26.
-  assert.equal(g.byCategory.sleep.zeroDays, 5);
-  assert.equal(g.sleep.napCount, 0);
+test('B: activity qua nửa đêm nằm trên trục ngày logic, thuộc ngày bắt đầu', () => {
+  const g = sig([
+    s('learn', MON, '05:00', '06:00'),
+    s('leisure', MON, '22:00', '01:00', TUE),
+  ]);
+  // Cả hai cùng ngày logic MON: session 22:00 → 01:00 gán trọn cho MON.
+  assert.equal(g.night.daysWithActivity, 1);
+  // 01:00 trên trục ngày logic là 25:00 = 1500, không phải 60.
+  assert.equal(g.night.lastActivityMedian, 25 * 60);
+  assert.equal(g.night.lateNightActivityDays, 1);
+  // Một ngày thì không có dao động.
+  assert.equal(g.night.lastActivitySpreadMin, null);
 });
 
-test('B: nap ≤ 4h không được tính là đêm', () => {
+test('B: lateNightActivityDays đếm ngày, không đếm session', () => {
   const g = sig([
-    s('sleep', MON, '13:00', '15:00'),
-    s('sleep', MON, '22:00', '04:00', TUE),
+    s('leisure', MON, '23:10', '23:50'),
+    s('work', MON, '21:00', '23:30'), // cùng ngày → vẫn tính 1
+    s('learn', TUE, '20:00', '22:00'), // dừng trước 23:00 → không tính
+    s('work', WED, '22:00', '00:30', THU),
   ]);
-  assert.equal(g.sleep.nights, 1);
-  assert.equal(g.sleep.napCount, 1);
-  near(g.sleep.napHours, 2);
-  near(g.sleep.medianSleepDuration!, 6);
-  assert.equal(g.sleep.shortNights, 0);
+  assert.equal(g.night.lateNightActivityDays, 2);
 });
 
-test('B: đêm dưới 6h vào shortNights', () => {
+test('B: earlyStartDays đếm ngày mở màn trước 06:00', () => {
   const g = sig([
-    s('sleep', MON, '23:00', '04:00', TUE),
-    s('sleep', TUE, '22:00', '05:00', WED),
+    s('learn', MON, '04:30', '06:30'),
+    s('learn', TUE, '05:59', '07:00'),
+    s('learn', WED, '06:00', '07:00'), // đúng mốc → không tính
+    s('work', THU, '08:00', '17:00'),
   ]);
-  assert.equal(g.sleep.shortNights, 1);
-  near(g.sleep.medianSleepDuration!, 6);
+  assert.equal(g.night.earlyStartDays, 2);
+});
+
+test('B: không có log thì mọi chỉ số nhịp ngày về 0 hoặc null', () => {
+  const g = sig([]);
+  assert.equal(g.night.daysWithActivity, 0);
+  assert.equal(g.night.lateNightActivityDays, 0);
+  assert.equal(g.night.earlyStartDays, 0);
+  assert.equal(g.night.lastActivityMedian, null);
+  assert.equal(g.night.lastActivitySpreadMin, null);
 });
 
 // ------------------------------------------------------------
@@ -293,18 +301,6 @@ test('F: lateLeisureHours tính từ 22:00, gồm cả phần sau nửa đêm', 
   assert.equal(g.leisure.longestBlockMin, 150);
 });
 
-test('F: leisureNightsDelayingSleep cần CẢ giải trí khuya lẫn ngủ muộn', () => {
-  const g = sig([
-    // Đêm 1: xem khuya + ngủ 23:45 → tính
-    s('leisure', MON, '22:30', '23:30'),
-    s('sleep', MON, '23:45', '05:00', TUE),
-    // Đêm 2: xem khuya nhưng ngủ đúng 22:00 → không tính
-    s('leisure', WED, '20:00', '22:30'),
-    s('sleep', WED, '22:00', '05:00', THU),
-  ]);
-  assert.equal(g.leisure.leisureNightsDelayingSleep, 1);
-});
-
 test('F: tách giờ giải trí ngày thường và cuối tuần', () => {
   const g = sig([s('leisure', TUE, '20:00', '21:00'), s('leisure', SAT, '14:00', '17:00')]);
   near(g.leisure.weekdayLeisureHours, 1);
@@ -338,19 +334,27 @@ test('G: đủ 3 mẫu thì có giá trị kèm sampleSize', () => {
   assert.equal(g.links.learnOnNormalDays!.sampleSize, 4);
 });
 
-test('G: ngày SAU đêm ngắn mới được tính', () => {
+test('G: ngày SAU một ngày còn hoạt động sau 23:00 mới được tính', () => {
   const g = sig([
-    s('sleep', MON, '23:30', '04:00', TUE), // 4.5h
-    s('sleep', TUE, '23:30', '04:00', WED),
-    s('sleep', WED, '23:30', '04:00', THU),
-    s('learn', TUE, '05:00', '06:00'),
-    s('learn', THU, '05:00', '07:00'),
+    s('leisure', MON, '22:00', '23:30'),
+    s('leisure', TUE, '22:00', '23:30'),
+    s('leisure', WED, '22:00', '23:30'),
+    s('learn', TUE, '05:00', '06:00'), // 1h
+    s('learn', THU, '05:00', '07:00'), // 2h
   ]);
-  assert.equal(g.sleep.shortNights, 3);
-  assert.equal(g.links.learnAfterShortNights!.sampleSize, 3);
-  // Ngày sau ba đêm ngắn: T3 1h, T4 0h, T5 2h → trung bình 1h.
-  near(g.links.learnAfterShortNights!.value, 1);
-  assert.equal(g.links.fitnessAfterShortNights!.value, 0);
+  assert.equal(g.night.lateNightActivityDays, 3);
+  assert.equal(g.links.learnAfterLateNights!.sampleSize, 3);
+  // Ngày sau ba ngày thức khuya: T3 1h, T4 0h, T5 2h → trung bình 1h.
+  near(g.links.learnAfterLateNights!.value, 1);
+});
+
+test('G: dưới 3 ngày thức khuya thì learnAfterLateNights là null', () => {
+  const g = sig([
+    s('leisure', MON, '22:00', '23:30'),
+    s('leisure', TUE, '22:00', '23:30'),
+    s('learn', TUE, '05:00', '06:00'),
+  ]);
+  assert.equal(g.links.learnAfterLateNights, null);
 });
 
 test('G: displacedBy khớp với chênh lệch so với kỳ trước', () => {

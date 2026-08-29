@@ -53,11 +53,11 @@ function month(): { acts: Activity[]; range: Range } {
   for (let i = 0; i < 31; i++) {
     const d = addDays('2026-07-25', i);
     acts.push(
-      s('sleep', d, '22:30', '05:00', addDays(d, 1)),
-      s('learn', d, '05:00', '06:30'),
+      s('learn', d, '05:00', '07:00'),
       s('work', d, '08:00', '17:30'),
       s('fitness', d, '18:00', '19:00'),
-      s('leisure', d, '20:00', '21:30')
+      s('leisure', d, '19:30', '22:30'),
+      s('learn', d, '22:30', '23:30')
     );
   }
   return {
@@ -70,10 +70,11 @@ function month(): { acts: Activity[]; range: Range } {
 // Hình dạng digest
 // ------------------------------------------------------------
 
-test('digest có đủ 5 category, mỗi cái ít nhất 3 chỉ số', () => {
+test('digest có đủ 4 category, mỗi cái ít nhất 3 chỉ số', () => {
   const d = buildDigest(sig([s('work', '2026-08-24', '08:00', '17:00')]));
   const totals = d.totals as Record<string, Record<string, unknown>>;
-  for (const c of ['learn', 'work', 'fitness', 'sleep', 'leisure']) {
+  assert.deepEqual(Object.keys(totals).sort(), ['fitness', 'learn', 'leisure', 'work']);
+  for (const c of ['learn', 'work', 'fitness', 'leisure']) {
     assert.ok(totals[c], `thiếu ${c}`);
     assert.ok(Object.keys(totals[c]).length >= 3, `${c} quá mỏng`);
   }
@@ -90,9 +91,9 @@ test('chỉ số null bị loại khỏi digest', () => {
   assert.equal('medianSessionMin' in fitness, false);
   assert.equal('longestGapDays' in fitness, false);
   assert.equal('daysSinceLast' in fitness, false);
-  // Không có đêm nào → không có giờ đi ngủ.
-  const sleep = d.sleep as Record<string, unknown>;
-  assert.equal('medianBedtime' in sleep, false);
+  // Chỉ có một ngày có log → không đo được độ lệch giờ kết thúc.
+  const dayShape = d.dayShape as Record<string, unknown>;
+  assert.equal('lastActivityEndSpreadMin' in dayShape, false);
   // Không có kỳ trước → không có cột so sánh.
   const totals = d.totals as Record<string, Record<string, unknown>>;
   assert.equal('vsPreviousHours' in totals.work, false);
@@ -126,13 +127,14 @@ test('chỉ số liên hệ dưới 3 mẫu không được đưa vào digest', 
 test('giờ được viết dạng HH:MM, không phải số phút thô', () => {
   const d = buildDigest(
     sig([
-      s('sleep', '2026-08-24', '23:20', '05:00', '2026-08-25'),
-      s('sleep', '2026-08-25', '23:20', '05:00', '2026-08-26'),
+      s('learn', '2026-08-24', '20:00', '23:20'),
+      s('learn', '2026-08-25', '20:00', '23:20'),
     ])
   );
-  const sleep = d.sleep as Record<string, unknown>;
-  assert.equal(sleep.medianBedtime, '23:20');
-  assert.equal(sleep.medianWakeTime, '05:00');
+  const dayShape = d.dayShape as Record<string, unknown>;
+  assert.equal(dayShape.medianLastActivityEnd, '23:20');
+  assert.equal(dayShape.daysWithActivityAfter23, 2);
+  // 1470 phút = 24:30 trên trục ngày logic → vẫn phải in ra giờ đồng hồ thật.
   assert.equal(hhmm(1470), '00:30');
 });
 
@@ -197,8 +199,7 @@ test('dữ liệu đầy đủ → cho chạy', () => {
 
 const plain = (over: Record<string, unknown> = {}) => ({
   period: { days: 7 },
-  totals: { sleep: { hours: 40, targetHours: 46.5 }, work: { hours: 43, targetHours: 43 } },
-  sleep: { medianNightHours: 6.5 },
+  totals: { work: { hours: 43, targetHours: 43 } },
   ...over,
 });
 
@@ -206,37 +207,31 @@ test('tuần bình thường thì im lặng - mặc định là không nói gì'
   assert.equal(extremeNote(plain()), null);
 });
 
-test('ngủ trung vị dưới 5h → một dòng trung tính, mốc là target của chính mình', () => {
-  const note = extremeNote(plain({ sleep: { medianNightHours: 4.4 } }))!;
-  assert.match(note, /4\.4h/);
-  assert.match(note, /your own floor of 47h/);
-  assert.match(note, /Worth a rest week/);
-});
-
-test('dòng cực đoan không chứa từ y tế hay phán xét', () => {
-  const note = extremeNote(plain({ sleep: { medianNightHours: 3 } }))!;
-  assert.equal(hasBannedWord(note), false);
-});
-
 test('work trên 70h/tuần → nói, nhưng vẫn nêu số bình thường', () => {
-  const note = extremeNote(
-    plain({ totals: { sleep: { hours: 40, targetHours: 46.5 }, work: { hours: 78, targetHours: 43 } } })
-  )!;
+  const note = extremeNote(plain({ totals: { work: { hours: 78, targetHours: 43 } } }))!;
   assert.match(note, /78h a week/);
   assert.match(note, /your own ceiling of 43h/);
+});
+
+test('dòng cực đoan không chứa từ y tế, phán xét hay từ về giấc ngủ', () => {
+  const note = extremeNote(plain({ totals: { work: { hours: 96, targetHours: 43 } } }))!;
+  assert.equal(hasBannedWord(note), false);
 });
 
 test('khoảng dài quy đổi work về một tuần trước khi so', () => {
   // 30 ngày, 200h work = 46.7h/tuần → chưa tới ngưỡng.
   const note = extremeNote(
-    plain({
-      period: { days: 30 },
-      totals: { sleep: { hours: 200, targetHours: 199 }, work: { hours: 200, targetHours: 184 } },
-    })
+    plain({ period: { days: 30 }, totals: { work: { hours: 200, targetHours: 184 } } })
   );
   assert.equal(note, null);
 });
 
-test('thiếu chỉ số ngủ thì không đoán bừa', () => {
+test('thiếu chỉ số work thì không đoán bừa', () => {
   assert.equal(extremeNote({ period: { days: 7 }, totals: {} }), null);
+});
+
+test('digest không còn bất cứ chỗ nào nhắc tới giấc ngủ', () => {
+  const { acts, range } = month();
+  const text = JSON.stringify(buildDigest(sig(acts, range)));
+  assert.equal(/sleep|bedtime|wake|nap/i.test(text), false);
 });
