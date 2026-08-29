@@ -18,7 +18,24 @@ export type VoicePlan =
   /** Máy hỏi lại (Task 5). Chỉ được phép xảy ra một lần. */
   | { kind: 'clarify'; cmd: ParsedCommand }
   /** Không hiểu gì → mở sheet nhập tay. Luôn phải có đường lui. */
-  | { kind: 'manual'; cmd: ParsedCommand };
+  | { kind: 'manual'; cmd: ParsedCommand }
+  /** Câu nói về giấc ngủ. App không đo nữa - phải BÁO RÕ, không im lặng bỏ qua. */
+  | { kind: 'retired'; cmd: ParsedCommand; message: string };
+
+/** Câu trả lời duy nhất cho một câu nói về giấc ngủ. */
+export const SLEEP_RETIRED_MESSAGE = 'Sleep is no longer tracked.';
+
+/**
+ * Chỉ soi `transcript`, và CHỈ khi model đã bó tay (`intent === 'unknown'`).
+ * Soi mọi câu thì "I stopped work and went to sleep" cũng bị nuốt mất, trong
+ * khi đó là một lệnh stop hoàn toàn hợp lệ.
+ */
+const SLEEP_WORDS =
+  /\b(sleep|sleeping|slept|asleep|nap|napping|napped|bedtime|went to bed|go to bed|woke up|wake up|snooze)\b/i;
+
+export function mentionsSleep(transcript: string): boolean {
+  return SLEEP_WORDS.test(transcript);
+}
 
 /** Field bắt buộc theo từng loại câu. */
 function requiredOf(cmd: ParsedCommand): MissingField[] {
@@ -56,7 +73,11 @@ export interface PlanContext {
 }
 
 export function planVoice(cmd: ParsedCommand, ctx: PlanContext): VoicePlan {
-  if (cmd.intent === 'unknown') return { kind: 'manual', cmd };
+  if (cmd.intent === 'unknown') {
+    return mentionsSleep(cmd.transcript)
+      ? { kind: 'retired', cmd, message: SLEEP_RETIRED_MESSAGE }
+      : { kind: 'manual', cmd };
+  }
   if (cmd.intent === 'clarify') {
     // Hỏi lần hai thì thôi, mở sheet nhập tay cho nhanh.
     return ctx.asked ? { kind: 'manual', cmd } : { kind: 'clarify', cmd };

@@ -3,7 +3,7 @@
 // ============================================================
 // logi - Màn hình Targets (Stage 4, Task 3)
 //
-// Ngân sách zero-sum: một tuần có đúng 135.5h. Không thêm được giờ,
+// Ngân sách zero-sum: một tuần có đúng 89h. Không thêm được giờ,
 // chỉ đổi chỗ. Mọi thứ trên màn hình này phải làm điều đó hiện rõ.
 // ============================================================
 
@@ -47,7 +47,6 @@ import {
 
 const PRESET_ORDER: PresetId[] = ['normal', 'crunch', 'deep_learn', 'recovery'];
 const SHORT: Record<Category, string> = {
-  sleep: 'S',
   work: 'W',
   learn: 'L',
   fitness: 'F',
@@ -57,8 +56,12 @@ const SHORT: Record<Category, string> = {
 const h = (n: number) => `${Math.round(n * 10) / 10}h`;
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-/** Sleep cố định ở mọi preset, nên nó không bao giờ là slider. */
-const ADJUSTABLE = CATEGORIES.filter((c) => c !== 'sleep');
+/**
+ * Bỏ Sleep rồi thì KHÔNG còn category nào cố định: cả 4 đều kéo được
+ * (AMENDMENT-remove-sleep mục 11). Giữ tên `ADJUSTABLE` cho khỏi phải sửa
+ * mọi chỗ gọi, nhưng nay nó đúng bằng `CATEGORIES`.
+ */
+const ADJUSTABLE = CATEGORIES;
 
 function summary(weekly: Weekly): string {
   return ADJUSTABLE.map((c) => `${SHORT[c]}${Math.round(weekly[c])}`).join(' · ');
@@ -272,11 +275,6 @@ function TargetsView() {
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Custom
               </h2>
-
-              <div className="mb-3 flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-900">
-                <span className="text-zinc-600 dark:text-zinc-400">Sleep</span>
-                <span className="font-medium text-zinc-500">{h(weekly.sleep)} - fixed</span>
-              </div>
 
               {ADJUSTABLE.map((c) => (
                 <Slider
@@ -576,7 +574,7 @@ function ConfirmSheet({
   onConfirm: () => void;
 }) {
   const rows = previewSwitch(from, to, target?.debtApplied ?? {}).filter(
-    (r) => r.category !== 'sleep' && Math.abs(r.to - r.from) > 0.05
+    (r) => Math.abs(r.to - r.from) > 0.05
   );
 
   return (

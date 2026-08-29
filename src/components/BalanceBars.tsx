@@ -21,8 +21,8 @@ interface Props {
 }
 
 export default function BalanceBars({ rows, showDeviation = true }: Props) {
-  // MỘT thang đo cho cả 5 thanh. Mỗi thanh một thang thì Fitness 3h sẽ trông
-  // dài bằng Sleep 46h - hình đẹp nhưng nói dối.
+  // MỘT thang đo cho cả 4 thanh. Mỗi thanh một thang thì Fitness 1.5h sẽ trông
+  // dài bằng Work 43h - hình đẹp nhưng nói dối.
   const max = Math.max(1, ...rows.map((r) => Math.max(r.actual, r.expected)));
 
   return (
@@ -112,6 +112,6 @@ function DeviationTag({ row }: { row: RangeDeviation }) {
 }
 
 export function categoryOrder(): Category[] {
-  // Sleep trước: nó là thanh dài nhất, đặt trên cùng thì thang đo đọc dễ hơn.
-  return ['sleep', 'work', 'learn', 'fitness', 'leisure'];
+  // Work trước: nó là thanh dài nhất, đặt trên cùng thì thang đo đọc dễ hơn.
+  return ['work', 'learn', 'fitness', 'leisure'];
 }

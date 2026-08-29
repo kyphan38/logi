@@ -36,17 +36,18 @@ const sum = (w: Weekly) => CATEGORIES.reduce((a, c) => a + w[c], 0);
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
- * `applyDebt()` CỘNG giờ vào target (Learn +6h) nên tổng vọt lên 141.5h.
- * Nhưng một tuần vẫn chỉ có 135.5h để phân bổ - trả nợ Learn thì phải lấy
+ * `applyDebt()` CỘNG giờ vào target (Learn +6h) nên tổng vọt lên 95h.
+ * Nhưng một tuần vẫn chỉ có 89h để phân bổ - trả nợ Learn thì phải lấy
  * từ Work hoặc Leisure, không thể lấy từ hư không.
  *
  * Hàm này cùng ý tưởng với `rebalance()` nhưng khoá được NHIỀU category
- * cùng lúc: sleep (cố định) và mọi category vừa được trả nợ.
+ * cùng lúc: mọi category vừa được trả nợ.
  * Không sửa `balance.ts`, không đổi cách `applyDebt` tính ra số tiền trả.
  */
 export function settleWithinBudget(weekly: Weekly, applied: DebtBalance): Weekly {
   const next = { ...weekly };
-  const locked = new Set<Category>(['sleep']);
+  // Bỏ Sleep rồi thì không còn category cố định nào; chỉ khoá bên vừa nhận nợ.
+  const locked = new Set<Category>();
 
   for (const c of CATEGORIES) {
     const pay = applied[c] ?? 0;
@@ -71,8 +72,8 @@ export function settleWithinBudget(weekly: Weekly, applied: DebtBalance): Weekly
 }
 
 /**
- * Làm tròn 2 số lẻ rồi dồn phần dư vào category lớn nhất (không phải sleep),
- * để tổng khớp TOTAL_BUDGET tuyệt đối. Thiếu bước này thì
+ * Làm tròn 2 số lẻ rồi dồn phần dư vào category lớn nhất, để tổng khớp
+ * TOTAL_BUDGET tuyệt đối. Thiếu bước này thì
  * `validateTargets()` thỉnh thoảng báo "thừa 0.03h" vì sai số dấu phẩy động.
  */
 export function roundToBudget(weekly: Weekly): Weekly {
@@ -81,16 +82,15 @@ export function roundToBudget(weekly: Weekly): Weekly {
 
   const residual = r2(TOTAL_BUDGET - sum(next));
   if (residual !== 0) {
-    const donors = CATEGORIES.filter((c) => c !== 'sleep');
-    let best = donors[0];
-    for (const c of donors) if (next[c] > next[best]) best = c;
+    let best: Category = CATEGORIES[0];
+    for (const c of CATEGORIES) if (next[c] > next[best]) best = c;
     next[best] = r2(next[best] + residual);
   }
   return next;
 }
 
 /**
- * Target của một tuần = preset + phần nợ được trả, kéo về đúng 135.5h.
+ * Target của một tuần = preset + phần nợ được trả, kéo về đúng 89h.
  * Dùng cho cả `ensureWeekTarget` lẫn `setPreset`.
  */
 export function buildWeekly(

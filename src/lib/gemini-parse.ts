@@ -19,7 +19,7 @@ export const PARSE_SCHEMA = {
     },
     category: {
       type: 'string',
-      enum: ['learn', 'work', 'fitness', 'sleep', 'leisure'],
+      enum: ['learn', 'work', 'fitness', 'leisure'],
       nullable: true,
     },
     label: {
@@ -106,17 +106,21 @@ CATEGORIES - map every activity to exactly one:
 - work      : the user's DevOps job, meetings, on-call, OT. ALSO the commute - "driving to work"
               or "heading to the office" STARTS work; work ends when they get home.
 - fitness   : gym, running, workout, sports, stretching, physio
-- sleep     : night sleep and naps
 - leisure   : hanging out, dinner with friends, gaming, movies, shows, social media downtime
 
 If an activity fits none, pick the nearest and drop confidence below 0.7.
+
+SLEEP IS NOT TRACKED. There is no sleep category any more. If the utterance is
+about sleeping, napping, going to bed, or waking up, emit intent=unknown with
+category=null, and keep the spoken words in \`transcript\` as they are. Do NOT
+map it onto leisure or any other category, and do not silently drop it.
 
 USER'S TYPICAL SCHEDULE - use this to resolve ambiguous times:
 - 04:30 wake, self-study until 06:00–06:30
 - 08:00–17:00 work Mon–Fri. Tue & Thu in office (45 min commute each way)
 - 18:00–19:30 workout
 - 20:30–22:00 study or reading
-- 22:00 sleep
+- 22:00 stops logging for the day
 - Weekends: long study blocks, sometimes unplanned work OT
 - No breakfast, coffee only. Does not track meals, showering, chores.
 
@@ -128,7 +132,7 @@ TIME RESOLUTION RULES:
    - resolve against CURRENT TIME.
 3. "This morning", "last night", "yesterday" → resolve to the concrete date.
 4. Ranges: "from 8 AM to 11 AM" → intent=log_past with both startAt and endAt.
-5. Future start: "start sleep in 5 mins" → intent=schedule, startAt = now + 5 min.
+5. Future start: "start work in 5 mins" → intent=schedule, startAt = now + 5 min.
    Do NOT emit endAt.
 6. Never emit a startAt more than 7 days in the past. If the utterance implies that,
    set intent=clarify.

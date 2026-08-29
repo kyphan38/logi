@@ -19,7 +19,7 @@ import { heatmapFits, heatmapOf, MAX_HEATMAP_DAYS, type Cell } from '@/lib/heatm
 import type { Range } from '@/lib/range';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
-const LEGEND: Category[] = ['sleep', 'work', 'learn', 'fitness', 'leisure'];
+const LEGEND: Category[] = ['work', 'learn', 'fitness', 'leisure'];
 
 interface Props {
   activities: Activity[];

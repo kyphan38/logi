@@ -133,6 +133,11 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
           transcript: cmd.transcript,
           requestId,
         });
+      } else if (plan.kind === 'retired') {
+        // Nói về giấc ngủ. Phải nói thẳng là app không đo nữa - im lặng mở
+        // sheet nhập tay sẽ khiến người dùng tưởng máy nghe nhầm và nói lại.
+        setClarify(null);
+        push(plan.message);
       } else {
         setClarify(null);
         push('Did not catch that. Fill it in instead.');

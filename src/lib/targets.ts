@@ -265,7 +265,7 @@ export async function setPreset(
   });
 }
 
-/** Ghi target tự chỉnh. Slider đã gọi `rebalance()` nên tổng phải sẵn đúng 135.5h. */
+/** Ghi target tự chỉnh. Slider đã gọi `rebalance()` nên tổng phải sẵn đúng 89h. */
 export async function setCustomTargets(
   uid: string,
   week: string,

@@ -52,7 +52,7 @@ export default function StackedDays({ activities, range, weekTargets, lateWeeks,
   });
 
   // Đường ngang = trung bình target của MỘT cột trong khoảng này. Không lấy
-  // 129.5/7 cứng: khoảng có thể toàn ngày thường hoặc toàn cuối tuần.
+  // 89/7 cứng: khoảng có thể toàn ngày thường hoặc toàn cuối tuần.
   const avg = averageTarget(buckets, weekTargets, now);
   const hasLate = buckets.some((b) => lateWeeks.has(b.key));
 

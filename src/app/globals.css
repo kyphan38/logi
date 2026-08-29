@@ -39,8 +39,6 @@
   --cat-work-ink: #956007;
   --cat-fitness-tint: #dbf0ea;
   --cat-fitness-ink: #0a7854;
-  --cat-sleep-tint: #e5e7eb;
-  --cat-sleep-ink: #5a687d;
   --cat-leisure-tint: #f6e2ed;
   --cat-leisure-ink: #b33774;
 
@@ -69,8 +67,6 @@
     --cat-work-ink: #f59e0b;
     --cat-fitness-tint: #153a2f;
     --cat-fitness-ink: #10b981;
-    --cat-sleep-tint: #272b31;
-    --cat-sleep-ink: #8693a5;
     --cat-leisure-tint: #452134;
     --cat-leisure-ink: #ee60a6;
   }

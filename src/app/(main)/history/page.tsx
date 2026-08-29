@@ -225,7 +225,7 @@ function SummaryGauge({
 
   return (
     <div className="mt-3">
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {CATEGORIES.map((c) => (
           <Gauge key={c} line={by.get(c) ?? { category: c, actual: 0, target: 0, low: false }} />
         ))}
@@ -249,7 +249,7 @@ function Gauge({ line }: { line: DayLine }) {
       <p className="truncate text-[10px] tracking-[-0.01em] text-ink-soft">{CATEGORY_LABEL[c]}</p>
 
       {noTarget ? (
-        // "không vẽ thanh" - vẫn chừa đúng chiều cao để 5 cột thẳng hàng.
+        // "không vẽ thanh" - vẫn chừa đúng chiều cao để 4 cột thẳng hàng.
         <div className="mt-1 h-1.5" aria-hidden="true" />
       ) : (
         <div

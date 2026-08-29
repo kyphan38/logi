@@ -14,7 +14,7 @@ import {
 import type { ParsedCommand } from '@/lib/parse-sanitize';
 import { CATEGORY_LABEL } from '@/types/logi';
 
-export { planVoice } from '@/lib/voice-plan';
+export { planVoice, mentionsSleep, SLEEP_RETIRED_MESSAGE } from '@/lib/voice-plan';
 export type { MissingField, VoicePlan } from '@/lib/voice-plan';
 
 /**
