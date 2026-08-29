@@ -137,12 +137,18 @@ export function coverageForRange(
 }
 
 /**
- * Số giờ đã log theo từng category, cắt gọn trong cửa sổ khoảng.
+ * Số giờ đã log theo từng category, gán TRỌN session cho `logicalDate` của
+ * `startAt` (AMENDMENT-remove-sleep mục 7).
  *
- * `actualHours()` của balance.ts cộng trọn cả session; ở đây phần tràn ra ngoài
- * hai đầu khoảng phải bị cắt, nếu không thanh Sleep của khoảng một ngày sẽ dài
- * hơn 24h. Trong một category, giờ chồng nhau VẪN cộng hai lần - đó là chuyện
- * của `overlapForRange`, không phải của thanh này.
+ * Bản cũ cắt session ở hai đầu khoảng. Với cột một ngày của By day, session
+ * 22:00 → 01:00 bị chia đôi cho hai cột: tổng tuần đúng nhưng từng ngày sai, và
+ * không cột nào khớp với Balance. Nay không cắt nữa, nên trục Y có thể vượt 24h
+ * ở ngày có session vắt qua nửa đêm - đúng như chú thích đầu `StackedDays`.
+ *
+ * Chỉ heatmap mới dùng giờ đồng hồ thật.
+ *
+ * Trong một category, giờ chồng nhau VẪN cộng hai lần - đó là chuyện của
+ * `overlapForRange`, không phải của thanh này.
  */
 export function actualForRange(
   activities: Activity[],
@@ -150,14 +156,13 @@ export function actualForRange(
   now: number = Date.now()
 ): Record<Category, number> {
   const out = zero();
-  const winStart = dayWindow(range.from).start;
-  const winEnd = Math.min(dayWindow(range.to).end, now);
 
   for (const a of activities) {
     if (a.status === 'abandoned' || a.status === 'scheduled') continue;
-    const s = Math.max(a.startAt, winStart);
-    const e = Math.min(a.endAt ?? now, winEnd);
-    if (e > s) out[a.category] += (e - s) / H_MS;
+    const d = logicalDate(a.startAt);
+    if (d < range.from || d > range.to) continue;
+    const e = a.endAt ?? now;
+    if (e > a.startAt) out[a.category] += (e - a.startAt) / H_MS;
   }
 
   return out;

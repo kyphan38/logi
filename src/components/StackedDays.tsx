@@ -22,7 +22,7 @@ import type { Range } from '@/lib/range';
 import { actualForRange, expectedForRange } from '@/lib/range-target';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
-const STACK: Category[] = ['sleep', 'work', 'learn', 'fitness', 'leisure'];
+const STACK: Category[] = ['work', 'learn', 'fitness', 'leisure'];
 
 interface Row extends Record<string, unknown> {
   key: string;
@@ -62,7 +62,9 @@ export default function StackedDays({ activities, range, weekTargets, lateWeeks,
           nếu để nó tự co thì trên iOS chart sẽ ra 0px và biến mất. */}
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={rows} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+          {/* `left: -20` kéo nhãn trục Y ra ngoài khung, "4h" bị cắt còn "ih".
+              Để 0 và tự đặt `width` cho YAxis (AMENDMENT-remove-sleep mục 7). */}
+          <BarChart data={rows} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="var(--border)" vertical={false} />
             <XAxis
               dataKey="label"
@@ -76,8 +78,9 @@ export default function StackedDays({ activities, range, weekTargets, lateWeeks,
               tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
               tickLine={false}
               axisLine={false}
-              width={36}
+              width={30}
               unit="h"
+              tickFormatter={(v: number) => String(Math.round(v))}
             />
             <Tooltip content={<StackTooltip />} cursor={{ fill: 'var(--surface-1)' }} />
             {avg > 0 && (

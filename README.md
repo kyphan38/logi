@@ -89,6 +89,13 @@ every record (~3k after a year). Both are manual and rare.
 
 ## Edge cases you should know
 
+**Hours are never split across days.** Every number about **how many hours**
+belongs, whole, to the `logicalDate` of the session's `startAt`. A Leisure
+session 22:00 → 01:00 puts all 3h on the first day; the second day gets 0h.
+Balance, the Analytics table and the By-day chart all follow this rule, so they
+always agree. Only the **heatmap** uses real clock time, because it answers a
+different question - see the heatmap note below.
+
 **Time zone.** A logical day runs 04:00 → 04:00, using the **device** clock. Fly
 to another time zone and the same session can land on a different logical day
 than it would at home. The app does not store a time zone per record. For one
