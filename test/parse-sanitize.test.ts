@@ -120,3 +120,53 @@ test('sanitize: body rỗng không làm crash', () => {
   assert.equal(r.transcript, '');
   assert.equal(r.confidence, 0);
 });
+
+// ---------------------------------------------------------------------------
+// Bắt đầu hồi tố: "đã bắt đầu 30 phút trước và VẪN đang làm".
+// Model hay đọc mốc giờ quá khứ thành log_past → card đòi giờ kết thúc
+// không hề tồn tại. Lưới đỡ này chỉ vá lúc model chọn sai.
+// ---------------------------------------------------------------------------
+
+test('sanitize: log_past mà không có endAt → thành start, giữ nguyên startAt', () => {
+  const r = sanitizeParse(
+    base({
+      intent: 'log_past',
+      startAt: new Date(NOW - 30 * 60_000).toISOString(),
+      endAt: null,
+      transcript: "I started watching YouTube 30 minutes ago and haven't finished yet",
+    }),
+    opts,
+  );
+  assert.equal(r.intent, 'start');
+  assert.equal(r.startAt, NOW - 30 * 60_000);
+  assert.equal(r.endAt, null);
+});
+
+test('sanitize: start mà vẫn kèm endAt → bỏ endAt ("until now" không phải giờ kết thúc)', () => {
+  const r = sanitizeParse(
+    base({
+      intent: 'start',
+      startAt: new Date(NOW - 30 * 60_000).toISOString(),
+      endAt: new Date(NOW).toISOString(),
+      transcript: 'I am watching YouTube, started 30 minutes ago, until now still watching',
+    }),
+    opts,
+  );
+  assert.equal(r.intent, 'start');
+  assert.equal(r.startAt, NOW - 30 * 60_000);
+  assert.equal(r.endAt, null);
+});
+
+test('sanitize: log_past đủ hai mốc giờ thì KHÔNG bị đổi thành start', () => {
+  const r = sanitizeParse(base(), opts);
+  assert.equal(r.intent, 'log_past');
+  assert.equal(r.endAt, NOW - H);
+});
+
+// Người dùng CÓ nói giờ kết thúc, chỉ là nó vô lý. Đừng biến câu đó thành
+// một session đang chạy - hỏi lại giờ kết thúc mới đúng.
+test('sanitize: end <= start vẫn là log_past, không rơi vào lưới đỡ', () => {
+  const r = sanitizeParse(base({ endAt: new Date(NOW - 3 * H).toISOString() }), opts);
+  assert.equal(r.intent, 'log_past');
+  assert.equal(r.endAt, null);
+});

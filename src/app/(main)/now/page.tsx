@@ -420,7 +420,6 @@ export default function NowPage() {
           <ParseConfirmCard
             key={voice.pending.requestId}
             cmd={voice.pending.cmd}
-            missing={voice.pending.missing}
             active={active}
             busy={voice.saving}
             onConfirm={voice.confirmPending}

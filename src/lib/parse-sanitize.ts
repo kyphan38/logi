@@ -89,12 +89,31 @@ export function sanitizeParse(
     if (now - startAt > MAX_BACKDATE_MS) askBack('That looks more than 7 days ago. Is that right?');
     if (startAt - now > MAX_FUTURE_MS) askBack('That start time is far in the future. Is that right?');
   }
+  // Người dùng CÓ nói giờ kết thúc nhưng nó vô lý. Khác hẳn với việc không
+  // nói giờ kết thúc - xem lưới đỡ ngay bên dưới.
+  let badEndDropped = false;
+
   if (startAt !== null && endAt !== null) {
     if (endAt <= startAt) {
       endAt = null; // giờ kết thúc vô lý → bỏ, để người dùng tự điền
+      badEndDropped = true;
     } else if (endAt - startAt > MAX_SPAN_MS) {
       askBack('That session is longer than 15 hours. Is that right?');
     }
+  }
+
+  // --- Bắt đầu hồi tố: đã chạy từ lúc nào đó, GIỜ VẪN ĐANG CHẠY ----
+  // "I started watching YouTube 30 minutes ago and haven't finished yet".
+  // Model thấy mốc giờ quá khứ là hay chọn log_past, mà log_past thì bắt buộc
+  // có endAt, nên card đòi một giờ kết thúc không hề tồn tại.
+  // Đây chỉ là lưới đỡ; chỗ sửa thật nằm ở buildSystemPrompt().
+  if (intent === 'log_past' && endAt === null && !badEndDropped) {
+    intent = 'start';
+  }
+  // "until now" nghĩa là VẪN ĐANG CHẠY, không phải giờ kết thúc.
+  // Đang chạy thì không có endAt - hai thứ này không đi cùng nhau được.
+  if (intent === 'start' && endAt !== null) {
+    endAt = null;
   }
 
   // --- confidence --------------------------------------------------

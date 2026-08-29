@@ -11,12 +11,11 @@ import type { Recording } from '@/hooks/useRecorder';
 import { ActivityError } from '@/lib/activities';
 import { createOnce } from '@/lib/once';
 import type { ParsedCommand } from '@/lib/parse-sanitize';
-import { applyVoice, planVoice, type MissingField } from '@/lib/voice-command';
+import { applyVoice, planVoice } from '@/lib/voice-command';
 import type { Activity } from '@/types/logi';
 
 export interface VoicePending {
   cmd: ParsedCommand;
-  missing: MissingField[];
   requestId: string;
 }
 
@@ -125,7 +124,9 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
         await commit(plan.cmd, requestId);
       } else if (plan.kind === 'confirm') {
         setClarify(null);
-        setPending({ cmd: plan.cmd, missing: plan.missing, requestId });
+        // Card tự tính lại field nào còn thiếu theo giá trị đang gõ,
+        // nên `plan.missing` chỉ dùng để quyết định có hỏi hay không.
+        setPending({ cmd: plan.cmd, requestId });
       } else if (plan.kind === 'clarify') {
         setClarify({
           question: cmd.clarifyQuestion ?? 'Which one did you mean?',

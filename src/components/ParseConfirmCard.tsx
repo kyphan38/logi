@@ -28,14 +28,12 @@ const INTENT_TITLE: Record<ParsedCommand['intent'], string> = {
 
 export default function ParseConfirmCard({
   cmd,
-  missing,
   active,
   busy,
   onConfirm,
   onCancel,
 }: {
   cmd: ParsedCommand;
-  missing: MissingField[];
   /** Session đang chạy - để chọn khi câu "I'm done" không rõ dừng cái nào. */
   active: Activity[];
   busy: boolean;
@@ -50,23 +48,38 @@ export default function ParseConfirmCard({
   const [target, setTarget] = useState(cmd.targetActivityId ?? '');
 
   const needsTime = cmd.intent !== 'stop';
+  // 'start' = đang chạy. Không có giờ kết thúc, và không được hỏi giờ kết thúc.
+  const running = cmd.intent === 'start';
   const needsEnd = cmd.intent === 'log_past';
+  const needsStart = cmd.intent === 'log_past' || cmd.intent === 'schedule';
   const needsCategory = cmd.intent !== 'stop';
   const needsTarget = cmd.intent === 'stop' || cmd.intent === 'edit';
   // "Change it to 9 AM" không nhắc category - đừng bắt chọn thứ họ không muốn đổi.
   const categoryRequired = needsCategory && cmd.intent !== 'edit';
 
   const startAt = fromLocalInput(startStr);
-  const endAt = fromLocalInput(endStr);
+  const endAt = running ? null : fromLocalInput(endStr);
+
+  // Thiếu field nào thì tính TẠI ĐÂY, theo đúng thứ đang hiện trên card.
+  // Danh sách `missing` lúc mở card cũ ngay khi người dùng chọn xong, nên
+  // trước đây câu lỗi hiện lên mà không ô nào đỏ - và ngược lại.
+  const gaps: { field: MissingField; name: string }[] = [];
+  if (needsTarget && target === '') gaps.push({ field: 'target', name: 'Session' });
+  if (categoryRequired && category === '') gaps.push({ field: 'category', name: 'Category' });
+  if (needsStart && startAt === null) gaps.push({ field: 'startAt', name: 'Start' });
+  if (needsEnd && endAt === null) gaps.push({ field: 'endAt', name: 'End' });
+
+  const backwards = startAt !== null && endAt !== null && endAt <= startAt;
 
   // Nút Confirm chỉ mở khi đủ field. Đỡ phải bắt lỗi sau khi ghi.
-  const ready =
-    (!needsTarget || target !== '') &&
-    (!categoryRequired || category !== '') &&
-    (!needsEnd || endAt !== null) &&
-    (cmd.intent !== 'schedule' || startAt !== null) &&
-    (cmd.intent !== 'log_past' || startAt !== null) &&
-    (endAt === null || startAt === null || endAt > startAt);
+  const ready = gaps.length === 0 && !backwards;
+
+  // Nêu đích danh ô nào thiếu - "ô được tô đỏ" là câu vô dụng khi có 2 ô đỏ.
+  const problem = gaps.length
+    ? `${gaps.map((g) => g.name).join(' and ')} ${gaps.length > 1 ? 'are' : 'is'} missing.`
+    : backwards
+      ? 'End must be after Start.'
+      : null;
 
   function confirm() {
     onConfirm({
@@ -79,7 +92,7 @@ export default function ParseConfirmCard({
     });
   }
 
-  const hi = (f: MissingField) => (missing.includes(f) ? ` ${MISSING}` : '');
+  const hi = (f: MissingField) => (gaps.some((g) => g.field === f) ? ` ${MISSING}` : '');
 
   return (
     <div
@@ -177,13 +190,21 @@ export default function ParseConfirmCard({
                   className={FIELD + hi('endAt')}
                 />
               </label>
+            ) : running ? (
+              // Ô trống ở đây làm người ta tưởng phải điền. Nói thẳng là đang chạy.
+              <div className="flex flex-1 flex-col gap-1">
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">End</span>
+                <p className={`${FIELD} flex items-center text-zinc-400 dark:text-zinc-500`}>
+                  running
+                </p>
+              </div>
             ) : null}
           </div>
         ) : null}
 
-        {missing.length > 0 ? (
+        {problem ? (
           <p role="alert" className="text-xs text-red-600 dark:text-red-400">
-            Fill the highlighted field.
+            {problem}
           </p>
         ) : null}
       </div>

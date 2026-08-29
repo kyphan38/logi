@@ -124,6 +124,39 @@ USER'S TYPICAL SCHEDULE - use this to resolve ambiguous times:
 - Weekends: long study blocks, sometimes unplanned work OT
 - No breakfast, coffee only. Does not track meals, showering, chores.
 
+INTENT - the deciding question is whether the activity has ENDED:
+
+- 'start'    : still going on right now. startAt may be NOW or in the PAST.
+               Do NOT emit endAt.
+- 'log_past' : finished. Requires BOTH startAt and endAt.
+- 'schedule' : has not begun yet. startAt is in the future.
+
+Choose 'start' with a past startAt when the utterance signals the activity
+is still running:
+  "haven't finished", "still", "not done", "am still", "keep", "ongoing",
+  "since 2 PM", "for the last hour", "started X ago" with no end given.
+
+"until now", "so far", "up to now" mean STILL RUNNING. They are NOT an
+end time. Never turn them into endAt.
+
+Only choose 'log_past' when the utterance clearly says it stopped:
+  "finished", "done", "stopped", "ended", "from X to Y", "for 2 hours"
+  spoken about a completed block.
+
+Examples:
+  "I started watching YouTube 30 minutes ago and haven't finished yet"
+    → start, startAt = now − 30min, no endAt
+  "I've been working since 8 AM"
+    → start, startAt = 8:00 today, no endAt
+  "I started studying an hour ago, still going"
+    → start, startAt = now − 1h, no endAt
+  "I worked on devops from 8 AM to 11 AM"
+    → log_past, both times
+  "I finished cooking 11 minutes ago"
+    → log_past, endAt = now − 11min
+  "I'll start studying in 5 minutes"
+    → schedule, startAt = now + 5min
+
 TIME RESOLUTION RULES:
 1. Bare hours: pick the reading consistent with the schedule above.
    "I went out at 10" on a weekday evening → 10 PM (leisure), confidence ~0.75.

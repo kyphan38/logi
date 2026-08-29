@@ -161,10 +161,19 @@ or `localhost`.
 when a spoken sentence is parsed wrong. Do not touch the schema, the model, or
 the confidence thresholds.
 
-Nothing has been changed yet: tuning needs real mistakes from real use, and
-guessing at them would only trade a known-good prompt for an unknown one. Keep
-a short list - sentence said → what you got → what you wanted - and revisit it
-every few weeks. Re-run the Stage 3 sentences after each edit.
+Keep a short list - sentence said → what you got → what you wanted - and
+revisit it every few weeks. Re-run the Stage 3 sentences after each edit.
+
+| Date | Said | Got | Wanted | Fix |
+|---|---|---|---|---|
+| 2026-08-29 | "I started watching YouTube 30 minutes ago and haven't finished yet" | `log_past`, card asked for an End time that does not exist | a running session, `startAt` = now − 30 min | `INTENT` block in the prompt: the deciding question is whether the activity has **ended**, not whether the start time is in the past |
+| 2026-08-29 | "…started 30 minutes ago, until now still watching" | `endAt` = now, session closed | still running | same block: "until now" / "so far" mean still running, never an end time |
+
+The prompt is a suggestion, not a guarantee, so `sanitizeParse()` repairs the
+two shapes that cannot be true: `log_past` with no `endAt` becomes `start`, and
+`start` with an `endAt` loses it. One exception - if the spoken end time was
+real but backwards (`8 AM to 7 AM`), the entry stays `log_past` and the card
+asks for the end time again.
 
 ## PWA & push notifications
 

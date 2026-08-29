@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { planVoice } from '@/lib/voice-plan';
-import type { ParsedCommand } from '@/lib/parse-sanitize';
+import { sanitizeParse, type ParsedCommand } from '@/lib/parse-sanitize';
+import { applyVoice, type VoiceRepo } from '@/lib/voice-command';
 import { act, at } from './_helpers.ts';
 
 const NOW = at('2026-08-26', '20:00');
@@ -217,5 +218,87 @@ describe('planVoice - sửa bằng giọng nói record vừa ghi (Task 5)', () =
     });
     assert.equal(p.kind, 'confirm');
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['target']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BẮT ĐẦU HỒI TỐ - từ câu Gemini trả về, qua sanitize, tới quyết định và
+// lời gọi ghi. "Tôi bắt đầu 30 phút trước và vẫn đang xem" phải ra một
+// session ĐANG CHẠY với startAt trong quá khứ, không phải một khối đã đóng.
+// ---------------------------------------------------------------------------
+
+describe('bắt đầu hồi tố', () => {
+  const SAN = { now: NOW, knownIds: new Set<string>() };
+
+  /** Câu Gemini trả về (ISO string), trước khi sanitize. */
+  function raw(o: Record<string, unknown>) {
+    return {
+      category: 'leisure',
+      label: 'YouTube',
+      confidence: 0.9,
+      clarifyQuestion: null,
+      clarifyOptions: null,
+      targetActivityId: null,
+      transcript: 'test',
+      ...o,
+    } as never;
+  }
+
+  it('log_past thiếu endAt → thành start, và ghi được luôn', () => {
+    const c = sanitizeParse(
+      raw({
+        intent: 'log_past',
+        startAt: new Date(NOW - 30 * 60_000).toISOString(),
+        endAt: null,
+        transcript: "I started watching YouTube 30 minutes ago and haven't finished yet",
+      }),
+      SAN,
+    );
+    assert.equal(c.intent, 'start');
+
+    const p = planVoice(c, { active: [] });
+    assert.equal(p.kind, 'commit'); // không hỏi giờ kết thúc nữa
+    assert.equal(p.cmd.startAt, NOW - 30 * 60_000);
+  });
+
+  it('start kèm endAt → bỏ endAt, vẫn là session đang chạy', () => {
+    const c = sanitizeParse(
+      raw({
+        intent: 'start',
+        startAt: new Date(NOW - 30 * 60_000).toISOString(),
+        endAt: new Date(NOW).toISOString(),
+        transcript: 'I am watching YouTube, started 30 minutes ago, until now still watching',
+      }),
+      SAN,
+    );
+    assert.equal(c.intent, 'start');
+    assert.equal(c.endAt, null);
+    assert.equal(planVoice(c, { active: [] }).kind, 'commit');
+  });
+
+  it('start có startAt quá khứ → startActivity nhận đúng giờ đó, endAt null', async () => {
+    const c = cmd({
+      intent: 'start',
+      category: 'leisure',
+      label: 'YouTube',
+      startAt: NOW - 30 * 60_000,
+    });
+
+    let seen: { uid: string; input: Record<string, unknown> } | null = null;
+    const repo = {
+      startActivity: async (uid: string, input: Record<string, unknown>) => {
+        seen = { uid, input };
+        return 'new1';
+      },
+    } as unknown as VoiceRepo;
+
+    await applyVoice('u1', planVoice(c, { active: [] }).cmd, repo);
+
+    const call = seen as unknown as { uid: string; input: Record<string, unknown> };
+    assert.equal(call.uid, 'u1');
+    assert.equal(call.input.startAt, NOW - 30 * 60_000);
+    assert.equal(call.input.category, 'leisure');
+    // Không truyền status → activities.ts mặc định 'active', endAt null.
+    assert.equal(call.input.status, undefined);
   });
 });
