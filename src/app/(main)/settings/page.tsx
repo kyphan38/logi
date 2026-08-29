@@ -23,7 +23,7 @@ import {
 } from '@/lib/push';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const uid = user?.uid ?? null;
 
   const [state, setState] = useState<PushState | null>(null);
@@ -132,6 +132,20 @@ export default function SettingsPage() {
         <Link href="/settings/restore" className="text-[13px] text-ink-soft underline">
           Restore from a backup file
         </Link>
+      </section>
+
+      {/* Nút Sign out dọn từ màn Now sang đây (AMENDMENT-remove-sleep 6b):
+          header của Now chỉ còn ngày và số giờ đã ghi. */}
+      <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
+        <h2 className="text-sm font-medium text-ink">Account</h2>
+        <p className="text-[13px] text-ink-muted">{user?.email ?? 'Signed in'}</p>
+        <button
+          type="button"
+          onClick={signOut}
+          className="min-h-11 self-start rounded-sm border border-line px-4 text-sm font-medium text-ink-soft transition active:scale-[0.99]"
+        >
+          Sign out
+        </button>
       </section>
     </div>
   );

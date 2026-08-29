@@ -20,15 +20,61 @@ export default function ActiveSessionCard({
   onStop,
   busy,
   pending = false,
+  compact = false,
 }: {
   activity: Activity;
   onStop: () => void;
   busy: boolean;
   /** Ghi còn nằm trong hàng đợi, chưa lên server. */
   pending?: boolean;
+  /**
+   * Từ 3 session chạy song song trở lên, card thu thành một hàng 56px
+   * (AMENDMENT-remove-sleep 6b). Mục tiêu là cả màn Now vừa một màn hình -
+   * không cuộn thì không bấm nhầm.
+   */
+  compact?: boolean;
 }) {
   const elapsed = useElapsed(activity.startAt);
   const color = CATEGORY_COLOR[activity.category];
+
+  if (compact) {
+    return (
+      <div
+        id={`session-${activity.category}`}
+        className="flex h-14 items-center gap-2 rounded-md border border-l-4 border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-900"
+        style={{ borderLeftColor: color }}
+      >
+        <span
+          className="h-2 w-2 shrink-0 animate-pulse rounded-full"
+          style={{ backgroundColor: color }}
+          aria-hidden="true"
+        />
+        <span className="shrink-0 text-xs font-semibold uppercase tracking-wide">
+          {CATEGORY_LABEL[activity.category]}
+        </span>
+        <span className="shrink-0 text-sm font-semibold tabular-nums">{hms(elapsed)}</span>
+        <span className="truncate text-xs text-zinc-400 dark:text-zinc-500">
+          since {clock(activity.startAt)}
+        </span>
+        {pending ? (
+          <span
+            title="Waiting to sync"
+            aria-label="Waiting to sync"
+            role="img"
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+          />
+        ) : null}
+        <button
+          type="button"
+          onClick={onStop}
+          disabled={busy}
+          className="ml-auto min-h-11 shrink-0 rounded-lg border border-zinc-300 px-3 text-sm font-medium transition active:scale-[0.97] disabled:opacity-50 dark:border-zinc-700"
+        >
+          Stop
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div

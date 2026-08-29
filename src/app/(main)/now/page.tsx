@@ -13,7 +13,6 @@ import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
 import Toasts from '@/components/Toasts';
-import TodayStrip from '@/components/TodayStrip';
 import VoiceSheet from '@/components/VoiceSheet';
 import WeeklyReview from '@/components/WeeklyReview';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,10 +30,14 @@ import { useReviewDue } from '@/hooks/useReview';
 import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
 import { useVoice } from '@/hooks/useVoice';
 import { ActivityError, deleteActivity, startActivity, stopActivity } from '@/lib/activities';
-import { findStale, logicalDate, overlapHours } from '@/lib/balance';
+import { actualHours, findStale, logicalDate, logicalWeekday, overlapHours } from '@/lib/balance';
 import { pickBalance } from '@/lib/banner';
-import { roundDown } from '@/lib/datetime';
-import { CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
+import { formatDuration, roundDown } from '@/lib/datetime';
+import { nowTiles } from '@/lib/day-progress';
+import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
+
+/** Từ 3 session song song trở lên thì card thu lại, để màn Now vẫn vừa một màn. */
+const COMPACT_FROM = 3;
 
 /** "2026-08-26" → "Wednesday, Aug 26". Parse tay để không lệch múi giờ. */
 function prettyLogicalDate(d: string): string {
@@ -47,7 +50,7 @@ function prettyLogicalDate(d: string): string {
 }
 
 export default function NowPage() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const uid = user?.uid ?? null;
 
   // Weekly Review: banner từ 19:00 CN, còn hạn tới hết thứ Ba.
@@ -108,6 +111,21 @@ export default function NowPage() {
 
   const running = useMemo(() => new Set(active.map((a) => a.category)), [active]);
 
+  // Dải tiến độ nằm ngay trong nút category (AMENDMENT-remove-sleep 6b): mỗi
+  // nút tự nói hôm nay đã làm bao nhiêu so với target của đúng thứ hôm nay.
+  const tiles = useMemo(
+    () => nowTiles(todayActivities, weekTarget?.weekly ?? null, logicalWeekday(nowMinute), nowMinute),
+    [todayActivities, weekTarget, nowMinute]
+  );
+
+  // "3h 20m tracked" ở header: giờ thật, đã trừ phần log song song. Không có
+  // mẫu số 24h ở đâu cả - ngày không được coi là phải lấp đầy.
+  const trackedMs = useMemo(() => {
+    const actual = actualHours(todayActivities, nowMinute);
+    const sum = CATEGORIES.reduce((t, c) => t + actual[c], 0);
+    return Math.max(0, (sum - overlapHours(todayActivities, nowMinute)) * 3_600_000);
+  }, [todayActivities, nowMinute]);
+
   // Session `active` quá 15h. `active` là stream realtime nên danh sách này tự
   // cập nhật khi mount, khi app quay lại foreground (useTick bắt 'focus'),
   // và ngay khi người dùng xử lý xong từng cái.
@@ -118,13 +136,21 @@ export default function NowPage() {
     setBusy(true);
     try {
       // Offline: cache đã ghi ngay, đừng bắt nút chờ server ack.
-      await capWait(
-        startActivity(uid, {
-          category,
-          startAt: minutesAgo > 0 ? Date.now() - minutesAgo * 60_000 : undefined,
-        }),
-        (e) => push(`Sync failed. ${(e as Error).message}`)
-      );
+      const started = startActivity(uid, {
+        category,
+        startAt: minutesAgo > 0 ? Date.now() - minutesAgo * 60_000 : undefined,
+      });
+      await capWait(started, (e) => push(`Sync failed. ${(e as Error).message}`));
+      // Lớp 3 của 6c: Start chỉ một chạm, nên phải luôn có đường lui 5 giây.
+      // `started` giữ riêng vì `capWait` có thể trả về trước khi có id.
+      push(`Started ${CATEGORY_LABEL[category]}`, {
+        label: 'Undo',
+        run: () => {
+          void started
+            .then((id) => deleteActivity(uid, id))
+            .catch((e) => push(`Could not undo. ${(e as Error).message}`));
+        },
+      });
     } catch (e) {
       push(
         e instanceof ActivityError && e.code === 'duplicate'
@@ -218,18 +244,16 @@ export default function NowPage() {
   return (
     // pb-20: chừa chỗ cho nút mic FAB, để nó không đè lên nút Stop của card cuối.
     <div className="flex flex-1 flex-col gap-6 pb-20">
-      <header className="flex items-start justify-between gap-4">
+      {/* Header một dòng: ngày logic bên trái, số giờ đã ghi bên phải. Nút
+          Sign out chuyển sang Settings để màn Now vừa một màn hình. */}
+      <header className="flex items-baseline justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Now</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">{prettyLogicalDate(today)}</p>
         </div>
-        <button
-          type="button"
-          onClick={signOut}
-          className="min-h-11 shrink-0 rounded-lg border border-zinc-300 px-3 text-sm font-medium active:scale-[0.99] dark:border-zinc-700"
-        >
-          Sign out
-        </button>
+        <p className="shrink-0 text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
+          {formatDuration(trackedMs)} tracked
+        </p>
       </header>
 
       {reviewWeek && (
@@ -283,13 +307,14 @@ export default function NowPage() {
       ) : null}
 
       {active.length > 0 ? (
-        <section className="flex flex-col gap-3" aria-label="Running sessions">
+        <section className="flex flex-col gap-2" aria-label="Running sessions">
           {active.map((a) => (
             <ActiveSessionCard
               key={a.id}
               activity={a}
               busy={busy}
               pending={pendingIds.has(a.id)}
+              compact={active.length >= COMPACT_FROM}
               onStop={() => handleStop(a.id)}
             />
           ))}
@@ -302,17 +327,14 @@ export default function NowPage() {
       ) : null}
 
       <CategoryGrid
+        tiles={tiles}
         running={running}
         busy={busy}
         onStart={handleStart}
         onFocusRunning={focusRunning}
       />
 
-      {/* Giấc ngủ tràn từ hôm trước không được truyền xuống: nó thuộc ngày hôm
-          trước, và thanh chỉ bắt đầu từ record đầu tiên của hôm nay. */}
-      {todayActivities.length > 0 ? (
-        <TodayStrip today={today} activities={todayActivities} now={nowMinute} />
-      ) : !activeLoading && active.length === 0 ? (
+      {todayActivities.length === 0 && !activeLoading && active.length === 0 ? (
         <p className="text-sm text-zinc-400 dark:text-zinc-500">
           Nothing tracked yet. Tap a category to start.
         </p>
