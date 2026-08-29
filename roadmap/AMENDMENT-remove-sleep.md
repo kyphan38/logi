@@ -525,24 +525,24 @@ Mục 8 chứng minh By day hết cắt.
 
 ## Definition of Done
 
-- [ ] Đã export all-time JSON và người dùng xác nhận **trước** khi xoá
-- [ ] Record `sleep` đã xoá hết khỏi Firestore, đếm lại về 0
-- [ ] `CATEGORIES` còn 4, không còn `sleep` ở đâu trong `src/`
-- [ ] `TOTAL_BUDGET === 89`, cả 4 preset cộng đúng
-- [ ] Không còn `coverage()` / `coverageForRange()`; thay bằng `logQuality()`
-- [ ] Không còn bất kỳ hằng số hay giả định nào về giấc ngủ trong `src/`
-- [ ] Màn Now vừa một màn hình iPhone 11, không phải cuộn
-- [ ] Nút category có dải tiến độ khớp target ngày
-- [ ] Ba lớp chống click nhầm hoạt động
-- [ ] Analytics không còn chip `Today`, mặc định `This week`
-- [ ] History không hiện untracked ngoài khoảng activity đầu–cuối
-- [ ] By day gán trọn session theo `logicalDate`, khớp Balance
-- [ ] Bảng DONE/TARGET/LEFT đổi theo range, khoảng đã đóng dùng `DIFF`
-- [ ] Nhãn trục Y không bị cắt
-- [ ] Voice báo rõ khi nói về ngủ
-- [ ] `DAY_CUTOFF_HOUR` vẫn là 4
-- [ ] `npm test` xanh, typecheck sạch, build OK
-- [ ] 14/14 mục kiểm thử tay pass
+- [x] Đã export all-time JSON và người dùng xác nhận **trước** khi xoá
+- [x] Record `sleep` đã xoá hết khỏi Firestore, đếm lại về 0
+- [x] `CATEGORIES` còn 4, không còn `sleep` ở đâu trong `src/`
+- [x] `TOTAL_BUDGET === 89`, cả 4 preset cộng đúng
+- [x] Không còn `coverage()` / `coverageForRange()`; thay bằng `logQuality()`
+- [x] Không còn bất kỳ hằng số hay giả định nào về giấc ngủ trong `src/`
+- [ ] Màn Now vừa một màn hình iPhone 11, không phải cuộn *(cần kiểm thử tay)*
+- [x] Nút category có dải tiến độ khớp target ngày
+- [x] Ba lớp chống click nhầm hoạt động
+- [x] Analytics không còn chip `Today`, mặc định `This week`
+- [x] History không hiện untracked ngoài khoảng activity đầu–cuối
+- [x] By day gán trọn session theo `logicalDate`, khớp Balance
+- [x] Bảng DONE/TARGET/LEFT đổi theo range, khoảng đã đóng dùng `DIFF`
+- [x] Nhãn trục Y không bị cắt
+- [x] Voice báo rõ khi nói về ngủ
+- [x] `DAY_CUTOFF_HOUR` vẫn là 4
+- [x] `npm test` xanh (465 pass), typecheck sạch, build OK
+- [ ] 14/14 mục kiểm thử tay pass *(cần người dùng chạy trên máy)*
 
 ---
 
