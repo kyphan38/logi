@@ -19,7 +19,7 @@ import {
   type RangeKind,
 } from '@/lib/range';
 
-const CHIPS: Exclude<RangeKind, 'custom'>[] = ['today', 'this_week', 'last_week', 'this_month'];
+const CHIPS: Exclude<RangeKind, 'custom'>[] = ['this_week', 'last_week', 'this_month'];
 
 interface Props {
   value: Range;

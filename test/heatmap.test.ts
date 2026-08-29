@@ -97,7 +97,7 @@ test('phần vượt ra ngoài khoảng bị cắt', () => {
 test('session đang chạy chỉ tô tới now', () => {
   const now = at(D, '09:30');
   const acts = [act({ startAt: at(D, '08:00'), endAt: null, category: 'work' })];
-  const { grid } = heatmapOf(acts, { from: D, to: D, kind: 'today', isPartial: true }, now);
+  const { grid } = heatmapOf(acts, { from: D, to: D, kind: 'custom', isPartial: true }, now);
 
   assert.equal(grid[row(8)][0].minutes, 60);
   assert.equal(grid[row(9)][0].minutes, 30);

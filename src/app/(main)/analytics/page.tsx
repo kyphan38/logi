@@ -9,8 +9,8 @@ import ExportSheet from '@/components/ExportSheet';
 import Heatmap from '@/components/Heatmap';
 import InsightPanel from '@/components/InsightPanel';
 import RangePicker from '@/components/RangePicker';
+import RangeTable from '@/components/RangeTable';
 import StackedDays from '@/components/StackedDays';
-import TodayCard from '@/components/TodayCard';
 import { useTick } from '@/hooks/useActivities';
 import { fetchAllTime, useExportNudge } from '@/hooks/useBackup';
 import { useRangeData } from '@/hooks/useRangeData';
@@ -30,7 +30,8 @@ export default function AnalyticsPage() {
   // Ngày logic đổi lúc 04:00 nên phút là đủ mịn; giây chỉ làm chart nháy.
   const now = useTick(60_000, true);
 
-  const [range, setRange] = useState<Range>(() => buildRange('today', Date.now()));
+  // Mặc định `this_week`: Analytics chỉ có nghĩa từ 2 ngày trở lên (mục 8.1).
+  const [range, setRange] = useState<Range>(() => buildRange('this_week', Date.now()));
   const [exporting, setExporting] = useState(false);
   const { activities, weekTargets, lateWeeks, loading, error, reload } = useRangeData(range);
 
@@ -51,6 +52,7 @@ export default function AnalyticsPage() {
   }, [activities, weekTargets, range, now]);
 
   const empty = !loading && activities.length === 0;
+  const singleDay = range.from === range.to;
 
   return (
     <div className="flex flex-col gap-6">
@@ -104,11 +106,11 @@ export default function AnalyticsPage() {
         <EmptyState onThisWeek={() => setRange(buildRange('this_week', now))} />
       ) : (
         <>
+          {/* Bảng đứng trước - câu hỏi hay gặp nhất là "khoảng này tôi thế nào". */}
+          <RangeTable activities={activities} range={range} weekTargets={weekTargets} now={now} />
+
           {/* Coverage đứng TRƯỚC mọi chart: log được 40% thời gian thì các con
               số bên dưới không nói lên điều gì, phải biết trước khi đọc. */}
-          {/* Hôm nay đứng trước - câu hỏi hay gặp nhất là "giờ tôi đang thế nào". */}
-          <TodayCard activities={activities} range={range} weekTargets={weekTargets} now={now} />
-
           <CoverageNote coverage={view.coverage} overlap={view.overlap} />
 
           <section className="flex flex-col gap-3">
@@ -116,21 +118,31 @@ export default function AnalyticsPage() {
             <BalanceBars rows={view.rows} showDeviation={view.coverage >= COVERAGE_FLOOR} />
           </section>
 
-          <section className="flex flex-col gap-3">
-            <h2 className="text-[13px] font-medium text-ink-soft">By {bucketMode(range)}</h2>
-            <StackedDays
-              activities={activities}
-              range={range}
-              weekTargets={weekTargets}
-              lateWeeks={lateWeeks}
-              now={now}
-            />
-          </section>
+          {/* Khoảng một ngày: By day một cột và When một cột đều không nói lên
+              điều gì mà History không nói rõ hơn (mục 8.1). */}
+          {singleDay ? (
+            <p className="text-[13px] text-ink-muted">
+              Pick 2+ days to see daily and hourly patterns.
+            </p>
+          ) : (
+            <>
+              <section className="flex flex-col gap-3">
+                <h2 className="text-[13px] font-medium text-ink-soft">By {bucketMode(range)}</h2>
+                <StackedDays
+                  activities={activities}
+                  range={range}
+                  weekTargets={weekTargets}
+                  lateWeeks={lateWeeks}
+                  now={now}
+                />
+              </section>
 
-          <section className="flex flex-col gap-3">
-            <h2 className="text-[13px] font-medium text-ink-soft">When</h2>
-            <Heatmap activities={activities} range={range} now={now} />
-          </section>
+              <section className="flex flex-col gap-3">
+                <h2 className="text-[13px] font-medium text-ink-soft">When</h2>
+                <Heatmap activities={activities} range={range} now={now} />
+              </section>
+            </>
+          )}
 
           {/* Sau chart, không phải trước: chart trả lời "cái gì đã xảy ra",
               phần này chỉ chọn ra cái đáng để ý. Đọc ngược lại thì người dùng

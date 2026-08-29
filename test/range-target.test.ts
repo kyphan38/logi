@@ -135,9 +135,10 @@ test('KHÔNG pro-rate ngày quá khứ', () => {
   assert.equal(r1(exp.work), 19.5); // 9 + 10.5, không bị nhân 0.5
 });
 
-test('Today lúc 02:00 sáng → là ngày hôm trước, đã trôi 22/24 giờ', () => {
+test('custom một ngày lúc 02:00 sáng → là ngày hôm trước, đã trôi 22/24 giờ', () => {
   const now = at('2026-08-27', '02:00'); // ngày logic vẫn là 2026-08-26 (T4)
-  const range = buildRange('today', now);
+  // Chip `today` đã bỏ (mục 8.1); một ngày nay đi qua `customRange`.
+  const range = customRange('2026-08-26', '2026-08-26', now).range!;
   assert.equal(range.from, '2026-08-26');
   assert.equal(range.to, '2026-08-26');
   assert.ok(range.isPartial);

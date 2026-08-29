@@ -10,7 +10,13 @@ import { dayProgress, logicalDate, logicalWeek, logicalWeekday } from '@/lib/bal
 import { addDays } from '@/lib/timeline';
 import { addWeeks, weekStart } from '@/lib/week';
 
-export type RangeKind = 'today' | 'this_week' | 'last_week' | 'this_month' | 'custom';
+/**
+ * Không còn `today` (AMENDMENT-remove-sleep mục 8.1): Analytics chỉ trả lời câu
+ * hỏi cần từ 2 ngày trở lên. Một ngày thì Now và History làm tốt hơn - By day
+ * một cột vô nghĩa, When trùng History, Balance trùng mấy nút ở màn Now.
+ * Vẫn chọn được một ngày qua `custom`, khi đó chỉ hiện Balance.
+ */
+export type RangeKind = 'this_week' | 'last_week' | 'this_month' | 'custom';
 
 export interface Range {
   /** logicalDate, "2026-08-24". */
@@ -114,9 +120,6 @@ export function buildRange(kind: Exclude<RangeKind, 'custom'>, now: number = Dat
   const today = logicalDate(now);
 
   switch (kind) {
-    case 'today':
-      return { from: today, to: today, kind, isPartial: partial(today, now) };
-
     case 'this_week': {
       const from = mondayOf(today);
       return { from, to: today, kind, isPartial: partial(today, now) };
@@ -198,7 +201,6 @@ export function inRange(logicalDateOf: string, range: { from: string; to: string
 // ---------------------------------------------------------------------------
 
 const CHIP_LABEL: Record<RangeKind, string> = {
-  today: 'Today',
   this_week: 'This week',
   last_week: 'Last week',
   this_month: 'This month',

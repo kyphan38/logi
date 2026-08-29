@@ -47,7 +47,7 @@ test('ba session chồng nhau vẫn chỉ đếm phần hợp một lần', () =
 test('hôm nay chỉ tính tới now, không tính phần tương lai', () => {
   // 10:00 → ngày logic đã trôi 6/24 giờ.
   const now = at(DAY, '10:00');
-  const range: Range = { from: DAY, to: DAY, kind: 'today', isPartial: true };
+  const range: Range = { from: DAY, to: DAY, kind: 'custom', isPartial: true };
 
   assert.equal(r2(realHoursOfRange(range, now)), 6);
 
@@ -57,7 +57,7 @@ test('hôm nay chỉ tính tới now, không tính phần tương lai', () => {
 
 test('session đang chạy chỉ tính tới now', () => {
   const now = at(DAY, '10:00');
-  const range: Range = { from: DAY, to: DAY, kind: 'today', isPartial: true };
+  const range: Range = { from: DAY, to: DAY, kind: 'custom', isPartial: true };
   const acts = [act({ startAt: at(DAY, '08:00'), endAt: null, category: 'work' })];
   assert.equal(r2(coverageForRange(acts, range, now)), r2(2 / 6));
 });
