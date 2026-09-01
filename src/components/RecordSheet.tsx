@@ -110,9 +110,13 @@ export default function RecordSheet({
 
   const start = fromLocalInput(startStr);
   const end = fromLocalInput(endStr);
-  // Session đang chạy: để trống End nghĩa là vẫn chạy tiếp.
-  const running = editing?.endAt === null && end === null;
-  const endRequired = !editing || editing.endAt !== null;
+  // Để trống End = việc vẫn đang chạy. Đúng cho cả hai chỗ:
+  //  - sửa session đang chạy: giữ nguyên, không ép điền giờ kết thúc;
+  //  - thêm tay: "8:00 sáng tôi bắt đầu và giờ vẫn đang làm" → tạo session chạy.
+  // Record đã xong thì vẫn bắt buộc có End - xoá End để mở lại là việc khác,
+  // dễ lỡ tay biến record cũ thành session chạy suốt nhiều ngày.
+  const endRequired = editing !== null && editing.endAt !== null;
+  const running = !endRequired && end === null;
 
   const errors = useMemo(() => {
     const e: { start?: string; end?: string } = {};
@@ -154,13 +158,16 @@ export default function RecordSheet({
           }),
           late
         );
+      } else if (end === null) {
+        // Thêm tay một việc chưa xong: mở session chạy từ giờ đã ghi.
+        await capWait(startActivity(uid, { category, label: text, startAt: start }), late);
       } else {
         await capWait(
           createPastActivity(uid, {
             category,
             label: text,
             startAt: start,
-            endAt: end as number,
+            endAt: end,
           }),
           late
         );
@@ -174,7 +181,9 @@ export default function RecordSheet({
           ? `Moved to ${shortDate(start)}`
           : editing
             ? 'Saved.'
-            : `Added ${CATEGORY_LABEL[category]}.`,
+            : end === null
+              ? `Started ${CATEGORY_LABEL[category]}.`
+              : `Added ${CATEGORY_LABEL[category]}.`,
       );
       onClose();
     } catch (e) {
@@ -285,7 +294,10 @@ export default function RecordSheet({
 
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-              End {editing?.endAt === null ? <span className="font-normal">(still running)</span> : null}
+              End{' '}
+              {endRequired ? null : (
+                <span className="font-normal">(leave empty if still running)</span>
+              )}
             </span>
             <input
               type="datetime-local"
@@ -302,9 +314,22 @@ export default function RecordSheet({
             ) : null}
           </label>
 
-          <p className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
-            Duration: {running ? 'running' : duration}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
+              Duration: {running ? 'running' : duration}
+            </p>
+            {/* Xoá giờ trong ô datetime trên điện thoại khá vướng - cho nút tắt. */}
+            {endRequired ? null : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setEndStr(running ? toLocalInput(now) : '')}
+                className="text-sm font-medium text-zinc-500 underline underline-offset-2 disabled:opacity-50 dark:text-zinc-400"
+              >
+                {running ? 'End now' : 'Still running'}
+              </button>
+            )}
+          </div>
         </div>
 
         {failure ? (
