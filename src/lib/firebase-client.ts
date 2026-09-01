@@ -14,6 +14,8 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 
+import { DB_ID } from '@/lib/db-id';
+
 // Next.js chỉ inline được biến NEXT_PUBLIC_* khi viết đầy đủ, không destructure.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -50,26 +52,31 @@ function createDb(): Firestore {
   // KHÔNG cache vào globalThis: trên server Next có thể nạp firebase/firestore
   // thành nhiều bản sao module khác nhau, dùng chung cache sẽ khiến
   // collection(db, ...) ném "Expected first argument ... to be FirebaseFirestore".
-  // getFirestore(app) vốn đã idempotent nên không cần cache.
-  if (typeof window === 'undefined') return getFirestore(app);
+  // getFirestore(app, DB_ID) vốn đã idempotent nên không cần cache.
+  if (typeof window === 'undefined') return getFirestore(app, DB_ID);
 
   if (globalCache.__logiDb) return globalCache.__logiDb;
 
   let db: Firestore;
   try {
     // Offline-first: Start/Stop vẫn chạy khi mất mạng, sync lại sau.
-    db = initializeFirestore(app, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager(),
-      }),
-    });
+    // databaseId là tham số THỨ BA của initializeFirestore, sau settings.
+    db = initializeFirestore(
+      app,
+      {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      },
+      DB_ID,
+    );
   } catch (err) {
     // iOS Safari private mode chặn IndexedDB → rơi về memory cache.
     console.warn('[firebase-client] persistent cache unavailable, using memory cache', err);
     try {
-      db = initializeFirestore(app, { localCache: memoryLocalCache() });
+      db = initializeFirestore(app, { localCache: memoryLocalCache() }, DB_ID);
     } catch {
-      db = getFirestore(app);
+      db = getFirestore(app, DB_ID);
     }
   }
 

@@ -20,7 +20,10 @@ import { logger } from 'firebase-functions';
 import { dayStart, logicalDate, logicalWeek, logicalWeekday, markAt } from './time';
 
 initializeApp();
-const db = getFirestore();
+
+// functions/ là package riêng, không import được `src/lib/db-id.ts`.
+// Giữ khớp với DB_ID ở đó. Xem roadmap/PLAN-db-split.md.
+const db = getFirestore('logi-db');
 
 type ReminderType = 'morning' | 'evening' | 'weekly';
 

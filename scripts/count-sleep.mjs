@@ -42,7 +42,8 @@ const app = initializeApp({
   projectId: need('FIREBASE_ADMIN_PROJECT_ID'),
 });
 
-const db = getFirestore(app);
+// Khớp với DB_ID ở src/lib/db-id.ts. Xem roadmap/PLAN-db-split.md.
+const db = getFirestore(app, 'logi-db');
 
 const fmt = (ts) =>
   ts == null

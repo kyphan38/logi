@@ -10,6 +10,8 @@ import { cert, getApps, getApp, initializeApp, type App } from 'firebase-admin/a
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
+import { DB_ID } from '@/lib/db-id';
+
 function readEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -37,4 +39,4 @@ function createAdminApp(): App {
 
 export const adminApp: App = createAdminApp();
 export const adminAuth: Auth = getAuth(adminApp);
-export const adminDb: Firestore = getFirestore(adminApp);
+export const adminDb: Firestore = getFirestore(adminApp, DB_ID);
