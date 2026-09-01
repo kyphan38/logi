@@ -150,6 +150,12 @@ promoted to `active` and show up as a session running for 240 hours.
 | 8 | No audio written to disk or Storage | Pass - audio goes to Gemini in the request body and is never stored |
 | 9 | No personal data in production logs | Pass - logs carry error names only, never labels or transcripts |
 | 10 | Firebase Console → Authorized domains | **Manual - check this yourself in the console** |
+| 11 | Rules of another app cannot wipe ours | Pass - logi owns the `logi-db` database; `cogi` and `noda` sit in their own |
+
+Three apps share the Firebase project `kyphan38-apps`, so each one now has its
+own database. The id lives in `src/lib/db-id.ts`. A deploy of
+`firebase deploy --only firestore` only touches `logi-db`. See
+`roadmap/PLAN-db-split.md`.
 
 Item 10 is the only one a script cannot check. Open Firebase Console → Auth →
 Settings → Authorized domains, and remove anything that is not your real domain
