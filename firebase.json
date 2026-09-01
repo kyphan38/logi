@@ -4,6 +4,10 @@
       "database": "logi-db",
       "rules": "firestore.rules",
       "indexes": "firestore.indexes.json"
+    },
+    {
+      "database": "(default)",
+      "rules": "firestore.default.rules"
     }
   ],
   "functions": [

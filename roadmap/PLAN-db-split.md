@@ -1,6 +1,6 @@
 # PLAN - Tách database Firestore (logi)
 
-Ngày viết: 2026-09-01. Trạng thái: **chưa làm**.
+Ngày viết: 2026-09-01. Trạng thái: **xong** - cả ba app đã tách, `(default)` đã khoá.
 
 Bản song song: `cogi/web/docs/PLAN-db-split.md`, `noda/PLAN-db-split.md`.
 
@@ -305,15 +305,35 @@ Sau bước 6 thì phải deploy lại rules cũ cho `(default)` trước khi lu
 
 ## 5. Checklist
 
-- [ ] Tạo `logi-db`, đúng region với `(default)`
-- [ ] `firebase.json`: mảng firestore + codebase `logi`
-- [ ] `firebase deploy --only firestore`, kiểm tra tab Rules của `logi-db`
-- [ ] Xuất backup JSON từ app
-- [ ] Chạy khô script chép, xem số
-- [ ] Chép thật, chạy lại đối chiếu số
-- [ ] Sửa 5 file code + thêm `db-id.ts`
-- [ ] typecheck / lint / test / build
-- [ ] Deploy functions (không xoá nhầm), push Vercel
+- [x] Tạo `logi-db`, đúng region với `(default)` - `asia-southeast1`
+- [x] `firebase.json`: mảng firestore + codebase `logi`
+- [x] `firebase deploy --only firestore`, kiểm tra tab Rules của `logi-db`
+- [x] Xuất backup JSON từ app
+- [x] Chạy khô script chép, xem số
+- [x] Chép thật, chạy lại đối chiếu số - 20 doc, hai bên khớp
+- [x] Sửa 5 file code + thêm `db-id.ts`
+- [x] typecheck / lint / test / build - 472 test pass
+- [x] Deploy functions (không xoá nhầm), push Vercel
 - [ ] Thử trên điện thoại: History, Targets, thêm/xoá record, reminder
-- [ ] (Sau khi cả ba app xong) khoá `(default)` deny-all
+- [x] (Sau khi cả ba app xong) khoá `(default)` deny-all - 2026-09-01
+
+### Khoá `(default)` - đã làm
+
+Rules nằm ở `firestore.default.rules` trong repo này, thêm vào mảng
+`firestore` của `firebase.json` với `"database": "(default)"`. Không khai
+`indexes` vì database này không còn ai đọc.
+
+Đối chiếu qua Rules API sau khi deploy (log của CLI viết mơ hồ, đừng tin nó):
+
+| Release | Ruleset | Ghi chú |
+|---|---|---|
+| `cloud.firestore` | `73338f12` | deny-all, mới |
+| `cloud.firestore/logi-db` | `c1df2c66` | rules của logi |
+| `cloud.firestore/cogi-db` | `3206cc80` | không đụng tới |
+| `cloud.firestore/noda-db` | `8afdb12c` | không đụng tới |
+
+Dữ liệu cũ trong `(default)` vẫn còn - giữ làm backup, không xoá. Deny-all
+chỉ chặn client SDK; Admin SDK bỏ qua rules nên script vẫn khôi phục được.
+
+Muốn mở lại: `git revert` commit này rồi deploy.
 - [ ] Cập nhật README

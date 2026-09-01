@@ -153,8 +153,13 @@ promoted to `active` and show up as a session running for 240 hours.
 | 11 | Rules of another app cannot wipe ours | Pass - logi owns the `logi-db` database; `cogi` and `noda` sit in their own |
 
 Three apps share the Firebase project `kyphan38-apps`, so each one now has its
-own database. The id lives in `src/lib/db-id.ts`. A deploy of
-`firebase deploy --only firestore` only touches `logi-db`. See
+own database. The id lives in `src/lib/db-id.ts`.
+
+The old shared database `(default)` is retired and locked deny-all, from this
+repo, in `firestore.default.rules`. Its data is left in place as a backup. The
+lock stops client SDKs only - an Admin SDK script still reads it, so a restore
+is possible. `firebase deploy --only firestore` therefore releases two rulesets:
+`logi-db` and `(default)`. It never touches `cogi-db` or `noda-db`. See
 `roadmap/PLAN-db-split.md`.
 
 Item 10 is the only one a script cannot check. Open Firebase Console → Auth →

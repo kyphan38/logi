@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// =============================================================================
+// Database (default) - ĐÃ NGHỈ HƯU. Khoá deny-all từ 2026-09-01.
+// =============================================================================
+// Ba app từng dùng chung database này: cogi, logi, noda. Một database chỉ có
+// một bộ rules, nên mỗi lần một app deploy là rules của hai app kia bị xoá.
+// Ngày 2026-08-26 logi deploy → cogi và noda ăn permission-denied suốt mấy ngày
+// mà không ai thấy, vì lỗi bị nuốt trong catch rỗng.
+//
+// Giờ mỗi app một database riêng:
+//   cogi → cogi-db     logi → logi-db     noda → noda-db
+//
+// Dữ liệu cũ trong (default) vẫn còn nguyên, giữ làm backup. Không xoá.
+// Rules này chỉ chặn client SDK. Admin SDK (service account) bỏ qua rules,
+// nên script vẫn đọc được để khôi phục khi cần.
+//
+// Xem roadmap/PLAN-db-split.md.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
