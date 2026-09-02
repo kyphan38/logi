@@ -21,9 +21,9 @@ import { dayStart, logicalDate, logicalWeek, logicalWeekday, markAt } from './ti
 
 initializeApp();
 
-// functions/ là package riêng, không import được `src/lib/db-id.ts`.
-// Giữ khớp với DB_ID ở đó. Xem roadmap/PLAN-db-split.md.
-const db = getFirestore('logi-db');
+// Database mặc định của project kyphan38-logi-app.
+// Xem roadmap/PLAN-project-split-logi.md.
+const db = getFirestore();
 
 type ReminderType = 'morning' | 'evening' | 'weekly';
 

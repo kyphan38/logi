@@ -150,17 +150,18 @@ promoted to `active` and show up as a session running for 240 hours.
 | 8 | No audio written to disk or Storage | Pass - audio goes to Gemini in the request body and is never stored |
 | 9 | No personal data in production logs | Pass - logs carry error names only, never labels or transcripts |
 | 10 | Firebase Console → Authorized domains | **Manual - check this yourself in the console** |
-| 11 | Rules of another app cannot wipe ours | Pass - logi owns the `logi-db` database; `cogi` and `noda` sit in their own |
+| 11 | Rules of another app cannot wipe ours | Pass - logi has its own Firebase project `kyphan38-logi-app`; `cogi` and `noda` have their own |
 
-Three apps share the Firebase project `kyphan38-apps`, so each one now has its
-own database. The id lives in `src/lib/db-id.ts`.
+logi has its own Firebase project, `kyphan38-logi-app`, and uses the `(default)`
+database in it. The id still lives in `src/lib/db-id.ts`, so there is one place
+to change it.
 
-The old shared database `(default)` is retired and locked deny-all, from this
-repo, in `firestore.default.rules`. Its data is left in place as a backup. The
-lock stops client SDKs only - an Admin SDK script still reads it, so a restore
-is possible. `firebase deploy --only firestore` therefore releases two rulesets:
-`logi-db` and `(default)`. It never touches `cogi-db` or `noda-db`. See
-`roadmap/PLAN-db-split.md`.
+Sharing a project was the real problem, not sharing a database: one Auth user
+pool, one set of Cloud Function names, one quota. Now `firebase deploy` releases
+one ruleset, into a project no other app can reach.
+
+The old data in `kyphan38-apps` / `logi-db` is left in place as a backup and is
+not deleted. See `roadmap/PLAN-project-split-logi.md`.
 
 Item 10 is the only one a script cannot check. Open Firebase Console → Auth →
 Settings → Authorized domains, and remove anything that is not your real domain
