@@ -22,7 +22,12 @@ export const metadata: Metadata = {
     shortcut: "/favicon.svg",
     apple: "/apple-touch-icon.png",
   },
-  appleWebApp: { capable: true, title: "logi", statusBarStyle: "black-translucent" },
+  // statusBarStyle KHÔNG dùng 'black-translucent'. Ở chế độ đó iOS standalone
+  // đẩy web view lên sát đỉnh màn hình (status bar đè lên nội dung) NHƯNG
+  // `100dvh` vẫn trả về chiều cao đã trừ status bar. Khung `h-dvh` của AppShell
+  // vì thế kết thúc sớm đúng bằng safe-area-inset-top (48pt trên iPhone XR/11),
+  // để hở một khoảng trống dưới thanh tab. 'default' cho dvh khớp vùng hiển thị.
+  appleWebApp: { capable: true, title: "logi", statusBarStyle: "default" },
 };
 
 // maximumScale: 1 chặn iOS Safari tự zoom khi focus vào input.
