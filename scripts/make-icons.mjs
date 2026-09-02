@@ -14,7 +14,7 @@
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-const BG = [0xd9, 0x77, 0x06]; // accent của logi (amber 600)
+const BG = [0x17, 0x25, 0x54]; // accent của logi (navy)
 const FG = [0xff, 0xff, 0xff];
 
 // Toạ độ trên lưới 24x24, giống hệt các <path> trong favicon.svg.
