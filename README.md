@@ -256,7 +256,7 @@ never asked to add two numbers together.
 
 ### What it costs
 
-About **1,600 tokens per run** on `gemini-3.5-flash-lite` (roughly 1,200 in,
+About **1,600 tokens per run** on `gemini-3.8-flash` (roughly 1,200 in,
 400 out). Two things keep that from repeating:
 
 - The result is cached in `users/{uid}/insights/{from_to}`, keyed by
