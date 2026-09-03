@@ -18,11 +18,13 @@ import { addWeeks, weekLabel, weekStart } from '@/lib/week';
 
 export type TrendSpan = '3w' | '6w' | '3m' | '6m';
 
+// Nhãn gọn để 3 dropdown của card Trend vừa một hàng ở 375px. Bỏ chữ "Last"
+// mà nghĩa không đổi: "6 weeks" vẫn hiểu là 6 tuần gần nhất.
 export const TREND_SPANS: readonly { value: TrendSpan; label: string }[] = [
-  { value: '3w', label: 'Last 3 weeks' },
-  { value: '6w', label: 'Last 6 weeks' },
-  { value: '3m', label: 'Last 3 months' },
-  { value: '6m', label: 'Last 6 months' },
+  { value: '3w', label: '3 weeks' },
+  { value: '6w', label: '6 weeks' },
+  { value: '3m', label: '3 months' },
+  { value: '6m', label: '6 months' },
 ];
 
 export const DEFAULT_SPAN: TrendSpan = '6w';

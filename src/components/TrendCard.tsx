@@ -44,48 +44,45 @@ import {
 } from '@/lib/trend';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Category } from '@/types/logi';
 
-type TrendMode = 'category' | 'bedtime' | 'tasks';
+/** Một dropdown duy nhất cho "xem gì": 4 category + bedtime + tasks. */
+type TrendSubject = Category | 'bedtime' | 'tasks';
 
-const MODE_OPTIONS: readonly { value: TrendMode; label: string }[] = [
-  { value: 'category', label: 'Hours' },
-  { value: 'bedtime', label: 'Bedtime' },
-  { value: 'tasks', label: 'Tasks' },
+const SUBJECT_OPTIONS: readonly { value: TrendSubject; label: string }[] = [
+  ...CATEGORIES.map((c) => ({ value: c as TrendSubject, label: CATEGORY_LABEL[c] })),
+  { value: 'bedtime' as TrendSubject, label: 'Bedtime' },
+  { value: 'tasks' as TrendSubject, label: 'Tasks' },
 ];
-
-const CAT_OPTIONS = CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }));
 
 const h1 = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
 
-const EXTRA_OF: Record<TrendMode, TrendExtra> = {
-  category: 'none',
-  bedtime: 'bedtime',
-  tasks: 'tasks',
-};
+function extraOf(s: TrendSubject): TrendExtra {
+  if (s === 'bedtime') return 'bedtime';
+  if (s === 'tasks') return 'tasks';
+  return 'none';
+}
 
 export default function TrendCard({ now }: { now: number }) {
   const [span, setSpan] = useState<TrendSpan>(DEFAULT_SPAN);
-  const [mode, setMode] = useState<TrendMode>('category');
-  const [category, setCategory] = useState<Category>('learn');
+  const [subject, setSubject] = useState<TrendSubject>('learn');
+  const mode = subject === 'bedtime' || subject === 'tasks' ? subject : 'category';
+  const category: Category = mode === 'category' ? (subject as Category) : 'learn';
   const { activities, weekTargets, dayLogs, weekPlans, loading, error, reload } = useTrend(
     span,
     now,
-    EXTRA_OF[mode]
+    extraOf(subject)
   );
 
   const buckets = useMemo(() => trendBuckets(span, now), [span, now]);
 
   const controls = (
-    <span className="flex items-center gap-2">
+    <span className="flex flex-wrap items-center justify-end gap-2">
       <CardSelect value={span} options={TREND_SPANS} onChange={setSpan} label="Trend period" />
-      <CardSelect value={mode} options={MODE_OPTIONS} onChange={setMode} label="Trend subject" />
-      {mode === 'category' ? (
-        <CardSelect
-          value={category}
-          options={CAT_OPTIONS}
-          onChange={setCategory}
-          label="Trend category"
-        />
-      ) : null}
+      <CardSelect
+        value={subject}
+        options={SUBJECT_OPTIONS}
+        onChange={setSubject}
+        label="Trend subject"
+      />
     </span>
   );
 
