@@ -31,8 +31,10 @@ export default function Card({ title, action, footnote, children, label }: Props
       aria-label={label ?? title}
       className="flex flex-col gap-3 rounded-md border border-line-strong bg-surface-2 p-4"
     >
+      {/* flex-wrap: khung nào nhiều dropdown thì action tự xuống hàng dưới
+          title, thay vì ép các ô hẹp tới mức cụt chữ. */}
       {(title || action) && (
-        <div className="flex min-h-7 items-center justify-between gap-3">
+        <div className="flex min-h-7 flex-wrap items-center justify-between gap-x-3 gap-y-2">
           {title ? (
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
               {title}
