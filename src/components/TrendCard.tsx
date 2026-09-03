@@ -233,7 +233,9 @@ function HoursTrend({
                 if (v === null || v === undefined || r?.hasData === false) {
                   return ['no data', CATEGORY_LABEL[category]];
                 }
-                const tgt = r && r.target > 0 ? ` of ${h1(r.target)}h target` : '';
+                // Tooltip gọn cho mobile: "23.3h of 6.0h". Bỏ chữ "target" -
+                // footnote dưới chart đã nói đường đứt là target tuần.
+                const tgt = r && r.target > 0 ? ` of ${h1(r.target)}h` : '';
                 return [`${h1(Number(v))}h${tgt}`, CATEGORY_LABEL[category]];
               }}
             />
