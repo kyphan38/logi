@@ -124,3 +124,76 @@ export function elapsedFraction(b: TrendBucket, now: number = Date.now()): numbe
   const full = b.key.includes('W') ? 7 : new Date(y, m, 0).getDate();
   return Math.min(1, daysBetween(b.range.from, logicalDate(now)) / full);
 }
+
+// ---------------------------------------------------------------------------
+// Kỳ trống ≠ kỳ bằng 0
+//
+// Trước Stage 8, tuần chưa dùng app bị vẽ thành cột 0 và lọt vào dòng so sánh,
+// nên chart đọc lên là "W31 0.0h → W35 7.3h · up +7.3h". Người đó không học 0
+// giờ tuần W31 - lúc đó app còn chưa có. Cùng lỗi với `sampleSize < 3` bên AI
+// insights: thiếu dữ liệu không phải dữ liệu bằng không.
+// ---------------------------------------------------------------------------
+
+/** Chỉ cần các field quyết định "kỳ này có ai ghi gì không". */
+interface Logged {
+  status: string;
+  startAt: number;
+}
+
+/**
+ * Kỳ có ít nhất một session THẬT hay không.
+ *
+ * `abandoned` là session bỏ dở nên không tính là dữ liệu; `scheduled` là dự
+ * định chưa xảy ra. Cả hai mà tính thì một cái hẹn lỡ cũng đủ biến tuần trống
+ * thành tuần "có dữ liệu, 0 giờ" - đúng cái cột sai mà ta đang bỏ.
+ */
+export function hasLogged(
+  activities: readonly Logged[],
+  range: { from: string; to: string }
+): boolean {
+  return activities.some((a) => {
+    if (a.status === 'abandoned' || a.status === 'scheduled') return false;
+    const d = logicalDate(a.startAt);
+    return d >= range.from && d <= range.to;
+  });
+}
+
+export interface TrendPoint {
+  label: string;
+  /** `null` = kỳ chưa có dữ liệu. Không vẽ cột, không đưa vào so sánh. */
+  hours: number | null;
+  /** Kỳ đang chạy - cột thấp là vì chưa hết kỳ. */
+  partial: boolean;
+}
+
+export interface TrendCompare {
+  from: TrendPoint;
+  to: TrendPoint;
+  /** Dương = đi lên. */
+  diff: number;
+  word: 'up' | 'down' | 'flat';
+}
+
+/**
+ * Dòng so sánh đầu ↔ cuối, hoặc `null` khi không đủ căn cứ.
+ *
+ * Bỏ kỳ dở dang và kỳ trống. Dưới 2 kỳ dùng được thì ẩn hẳn dòng chữ - thà
+ * không nói còn hơn nói một xu hướng dựng từ một điểm.
+ *
+ * Chênh dưới 0.5h coi là `flat`: nửa tiếng qua sáu tuần là nhiễu, không phải
+ * chuyển biến.
+ */
+export function trendCompare(points: readonly TrendPoint[]): TrendCompare | null {
+  const usable = points.filter((p) => !p.partial && p.hours !== null);
+  if (usable.length < 2) return null;
+
+  const from = usable[0];
+  const to = usable[usable.length - 1];
+  const diff = (to.hours as number) - (from.hours as number);
+  return {
+    from,
+    to,
+    diff,
+    word: Math.abs(diff) < 0.5 ? 'flat' : diff > 0 ? 'up' : 'down',
+  };
+}

@@ -28,7 +28,6 @@ import {
 } from 'recharts';
 
 import Card, { CardSelect } from '@/components/Card';
-import { logicalDate } from '@/lib/balance';
 import { bedtimeStats, formatScale } from '@/lib/bedtime';
 import { actualForRange, expectedForRange } from '@/lib/range-target';
 import { weeksOf } from '@/lib/range';
@@ -38,7 +37,9 @@ import {
   DEFAULT_SPAN,
   TREND_SPANS,
   elapsedFraction,
+  hasLogged,
   trendBuckets,
+  trendCompare,
   trendWindow,
   type TrendSpan,
 } from '@/lib/trend';
@@ -158,11 +159,7 @@ function HoursTrend({
       buckets.map((b) => {
         // Kỳ có ít nhất một session (không tính abandoned/scheduled) mới là
         // "có dữ liệu". Chưa dùng app thì cột trống, không phải 0 giờ.
-        const hasData = activities.some((a) => {
-          if (a.status === 'abandoned' || a.status === 'scheduled') return false;
-          const d = logicalDate(a.startAt);
-          return d >= b.range.from && d <= b.range.to;
-        });
+        const hasData = hasLogged(activities, b.range);
         return {
           key: b.key,
           // Kỳ đang chạy được đánh dấu ngay trên trục: người đọc thấy cột thấp
@@ -272,14 +269,11 @@ function HoursTrend({
  */
 function TrendRead({ rows }: { rows: HoursRow[] }) {
   // Kỳ dở dang loại ra như cũ; thêm điều kiện có dữ liệu - thiếu một trong hai
-  // thì dòng so sánh là bịa.
-  const usable = rows.filter((r) => !r.partial && r.hasData && r.hours !== null);
-  if (usable.length < 2) return null;
+  // thì dòng so sánh là bịa. Quy tắc nằm trong `trend.ts` để test được.
+  const cmp = trendCompare(rows);
+  if (!cmp) return null;
 
-  const first = usable[0];
-  const last = usable[usable.length - 1];
-  const diff = (last.hours ?? 0) - (first.hours ?? 0);
-  const word = Math.abs(diff) < 0.5 ? 'flat' : diff > 0 ? 'up' : 'down';
+  const { from: first, to: last, diff, word } = cmp;
   const sign = diff > 0 ? '+' : diff < 0 ? '−' : '';
 
   return (

@@ -5,9 +5,12 @@ import {
   DEFAULT_SPAN,
   TREND_SPANS,
   elapsedFraction,
+  hasLogged,
   spanParts,
   trendBuckets,
+  trendCompare,
   trendWindow,
+  type TrendPoint,
 } from '@/lib/trend';
 import { at } from './_helpers.ts';
 
@@ -147,4 +150,83 @@ test('elapsedFraction không bao giờ vượt 1 - cột dở không thể nặn
       assert.ok(f > 0 && f <= 1, `${span}/${b.key} = ${f}`);
     }
   }
+});
+
+// ---------------------------------------------------------------------------
+// Kỳ trống ≠ kỳ bằng 0
+//
+// Bug cũ: chart đọc lên "W31 0.0h → W35 7.3h · up +7.3h" trong khi W31 app
+// còn chưa dùng.
+// ---------------------------------------------------------------------------
+
+const W36 = { from: '2026-08-31', to: '2026-09-06' };
+
+const logged = (date: string, status = 'done') => ({ status, startAt: at(date, '09:00') });
+
+const pt = (label: string, hours: number | null, partial = false): TrendPoint => ({
+  label,
+  hours,
+  partial,
+});
+
+test('hasLogged - kỳ có session thật thì có dữ liệu', () => {
+  assert.equal(hasLogged([logged('2026-09-02')], W36), true);
+});
+
+test('hasLogged - session nằm ngoài kỳ không tính', () => {
+  assert.equal(hasLogged([logged('2026-08-30'), logged('2026-09-07')], W36), false);
+});
+
+test('hasLogged - abandoned và scheduled KHÔNG phải dữ liệu', () => {
+  const acts = [logged('2026-09-02', 'abandoned'), logged('2026-09-03', 'scheduled')];
+  assert.equal(hasLogged(acts, W36), false);
+});
+
+test('hasLogged - kỳ rỗng thì trống, để lát nữa vẽ cột null chứ không phải 0', () => {
+  assert.equal(hasLogged([], W36), false);
+});
+
+test('tuần không có dữ liệu bị loại khỏi dòng so sánh', () => {
+  // W31..W33 trống, chỉ W34 và W35 có ghi.
+  const cmp = trendCompare([
+    pt('W31', null),
+    pt('W32', null),
+    pt('W33', null),
+    pt('W34', 5),
+    pt('W35', 7.3),
+  ]);
+  assert.ok(cmp);
+  assert.equal(cmp.from.label, 'W34');
+  assert.equal(cmp.to.label, 'W35');
+  assert.equal(Math.round(cmp.diff * 10) / 10, 2.3);
+  assert.equal(cmp.word, 'up');
+});
+
+test('dưới 2 tuần có dữ liệu → ẩn dòng so sánh', () => {
+  assert.equal(trendCompare([pt('W34', null), pt('W35', 7.3)]), null);
+  assert.equal(trendCompare([]), null);
+});
+
+test('tuần trống KHÔNG được coi là 0 giờ - không bịa ra cú tăng vọt', () => {
+  const cmp = trendCompare([pt('W31', null), pt('W35', 7.3), pt('W36', 7.0)]);
+  assert.ok(cmp);
+  assert.equal(cmp.from.label, 'W35');
+  assert.equal(cmp.word, 'flat');
+});
+
+test('kỳ đang chạy không được làm điểm cuối - nửa tuần luôn trông như đi xuống', () => {
+  const cmp = trendCompare([pt('W34', 6), pt('W35', 7), pt('W36', 1, true)]);
+  assert.ok(cmp);
+  assert.equal(cmp.to.label, 'W35');
+});
+
+test('chênh dưới 0.5h là flat, không gọi là xu hướng', () => {
+  const cmp = trendCompare([pt('W34', 7.0), pt('W35', 7.4)]);
+  assert.equal(cmp?.word, 'flat');
+});
+
+test('đi xuống thì diff âm', () => {
+  const cmp = trendCompare([pt('W34', 9), pt('W35', 4)]);
+  assert.equal(cmp?.word, 'down');
+  assert.equal(cmp?.diff, -5);
 });
