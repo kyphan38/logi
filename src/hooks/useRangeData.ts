@@ -11,7 +11,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { subscribeByRange } from '@/lib/activities';
 import { weeksOf, type Range } from '@/lib/range';
-import { listWeekTargets } from '@/lib/targets';
+import { fullPeriod } from '@/lib/range-table';
+import { subscribeWeekTargets } from '@/lib/targets';
 import { PRESETS, type Activity, type Category, type WeekTarget } from '@/types/logi';
 
 const EMPTY: Activity[] = [];
@@ -42,9 +43,11 @@ export function useRangeData(range: Range): RangeData {
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
 
+  const { from, to, kind } = range;
+
   // Đổi khoảng → xoá sạch số cũ ngay. Nếu không, chart sẽ hiển thị số của
   // khoảng trước dưới nhãn của khoảng mới trong một nhịp render.
-  const key = uid ? `${uid}|${range.from}|${range.to}|${nonce}` : null;
+  const key = uid ? `${uid}|${from}|${to}|${kind}|${nonce}` : null;
   const [prevKey, setPrevKey] = useState(key);
   if (prevKey !== key) {
     setPrevKey(key);
@@ -55,8 +58,6 @@ export function useRangeData(range: Range): RangeData {
     setLoadingActs(key !== null);
     setLoadingTargets(key !== null);
   }
-
-  const { from, to } = range;
 
   useEffect(() => {
     if (!uid) return;
@@ -79,12 +80,14 @@ export function useRangeData(range: Range): RangeData {
   useEffect(() => {
     if (!uid) return;
     void nonce;
-    let alive = true;
-    const weeks = weeksOf({ from, to });
+    // Cần lấy đủ tuần cho cả range lẫn fullPeriod (RangeTable tính cả tháng)
+    const period = fullPeriod(range);
+    const weeks = weeksOf(period);
 
-    listWeekTargets(uid, weeks)
-      .then((map) => {
-        if (!alive) return;
+    return subscribeWeekTargets(
+      uid,
+      weeks,
+      (map) => {
         const out = new Map<string, Record<Category, number>>();
         const late = new Set<string>();
         for (const w of weeks) {
@@ -95,21 +98,17 @@ export function useRangeData(range: Range): RangeData {
         setWeekTargets(out);
         setLateWeeks(late);
         setLoadingTargets(false);
-      })
-      .catch((e: unknown) => {
-        if (!alive) return;
+      },
+      (e: unknown) => {
         // Thiếu target thì chart vẫn vẽ được phần "actual"; đừng chặn cả trang.
         const out = new Map<string, Record<Category, number>>();
         for (const w of weeks) out.set(w, PRESETS.normal.weekly);
         setWeekTargets(out);
         setLoadingTargets(false);
         setError((e as Error).message);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [uid, from, to, nonce]);
+      }
+    );
+  }, [uid, from, to, kind, nonce]);
 
   return {
     activities,
