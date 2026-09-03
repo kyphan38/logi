@@ -9,6 +9,7 @@
 // tức là giữ nguyên hình dạng tuần của baseline rồi scale theo target thực tế.
 // Hàm thuần, không đụng React → test bằng `node --test`.
 // ---------------------------------------------------------------------------
+import { catchUp } from '@/lib/catchup';
 import { BASELINE_DAILY, BASELINE_WEEKLY, CATEGORIES, type Category } from '@/types/logi';
 
 /**
@@ -34,7 +35,14 @@ export const LOW_RATIO = 0.5;
 export interface DayLine {
   category: Category;
   actual: number;
+  /** Mẫu số của gauge. Có `doneBefore` thì đây là gợi ý bù, không thì standard. */
   target: number;
+  /** Chia theo baseline, không nhìn tuần đã đi tới đâu. */
+  standard: number;
+  /** Xong target tuần rồi, trước cả ngày này. */
+  met: boolean;
+  /** Trần ngày đã cắt bớt gợi ý. */
+  capped: boolean;
   /** actual < 50% target → cần chú ý. */
   low: boolean;
 }
@@ -42,26 +50,40 @@ export interface DayLine {
 /**
  * Dòng tóm tắt: `Learn 1.5 / 3.0 · Work 9.5 / 9.5`.
  *
- * @param progress phần ngày đã trôi qua, 0..1. Ngày đã qua truyền 1; ngày hôm
- *   nay truyền `dayProgress(now)` - 10 giờ sáng mà so với target cả ngày thì
- *   cái gì cũng "thiếu".
+ * @param doneBefore giờ đã log ở các ngày TRƯỚC ngày này trong cùng tuần logic.
+ *   Có thì mẫu số là gợi ý bù (xem `catchUp`); `null` - chưa tải xong dữ liệu
+ *   tuần - thì quay về chia theo baseline, thà đứng yên còn hơn nhảy số.
  */
 export function daySummary(
   actual: Record<Category, number>,
   weekly: Record<Category, number> | null,
   weekday: number,
-  progress = 1
+  doneBefore: Record<Category, number> | null = null
 ): DayLine[] {
   if (!weekly) return [];
-  const full = dailyTargetFor(weekday, weekly);
+
+  const flat = dailyTargetFor(weekday, weekly);
+  const plan = doneBefore ? catchUp(weekly, doneBefore, weekday) : null;
 
   const lines: DayLine[] = [];
   for (const c of CATEGORIES) {
     const a = actual[c] ?? 0;
-    const target = full[c] * Math.min(1, Math.max(0, progress));
-    // Chủ nhật không có Fitness thì không hiện Fitness.
-    if (a <= 0 && full[c] <= 0) continue;
-    lines.push({ category: c, actual: a, target, low: target > 0 && a < target * LOW_RATIO });
+    const standard = flat[c];
+    const target = plan ? plan[c].suggested : standard;
+
+    // Ngày nghỉ của category này (Fitness Chủ nhật) mà cũng chẳng log gì thì ô
+    // đó không mang tin - bỏ hẳn. Đã log thì vẫn hiện, để giờ không biến mất.
+    if (a <= 0 && standard <= 0 && target <= 0) continue;
+
+    lines.push({
+      category: c,
+      actual: a,
+      target,
+      standard,
+      met: plan?.[c].met ?? false,
+      capped: plan?.[c].capped ?? false,
+      low: target > 0 && a < target * LOW_RATIO,
+    });
   }
   return lines;
 }
