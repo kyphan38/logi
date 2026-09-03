@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import BalanceBars, { categoryOrder } from '@/components/BalanceBars';
+import Card from '@/components/Card';
 import LogQualityNote from '@/components/LogQualityNote';
 import ExportSheet from '@/components/ExportSheet';
 import Heatmap from '@/components/Heatmap';
@@ -11,6 +12,7 @@ import InsightPanel from '@/components/InsightPanel';
 import RangePicker from '@/components/RangePicker';
 import RangeTable from '@/components/RangeTable';
 import StackedDays from '@/components/StackedDays';
+import TrendCard from '@/components/TrendCard';
 import { useTick } from '@/hooks/useActivities';
 import { fetchAllTime, useExportNudge } from '@/hooks/useBackup';
 import { useRangeData } from '@/hooks/useRangeData';
@@ -111,21 +113,27 @@ export default function AnalyticsPage() {
               số bên dưới không nói lên điều gì, phải biết trước khi đọc. */}
           <LogQualityNote quality={view.quality} overlap={view.overlap} />
 
-          <section className="flex flex-col gap-3">
-            <h2 className="text-[13px] font-medium text-ink-soft">Balance</h2>
+          <Card
+            title="Balance"
+            footnote="One scale for all four bars. The notch is the target for this range."
+          >
             <BalanceBars rows={view.rows} showDeviation={!isThin(view.quality)} />
-          </section>
+          </Card>
 
           {/* Khoảng một ngày: By day một cột và When một cột đều không nói lên
               điều gì mà History không nói rõ hơn (mục 8.1). */}
           {singleDay ? (
-            <p className="text-[13px] text-ink-muted">
-              Pick 2+ days to see daily and hourly patterns.
-            </p>
+            <Card label="Daily and hourly patterns">
+              <p className="text-[13px] text-ink-muted">
+                Pick 2+ days to see daily and hourly patterns.
+              </p>
+            </Card>
           ) : (
             <>
-              <section className="flex flex-col gap-3">
-                <h2 className="text-[13px] font-medium text-ink-soft">By {bucketMode(range)}</h2>
+              <Card
+                title={`By ${bucketMode(range)}`}
+                footnote="Y axis is hours, not % of a day - logging two things at once can push a column past 24h."
+              >
                 <StackedDays
                   activities={activities}
                   range={range}
@@ -133,14 +141,18 @@ export default function AnalyticsPage() {
                   lateWeeks={lateWeeks}
                   now={now}
                 />
-              </section>
+              </Card>
 
-              <section className="flex flex-col gap-3">
-                <h2 className="text-[13px] font-medium text-ink-soft">When</h2>
+              <Card title="When" footnote="Darker cell = more hours logged in that hour.">
                 <Heatmap activities={activities} range={range} now={now} />
-              </section>
+              </Card>
             </>
           )}
+
+          {/* Trend KHÔNG dùng `range` của picker: câu hỏi "mấy tháng nay đi lên
+              hay đi xuống" không liên quan tới khoảng đang xem. Nó có cửa sổ
+              riêng, chọn bằng hai dropdown trong khung. */}
+          <TrendCard now={now} />
 
           {/* Sau chart, không phải trước: chart trả lời "cái gì đã xảy ra",
               phần này chỉ chọn ra cái đáng để ý. Đọc ngược lại thì người dùng

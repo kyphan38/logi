@@ -6,6 +6,7 @@
 // Thay `TodayCard`: bảng cũ luôn kể chuyện hôm nay dù chọn range nào.
 // Toàn bộ số học nằm ở `@/lib/range-table`; đây chỉ là phần vẽ.
 // ---------------------------------------------------------------------------
+import Card from '@/components/Card';
 import { type Range } from '@/lib/range';
 import { rangeTable } from '@/lib/range-table';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
@@ -31,10 +32,8 @@ export default function RangeTable({
   if (t.rows.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-[13px] font-medium text-ink-soft">{t.title}</h2>
-
-      <div className="flex flex-col rounded-md border border-line-strong bg-surface-1 px-4 py-3">
+    <Card title={t.title} footnote={t.note}>
+      <div className="flex flex-col">
         <div className="flex items-center gap-2 pb-1.5 text-[11px] uppercase tracking-wide text-ink-muted">
           <span className="flex-1" />
           <span className="w-12 text-right">Done</span>
@@ -72,8 +71,6 @@ export default function RangeTable({
           </div>
         ))}
       </div>
-
-      <p className="text-[11px] text-ink-muted">{t.note}</p>
-    </section>
+    </Card>
   );
 }

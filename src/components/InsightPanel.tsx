@@ -14,6 +14,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
+import Card from '@/components/Card';
 import { useInsight } from '@/hooks/useInsight';
 import { extremeNote, type Digest } from '@/lib/digest';
 import { lookupMetric, type Observation } from '@/lib/insight-sanitize';
@@ -36,9 +37,7 @@ export default function InsightPanel({ activities, range, weekTargets, now }: Pr
   });
 
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-[13px] font-medium text-ink-soft">Worth noting</h2>
-
+    <Card title="Worth noting">
       {!gate.ok || state === 'idle' ? (
         <Analyse
           range={range}
@@ -69,7 +68,7 @@ export default function InsightPanel({ activities, range, weekTargets, now }: Pr
           onRefresh={() => run(true)}
         />
       )}
-    </section>
+    </Card>
   );
 }
 

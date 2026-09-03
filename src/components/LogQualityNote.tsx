@@ -13,6 +13,7 @@
 // con số thô, mỗi con số tự kiểm chứng được.
 // ---------------------------------------------------------------------------
 
+import Card from '@/components/Card';
 import { isThin, logQualityLine, thinWarning, type LogQuality } from '@/lib/log-quality';
 
 interface Props {
@@ -25,12 +26,7 @@ export default function LogQualityNote({ quality, overlap }: Props) {
   const thin = isThin(quality);
 
   return (
-    <div
-      className={[
-        'flex flex-col gap-1 rounded-md border p-3',
-        thin ? 'border-line-strong bg-surface-1' : 'border-line bg-surface-1',
-      ].join(' ')}
-    >
+    <Card title="Log quality">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-[13px] tabular-nums text-ink">{logQualityLine(quality)}</span>
         {overlap > 0.05 && (
@@ -46,6 +42,6 @@ export default function LogQualityNote({ quality, overlap }: Props) {
       {thin && (
         <p className="whitespace-pre-line text-[13px] text-ink-soft">{thinWarning(quality)}</p>
       )}
-    </div>
+    </Card>
   );
 }

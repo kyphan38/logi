@@ -237,14 +237,59 @@ export function validateTargets(weekly: Record<Category, number>): BudgetCheck {
   return { ok: errors.length === 0, total, budget: TOTAL_BUDGET, errors };
 }
 
-/** Khi kéo một category, tự trừ/bù đều ở các category còn lại. */
+/**
+ * Category bị GHIM: người dùng đã chốt con số, không ai được lấy giờ của nó.
+ *
+ * Ghim tối đa 3. Ghim cái thứ tư thì không còn ai bù được, mà tổng vẫn phải
+ * đúng 89h - lúc đó màn hình chỉ còn là bốn ô số phải tự cộng cho khớp, đó là
+ * việc của máy tính chứ không phải của một cái slider.
+ */
+export const MAX_PINNED = 3;
+
+/**
+ * Giới hạn kéo được của MỘT category, khi các category khác đang bị ghim.
+ *
+ * `max` không phải là 89h: phần bị ghim đã tiêu mất, và mỗi category còn lại
+ * vẫn phải giữ đủ sàn của nó. Thiếu chặn này thì kéo quá tay là tổng vượt 89h
+ * mà không có ai gánh - nút Save tắt, người dùng không hiểu vì sao.
+ */
+export function dragBounds(
+  weekly: Record<Category, number>,
+  changed: Category,
+  pinned: Iterable<Category> = []
+): { min: number; max: number } {
+  const locked = new Set(pinned);
+  locked.delete(changed);
+  const donors = CATEGORIES.filter((c) => c !== changed && !locked.has(c));
+
+  const lockedSum = [...locked].reduce((a, c) => a + weekly[c], 0);
+  const floorSum = donors.reduce((a, c) => a + (HARD_FLOOR[c] ?? 0), 0);
+
+  const min = HARD_FLOOR[changed] ?? 0;
+  return { min, max: Math.max(min, TOTAL_BUDGET - lockedSum - floorSum) };
+}
+
+/**
+ * Khi kéo một category, tự trừ/bù đều ở các category CÒN LẠI VÀ CHƯA GHIM.
+ *
+ * Không còn ai để bù (ghim hết 3 cái kia) → trả nguyên trạng: giá trị của
+ * category thứ tư là hệ quả của ba cái kia, không kéo được.
+ */
 export function rebalance(
   weekly: Record<Category, number>,
   changed: Category,
-  newValue: number
+  newValue: number,
+  pinned: Iterable<Category> = []
 ): Record<Category, number> {
+  const locked = new Set(pinned);
+  locked.delete(changed);
+  const others = CATEGORIES.filter((c) => c !== changed && !locked.has(c));
+  if (others.length === 0) return { ...weekly };
+
+  // KHÔNG kẹp `newValue` ở đây: `rebalance` nhận đúng số được truyền vào, sàn
+  // và trần do slider chặn trước bằng `dragBounds()`. Kẹp cả hai chỗ thì lúc
+  // sai không biết chỗ nào đang nói dối.
   const next = { ...weekly, [changed]: newValue };
-  const others = CATEGORIES.filter((c) => c !== changed);
   let delta = Object.values(next).reduce((a, b) => a + b, 0) - TOTAL_BUDGET;
 
   for (let pass = 0; pass < 5 && Math.abs(delta) > 0.05; pass++) {

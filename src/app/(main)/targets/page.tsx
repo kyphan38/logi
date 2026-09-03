@@ -23,8 +23,8 @@ import {
   useWeekTarget,
 } from '@/hooks/useTargets';
 import { budgetMessages, PRESET_HINT } from '@/lib/copy';
-import { rebalance, validateTargets } from '@/lib/balance';
-import { roundToBudget, type Weekly } from '@/lib/rollover';
+import { dragBounds, MAX_PINNED, rebalance, validateTargets } from '@/lib/balance';
+import { reapplyDebt, roundToBudget, type Weekly } from '@/lib/rollover';
 import {
   TargetError,
   previewSwitch,
@@ -46,6 +46,17 @@ import {
 } from '@/types/logi';
 
 const PRESET_ORDER: PresetId[] = ['normal', 'crunch', 'deep_learn', 'recovery'];
+
+/**
+ * Custom là MODE THỨ NĂM, không phải một khối riêng nằm dưới.
+ *
+ * Trước đây bốn preset nằm trong dropdown còn bốn slider luôn hiện bên dưới
+ * dưới tiêu đề "CUSTOM". Màn hình vì thế nói hai câu ngược nhau cùng lúc:
+ * "Mode: Recovery" ở trên, "Custom 43.5h" ở dưới. Nay chỉ có MỘT danh sách
+ * năm lựa chọn, và chỉ mode đang chọn mới hiện phần điều khiển của nó.
+ */
+type ModeId = PresetId | 'custom';
+const MODE_ORDER: ModeId[] = [...PRESET_ORDER, 'custom'];
 const SHORT: Record<Category, string> = {
   work: 'W',
   learn: 'L',
@@ -103,11 +114,18 @@ function TargetsView() {
   const suggestPending = suggested !== null && suggested !== target?.preset;
 
   const [busy, setBusy] = useState(false);
-  // Khối preset gấp lại theo mặc định. Tự mở khi vào từ `?suggest=` - deep link
-  // mà đáp xuống một khối đang đóng thì coi như không dẫn tới đâu.
-  const [presetOpen, setPresetOpen] = useState(suggested !== null);
+  // Danh sách mode gấp lại theo mặc định. Tự mở khi vào từ `?suggest=` - deep
+  // link mà đáp xuống một khối đang đóng thì coi như không dẫn tới đâu.
+  const [modeOpen, setModeOpen] = useState(suggested !== null);
   const [confirm, setConfirm] = useState<PresetId | null>(null);
   const [draft, setDraft] = useState<Weekly | null>(null);
+  /** Người dùng vừa chọn mode Custom, dù số đang lưu vẫn đúng bằng preset. */
+  const [customPicked, setCustomPicked] = useState(false);
+  /**
+   * Category bị ghim: kéo cái khác thì KHÔNG được lấy giờ của nó.
+   * Chỉ sống trong phiên - đây là cách bạn đang kéo, không phải mục tiêu tuần.
+   */
+  const [pinned, setPinned] = useState<Set<Category>>(() => new Set());
   const [keepStreak, setKeepStreak] = useState(false);
   /** Weekly Review mở tay từ đây, không cần đợi tối Chủ nhật. */
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
@@ -124,6 +142,18 @@ function TargetsView() {
     [weekly]
   );
   const dirty = draft !== null && saved !== null && ADJUSTABLE.some((c) => draft[c] !== saved[c]);
+
+  // Số đang lưu KHÁC preset đang ghi trong doc → tuần này thật ra là Custom.
+  // Không tính ra được điều này thì màn hình cứ báo "Recovery" mãi dù bạn đã
+  // kéo lệch đi 20h, và mode trở thành một cái nhãn nói dối.
+  const savedIsCustom = useMemo(() => {
+    if (!saved || !target) return false;
+    const base = reapplyDebt(PRESETS[target.preset].weekly, target.debtApplied ?? {});
+    return ADJUSTABLE.some((c) => Math.abs(saved[c] - base[c]) > 0.05);
+  }, [saved, target]);
+
+  const mode: ModeId =
+    dirty || customPicked || savedIsCustom ? 'custom' : (target?.preset ?? 'normal');
 
   // --- Hành động ---------------------------------------------------
 
@@ -148,7 +178,31 @@ function TargetsView() {
       await setPreset(uid!, week, id);
       setDraft(null);
       setConfirm(null);
+      setCustomPicked(false);
+      setPinned(new Set());
       push(`Switched to ${PRESETS[id].label}.`);
+    });
+
+  /** Chọn Custom = giữ nguyên giờ hiện tại rồi mở slider. Chưa ghi gì cả. */
+  const pickCustom = () => {
+    setCustomPicked(true);
+    setConfirm(null);
+    setModeOpen(false);
+  };
+
+  const cancelCustom = () => {
+    setDraft(null);
+    setPinned(new Set());
+    if (!savedIsCustom) setCustomPicked(false);
+  };
+
+  /** Ghim / bỏ ghim. Quá 3 thì lời mời bị từ chối im lặng - nút đã disabled. */
+  const togglePin = (c: Category) =>
+    setPinned((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else if (next.size < MAX_PINNED) next.add(c);
+      return next;
     });
 
   const saveCustom = () =>
@@ -167,7 +221,7 @@ function TargetsView() {
 
   const drag = (c: Category, value: number) => {
     if (!weekly || locked) return;
-    setDraft(roundToBudget(rebalance(weekly, c, value)));
+    setDraft(roundToBudget(rebalance(weekly, c, value, pinned)));
   };
 
   // --- Render ------------------------------------------------------
@@ -219,8 +273,8 @@ function TargetsView() {
           <section className="mb-6">
             <button
               type="button"
-              onClick={() => setPresetOpen((v) => !v)}
-              aria-expanded={presetOpen}
+              onClick={() => setModeOpen((v) => !v)}
+              aria-expanded={modeOpen}
               className="flex w-full items-center justify-between rounded-md border border-zinc-200 px-4 py-3 text-left transition active:scale-[0.99] dark:border-zinc-800"
             >
               <span className="min-w-0">
@@ -228,7 +282,7 @@ function TargetsView() {
                   Mode
                 </span>
                 <span className="ml-2 font-medium text-zinc-900 dark:text-zinc-100">
-                  {target?.preset && !dirty ? PRESETS[target.preset].label : 'Custom'}
+                  {mode === 'custom' ? 'Custom' : PRESETS[mode].label}
                 </span>
                 {suggestPending && (
                   <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
@@ -242,49 +296,87 @@ function TargetsView() {
                 stroke="currentColor"
                 strokeWidth="2"
                 aria-hidden="true"
-                className={`h-4 w-4 shrink-0 text-zinc-400 transition ${presetOpen ? 'rotate-180' : ''}`}
+                className={`h-4 w-4 shrink-0 text-zinc-400 transition ${modeOpen ? 'rotate-180' : ''}`}
               >
                 <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
 
-            {presetOpen && (
+            {modeOpen && (
               <div className="mt-2 flex flex-col gap-2">
-                {PRESET_ORDER.map((id) => (
-                  <PresetCard
-                    key={id}
-                    id={id}
-                    selected={target?.preset === id && !dirty}
-                    suggested={suggested === id && target?.preset !== id}
-                    // Nợ quá 20h thì không được vay thêm nữa.
-                    lockedReason={
-                      id === 'crunch' && crunchLocked
-                        ? `Locked - ${h(debtTotal)} of debt outstanding`
-                        : null
-                    }
-                    disabled={locked || busy}
-                    onSelect={() => setConfirm(id)}
-                  />
-                ))}
+                {MODE_ORDER.map((id) =>
+                  id === 'custom' ? (
+                    <ModeCard
+                      key={id}
+                      label="Custom"
+                      hint="Your own hours"
+                      summary={weekly ? summary(weekly) : ''}
+                      selected={mode === 'custom'}
+                      disabled={locked || busy}
+                      onSelect={pickCustom}
+                    />
+                  ) : (
+                    <ModeCard
+                      key={id}
+                      label={PRESETS[id].label}
+                      hint={PRESET_HINT[id]}
+                      summary={summary(PRESETS[id].weekly)}
+                      selected={mode === id}
+                      suggested={suggested === id && mode !== id}
+                      // Nợ quá 20h thì không được vay thêm nữa.
+                      lockedReason={
+                        id === 'crunch' && crunchLocked
+                          ? `Locked - ${h(debtTotal)} of debt outstanding`
+                          : null
+                      }
+                      disabled={locked || busy}
+                      onSelect={() => setConfirm(id)}
+                    />
+                  )
+                )}
               </div>
             )}
           </section>
 
-          {weekly && (
+          {/*
+            Slider CHỈ hiện ở mode Custom. Đang ở Recovery mà vẫn thấy bốn
+            slider thì màn hình đang mời bạn phá chính cái preset vừa chọn.
+          */}
+          {weekly && mode === 'custom' && (
             <section className="mb-6">
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                Custom
-              </h2>
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Your hours
+                </h2>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {pinned.size > 0
+                    ? `${pinned.size}/${MAX_PINNED} pinned`
+                    : 'Pin one to hold it steady'}
+                </span>
+              </div>
 
-              {ADJUSTABLE.map((c) => (
-                <Slider
-                  key={c}
-                  category={c}
-                  value={weekly[c]}
-                  disabled={locked || busy}
-                  onChange={(v) => drag(c, v)}
-                />
-              ))}
+              {ADJUSTABLE.map((c) => {
+                const isPinned = pinned.has(c);
+                // Ghim hết 3 cái kia → cái này là phần còn lại của 89h, kéo nó
+                // thì không ai bù được. Để nó đọc được, không kéo được.
+                const derived = !isPinned && pinned.size >= MAX_PINNED;
+                const bounds = dragBounds(weekly, c, pinned);
+                return (
+                  <Slider
+                    key={c}
+                    category={c}
+                    value={weekly[c]}
+                    min={bounds.min}
+                    max={bounds.max}
+                    pinned={isPinned}
+                    derived={derived}
+                    canPin={isPinned || pinned.size < MAX_PINNED}
+                    onTogglePin={() => togglePin(c)}
+                    disabled={locked || busy || isPinned || derived}
+                    onChange={(v) => drag(c, v)}
+                  />
+                );
+              })}
 
               <TotalRow weekly={weekly} errors={budgetMessages(weekly)} />
 
@@ -292,7 +384,7 @@ function TargetsView() {
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setDraft(null)}
+                    onClick={cancelCustom}
                     className="flex-1 rounded-lg border border-zinc-300 py-2.5 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
                   >
                     Cancel
@@ -336,26 +428,29 @@ function TargetsView() {
 }
 
 // ------------------------------------------------------------
-// Preset card
-// ------------------------------------------------------------
+// Mode card
+// ----------------------------------------------------------------------
 
-function PresetCard({
-  id,
+function ModeCard({
+  label,
+  hint,
+  summary: line,
   selected,
   suggested = false,
-  lockedReason,
+  lockedReason = null,
   disabled,
   onSelect,
 }: {
-  id: PresetId;
+  label: string;
+  hint: string;
+  summary: string;
   selected: boolean;
   /** Do AI gợi ý ở màn Analytics. Chỉ là dấu nhắc, chưa áp dụng gì. */
   suggested?: boolean;
-  lockedReason: string | null;
+  lockedReason?: string | null;
   disabled: boolean;
   onSelect: () => void;
 }) {
-  const p = PRESETS[id];
   const off = disabled || lockedReason !== null;
 
   return (
@@ -368,14 +463,12 @@ function PresetCard({
         'w-full rounded-md border px-4 py-3 text-left transition',
         selected
           ? 'border-blue-600 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-950/30'
-          : suggested
-            ? 'border-zinc-400 dark:border-zinc-600'
-            : 'border-zinc-200 dark:border-zinc-800',
+          : 'border-zinc-200 dark:border-zinc-800',
         off ? 'cursor-not-allowed opacity-50' : 'active:scale-[0.99]',
       ].join(' ')}
     >
       <div className="flex items-center justify-between">
-        <span className="font-medium text-zinc-900 dark:text-zinc-100">{p.label}</span>
+        <span className="font-medium text-zinc-900 dark:text-zinc-100">{label}</span>
         {selected ? (
           <span className="text-blue-600 dark:text-blue-400">✓</span>
         ) : suggested ? (
@@ -383,32 +476,88 @@ function PresetCard({
         ) : null}
       </div>
       <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-        {lockedReason ?? PRESET_HINT[id]}
+        {lockedReason ?? hint}
       </p>
-      <p className="mt-1 font-mono text-xs text-zinc-400">{summary(p.weekly)}</p>
+      <p className="mt-1 font-mono text-xs text-zinc-400">{line}</p>
     </button>
   );
 }
 
-// ------------------------------------------------------------
+// ----------------------------------------------------------------------
 // Slider
 // ------------------------------------------------------------
+
+/** Ổ khoá nhỏ cạnh mỗi category. Đóng = không ai được lấy giờ của nó. */
+function PinButton({
+  pinned,
+  canPin,
+  disabled,
+  label,
+  onClick,
+}: {
+  pinned: boolean;
+  canPin: boolean;
+  disabled: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  const off = disabled || (!pinned && !canPin);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={off}
+      aria-pressed={pinned}
+      aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
+      className={[
+        'shrink-0 rounded p-1 transition',
+        pinned ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-300 dark:text-zinc-600',
+        off ? 'cursor-not-allowed opacity-40' : 'active:scale-90',
+      ].join(' ')}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="5" y="11" width="14" height="9" rx="2" />
+        {pinned ? (
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" strokeLinecap="round" />
+        ) : (
+          <path d="M8 11V7a4 4 0 0 1 7.5-2" strokeLinecap="round" />
+        )}
+      </svg>
+    </button>
+  );
+}
 
 function Slider({
   category,
   value,
+  min,
+  max,
+  pinned,
+  derived,
+  canPin,
   disabled,
   onChange,
+  onTogglePin,
 }: {
   category: Category;
   value: number;
+  /** Sàn cứng của category này. */
+  min: number;
+  /** Trần THẬT sau khi trừ phần đã ghim - không phải lúc nào cũng là 70h. */
+  max: number;
+  pinned: boolean;
+  /** Ba cái kia đã ghim → số này là phần còn lại, chỉ để đọc. */
+  derived: boolean;
+  canPin: boolean;
   disabled: boolean;
   onChange: (v: number) => void;
+  onTogglePin: () => void;
 }) {
   const floor = HARD_FLOOR[category] ?? 0;
   // Chạm sàn thì báo rõ, và `min` chặn luôn - không kéo xuống được nữa.
   const atFloor = value <= floor + 0.05 && floor > 0;
-  const max = 70;
+  // Trần 70h là giới hạn của thanh kéo; `max` là giới hạn của ngân sách.
+  const ceiling = Math.max(min, Math.min(70, max));
 
   return (
     <div className="mb-3">
@@ -425,13 +574,29 @@ function Slider({
               floor
             </span>
           )}
+          {derived && (
+            <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+              auto
+            </span>
+          )}
         </span>
-        <span className="font-mono tabular-nums text-zinc-900 dark:text-zinc-100">{h(value)}</span>
+        <span className="flex items-center gap-1">
+          <span className="font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
+            {h(value)}
+          </span>
+          <PinButton
+            pinned={pinned}
+            canPin={canPin}
+            disabled={derived}
+            label={CATEGORY_LABEL[category]}
+            onClick={onTogglePin}
+          />
+        </span>
       </div>
       <input
         type="range"
-        min={floor}
-        max={max}
+        min={min}
+        max={ceiling}
         step={0.5}
         value={value}
         disabled={disabled}

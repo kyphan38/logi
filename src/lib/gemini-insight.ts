@@ -120,6 +120,12 @@ const MODEL = 'gemini-3.8-flash';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 /**
+ * Trần cho CẢ phần nghĩ lẫn phần trả lời. Kết quả thật ~200 token; phần dư
+ * là chỗ cho model nghĩ. Hạ số này xuống dưới ~1000 là JSON bị cắt cụt.
+ */
+const MAX_OUTPUT_TOKENS = 2000;
+
+/**
  * Trả về JSON THÔ của model. Người gọi BẮT BUỘC đưa qua `sanitizeInsight()`
  * trước khi gửi ra client - không có ngoại lệ.
  */
@@ -141,14 +147,31 @@ export async function analyseDigest(digest: Digest, apiKey: string): Promise<unk
         // Thấp để bám số, nhưng không bằng 0: cùng một tuần đọc lại
         // vẫn nên đọc như câu người viết, không phải khuôn mẫu.
         temperature: 0.4,
-        maxOutputTokens: 700,
+        // gemini-3.8-flash suy nghĩ trước khi trả lời, và phần suy nghĩ ĐẾM
+        // vào `maxOutputTokens`. Với mức mặc định nó tiêu ~800 token nghĩ,
+        // nên trần 700 cũ luôn trả về JSON cụt → "Unexpected end of JSON input".
+        // Việc ở đây là chọn ra vài dòng từ digest có sẵn, không cần nghĩ sâu.
+        thinkingConfig: { thinkingLevel: 'low' },
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
       },
     }),
   });
 
   if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
   const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini returned no content');
-  return JSON.parse(text) as unknown;
+  const cand = data?.candidates?.[0];
+  const text = cand?.content?.parts?.[0]?.text;
+
+  // Cắt giữa chừng thì `JSON.parse` sẽ ném "Unexpected end of JSON input" -
+  // câu đó không nói được gì cho người phải đi sửa. Nói thẳng ra.
+  if (cand?.finishReason === 'MAX_TOKENS') {
+    throw new Error(`Gemini hit the ${MAX_OUTPUT_TOKENS}-token cap before finishing`);
+  }
+  if (!text) throw new Error(`Gemini returned no content (finishReason=${cand?.finishReason ?? 'none'})`);
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new Error('Gemini returned malformed JSON');
+  }
 }
