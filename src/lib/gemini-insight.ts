@@ -116,7 +116,7 @@ Write in English. Be brief. No preamble, no closing summary.`;
 // ------------------------------------------------------------
 
 // Cùng model với đường parse giọng nói: đã biết chắc key hiện tại gọi được.
-const MODEL = 'gemini-3.5-flash-lite';
+const MODEL = 'gemini-3.8-flash';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 /**
