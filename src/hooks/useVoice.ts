@@ -73,7 +73,10 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
               setTimeout(() => rej(new Error('Saving took too long.')), WRITE_TIMEOUT_MS)
             ),
           ]);
-          lastCreated.current = { id: done.activityId, at: Date.now() };
+          // Bedtime không có activity (`activityId` rỗng) nên không sửa tiếp
+          // bằng voice được - giữ lastCreated cũ thay vì trỏ vào chỗ trống.
+          if (done.activityId) lastCreated.current = { id: done.activityId, at: Date.now() };
+          else lastCreated.current = null;
           setPending(null);
           setClarify(null);
           push(done.message, {

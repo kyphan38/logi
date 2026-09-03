@@ -51,20 +51,24 @@ export function loggedRatio(
 }
 
 /**
- * `Work 0.4h · 31.0h expected by now (-99%)`
+ * `Work 0.4h · 31.0h expected by now this week (-99%)`
  *
  * KHÔNG dùng `formatDeviation()` của `balance.ts`: nó viết `0.4h / 31.0h`, mà
  * dấu `/` khiến 31.0h đọc lên như thể đó là target tuần của Work - trong khi
  * màn Targets ghi 40h. `balance.ts` là file cấm sửa nên đổi cách viết ở đây.
+ *
+ * Chữ "this week" cố ý có mặt: nút ở màn Now báo số HÔM NAY với đúng tên
+ * category này, nên banner mà thiếu "this week" là hai con số vênh nhau không
+ * nhãn nào phân biệt (Stage 8 mục 7).
  */
 function phrase(d: Deviation): string {
   const label = CATEGORY_LABEL[d.category];
   const sign = d.deltaHours > 0 ? '+' : '';
   const pct = Math.round(d.deltaPct * 100);
-  return `${label} ${d.actual.toFixed(1)}h · ${d.expected.toFixed(1)}h expected by now (${sign}${pct}%)`;
+  return `${label} ${d.actual.toFixed(1)}h · ${d.expected.toFixed(1)}h expected by now this week (${sign}${pct}%)`;
 }
 
-/** `Weekend OT: 8.0h. Learn is 12.0h short of its 31h target.` */
+/** `Weekend OT: 8.0h. Learn is 12.0h short of its 31h weekly target.` */
 function conflictPhrase(
   activities: Activity[],
   weekly: Record<Category, number>,
@@ -73,7 +77,7 @@ function conflictPhrase(
   const weekend = activities.filter((a) => [0, 6].includes(logicalWeekday(a.startAt)));
   const otWork = actualHours(weekend, now).work;
   const gap = weekly.learn - actualHours(activities, now).learn;
-  return `Weekend OT: ${otWork.toFixed(1)}h. Learn is ${gap.toFixed(1)}h short of its ${weekly.learn}h target.`;
+  return `Weekend OT: ${otWork.toFixed(1)}h. Learn is ${gap.toFixed(1)}h short of its ${weekly.learn}h weekly target.`;
 }
 
 /**

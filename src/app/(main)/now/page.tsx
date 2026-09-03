@@ -12,6 +12,7 @@ import ParseConfirmCard from '@/components/ParseConfirmCard';
 import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
+import TaskChecklist from '@/components/TaskChecklist';
 import Toasts from '@/components/Toasts';
 import VoiceSheet from '@/components/VoiceSheet';
 import WeeklyReview from '@/components/WeeklyReview';
@@ -25,15 +26,20 @@ import {
   useToasts,
   useWeekActivities,
 } from '@/hooks/useActivities';
+import { logBedtime, useDayLog } from '@/hooks/useBedtime';
 import { useReminders } from '@/hooks/useReminders';
 import { useReviewDue } from '@/hooks/useReview';
 import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
+import { useTodayCells } from '@/hooks/useTasks';
 import { useVoice } from '@/hooks/useVoice';
 import { ActivityError, deleteActivity, startActivity, stopActivity } from '@/lib/activities';
 import { actualHours, findStale, logicalDate, logicalWeekday, overlapHours } from '@/lib/balance';
 import { pickBalance } from '@/lib/banner';
+import { clearBedtime } from '@/lib/bedtime-store';
+import { formatBedtime } from '@/lib/bedtime';
 import { formatDuration, roundDown } from '@/lib/datetime';
 import { nowTiles } from '@/lib/day-progress';
+import { checklistFor, type ChecklistRow } from '@/lib/tasks';
 import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
 /** Từ 3 session song song trở lên thì card thu lại, để màn Now vẫn vừa một màn. */
@@ -125,6 +131,26 @@ export default function NowPage() {
     const sum = CATEGORIES.reduce((t, c) => t + actual[c], 0);
     return Math.max(0, (sum - overlapHours(todayActivities, nowMinute)) * 3_600_000);
   }, [todayActivities, nowMinute]);
+
+  // Checklist task hôm nay (Stage 8, quyết định 10): dưới banner, trên lưới nút.
+  // Gộp today + active rồi khử trùng id: session đang chạy từ hôm nay nằm ở cả
+  // hai stream, cộng hai lần là tiến độ nhân đôi.
+  const todayCells = useTodayCells(nowMinute);
+  const checklistRows = useMemo(() => {
+    const seen = new Map(todayActivities.map((a) => [a.id, a] as const));
+    for (const a of active) if (!seen.has(a.id)) seen.set(a.id, a);
+    return checklistFor(
+      todayCells.cells,
+      [...seen.values()],
+      todayCells.date,
+      todayCells.dow,
+      nowMinute
+    );
+  }, [todayCells, todayActivities, active, nowMinute]);
+
+  // Bedtime là mốc trong dayLogs, không phải activity. Nút nhỏ trong header:
+  // bấm là ghi `now`, đã ghi thì hiện giờ đã ghi, bấm lại để sửa.
+  const { log: bedtimeLog } = useDayLog(today);
 
   // Session `active` quá 15h. `active` là stream realtime nên danh sách này tự
   // cập nhật khi mount, khi app quay lại foreground (useTick bắt 'focus'),
@@ -232,6 +258,65 @@ export default function NowPage() {
     }
   }
 
+  /** Bấm một dòng checklist: session mang `taskId` nên được tính vào task. */
+  async function handleTaskStart(row: ChecklistRow) {
+    if (!uid || busy) return;
+    setBusy(true);
+    try {
+      const started = startActivity(uid, {
+        category: row.category,
+        label: row.title,
+        taskId: row.taskId,
+      });
+      await capWait(started, (e) => push(`Sync failed. ${(e as Error).message}`));
+      push(`Started ${row.title}`, {
+        label: 'Undo',
+        run: () => {
+          void started
+            .then((id) => deleteActivity(uid, id))
+            .catch((e) => push(`Could not undo. ${(e as Error).message}`));
+        },
+      });
+    } catch (e) {
+      push(
+        e instanceof ActivityError && e.code === 'duplicate'
+          ? `${CATEGORY_LABEL[row.category]} is already running.`
+          : `Could not start. ${(e as Error).message}`
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Bấm nút bedtime: ghi `now` vào dayLogs của ngày logic mà nó rơi vào. */
+  async function handleBedtime() {
+    if (!uid || busy) return;
+    setBusy(true);
+    try {
+      const at = Date.now();
+      const save = logBedtime(uid, at);
+      await capWait(save, (e) => push(`Sync failed. ${(e as Error).message}`));
+      const date = await save;
+      push(
+        date === today
+          ? `Bedtime ${formatBedtime(at)} logged.`
+          : `Bedtime ${formatBedtime(at)} logged for ${date}.`,
+        {
+          label: 'Undo',
+          run: () => {
+            void clearBedtime(uid, date).catch((e) =>
+              push(`Could not undo. ${(e as Error).message}`)
+            );
+          },
+        }
+      );
+    } catch (e) {
+      push(`Could not log bedtime. ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function focusRunning(category: Category) {
     // Chạm lại category đang chạy: không tạo trùng. Cuộn tới card + nói rõ lý do,
     // nếu không thì cú chạm trông như bị nuốt khi card vốn đã nằm trong màn hình.
@@ -245,15 +330,32 @@ export default function NowPage() {
     // pb-20: chừa chỗ cho nút mic FAB, để nó không đè lên nút Stop của card cuối.
     <div className="flex flex-1 flex-col gap-6 pb-20">
       {/* Header một dòng: ngày logic bên trái, số giờ đã ghi bên phải. Nút
-          Sign out chuyển sang Settings để màn Now vừa một màn hình. */}
+           Sign out chuyển sang Settings để màn Now vừa một màn hình. */}
       <header className="flex items-baseline justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Now</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">{prettyLogicalDate(today)}</p>
         </div>
-        <p className="shrink-0 text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
-          {formatDuration(trackedMs)} tracked
-        </p>
+        <div className="flex shrink-0 flex-col items-end gap-0.5">
+          <p className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
+            {formatDuration(trackedMs)} tracked
+          </p>
+          {/* Bedtime: nút chữ nhỏ, cùng hàng thông tin với tracked để không tốn
+              thêm một khối chiều cao nào. */}
+          <button
+            type="button"
+            onClick={() => void handleBedtime()}
+            disabled={busy}
+            aria-label={
+              bedtimeLog.bedtimeAt
+                ? `Bedtime ${formatBedtime(bedtimeLog.bedtimeAt)}, tap to update`
+                : 'Log bedtime now'
+            }
+            className="text-xs tabular-nums text-zinc-400 transition active:scale-95 disabled:opacity-50 dark:text-zinc-500"
+          >
+            {bedtimeLog.bedtimeAt ? `🌙 ${formatBedtime(bedtimeLog.bedtimeAt)}` : '🌙 bedtime'}
+          </button>
+        </div>
       </header>
 
       {reviewWeek && (
@@ -281,6 +383,15 @@ export default function NowPage() {
       ) : (
         <BalanceBanner line={balanceLine} />
       )}
+
+      {checklistRows.length > 0 ? (
+        <TaskChecklist
+          rows={checklistRows}
+          busy={busy}
+          onStart={(row) => void handleTaskStart(row)}
+          onStop={(row) => row.runningId && void handleStop(row.runningId)}
+        />
+      ) : null}
 
       {scheduled.length > 0 ? (
         <section className="flex flex-col gap-3" aria-label="Scheduled sessions">
@@ -334,7 +445,10 @@ export default function NowPage() {
         onFocusRunning={focusRunning}
       />
 
-      {todayActivities.length === 0 && !activeLoading && active.length === 0 ? (
+      {todayActivities.length === 0 &&
+      checklistRows.length === 0 &&
+      !activeLoading &&
+      active.length === 0 ? (
         <p className="text-sm text-zinc-400 dark:text-zinc-500">
           Nothing tracked yet. Tap a category to start.
         </p>

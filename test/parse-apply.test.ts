@@ -18,6 +18,7 @@ function cmd(o: Partial<ParsedCommand>): ParsedCommand {
     label: null,
     startAt: null,
     endAt: null,
+    bedtimeAt: null,
     confidence: 0.95,
     clarifyQuestion: null,
     clarifyOptions: null,
@@ -57,6 +58,13 @@ function spyRepo(before: Activity = act({ id: 'x1', startAt: NOW - H })) {
     getActivity: async (uid, id) => {
       log('getActivity', [uid, id]);
       return before;
+    },
+    setBedtime: async (uid, at) => {
+      log('setBedtime', [uid, at]);
+      return '2026-08-26';
+    },
+    clearBedtime: async (uid, date) => {
+      log('clearBedtime', [uid, date]);
     },
   };
   const names = () => calls.map((c) => c.fn);
@@ -261,5 +269,56 @@ describe('ngưỡng auto-commit', () => {
     const p = planVoice(cmd({ confidence: 0.7, category: null }), ctx);
     assert.equal(p.kind, 'confirm');
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['category']);
+  });
+});
+
+describe('bedtime - mốc đi ngủ, KHÔNG phải activity', () => {
+  const BED = at('2026-08-26', '23:12');
+
+  it('bedtime đủ giờ → commit, gọi setBedtime chứ không phải startActivity', async () => {
+    const s = spyRepo();
+    const p = planVoice(cmd({ intent: 'bedtime', category: null, bedtimeAt: BED }), {
+      active: [],
+    });
+    assert.equal(p.kind, 'commit');
+
+    const w = await applyVoice(
+      UID,
+      cmd({ intent: 'bedtime', category: null, bedtimeAt: BED }),
+      s.repo,
+    );
+    assert.deepEqual(s.names(), ['setBedtime']);
+    assert.deepEqual(s.first('setBedtime')?.args, [UID, BED]);
+    assert.match(w.message, /Bedtime/);
+    assert.equal(w.activityId, '', 'không có activity nên không sửa tiếp được');
+  });
+
+  it('bedtime thiếu giờ → confirm, nêu đích danh Bedtime', () => {
+    const p = planVoice(cmd({ intent: 'bedtime', category: null, bedtimeAt: null }), {
+      active: [],
+    });
+    assert.equal(p.kind, 'confirm');
+    assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['bedtimeAt']);
+  });
+
+  it('undo của bedtime là gỡ mốc, không xoá activity nào', async () => {
+    const s = spyRepo();
+    const w = await applyVoice(
+      UID,
+      cmd({ intent: 'bedtime', category: null, bedtimeAt: BED }),
+      s.repo,
+    );
+    await w.undo();
+    assert.deepEqual(s.first('clearBedtime')?.args, [UID, '2026-08-26']);
+    assert.ok(!s.names().includes('deleteActivity'));
+  });
+
+  it('model bó tay với câu giờ đi ngủ → chỉ đường tới nút, KHÔNG mở sheet activity', () => {
+    const p = planVoice(
+      cmd({ intent: 'unknown', transcript: 'I went to bed at eleven thirty' }),
+      { active: [] },
+    );
+    assert.equal(p.kind, 'retired');
+    assert.match(p.kind === 'retired' ? p.message : '', /bedtime button/);
   });
 });

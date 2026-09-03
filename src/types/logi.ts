@@ -46,6 +46,13 @@ export interface Activity {
   /** Transcript thô, để debug khi parse sai. Không lưu audio. */
   rawText: string | null;
 
+  /**
+   * Task trong checklist đã sinh ra session này (Stage 8, quyết định 5).
+   * `null` = bấm từ lưới 4 nút, từ voice, hay nhập tay - KHÔNG tính vào task.
+   * Gắn tay được ở `RecordSheet`, nhưng app không bao giờ tự đoán.
+   */
+  taskId: string | null;
+
   createdAt: number;
   updatedAt: number;
 }
@@ -164,3 +171,80 @@ export interface DebtLedger {
 export const DEBT_CARRYOVER_RATE = 0.5; // trả 50% nợ ở tuần kế
 export const DEBT_CARRYOVER_CAP = 10;   // trần giờ cộng thêm mỗi tuần
 export const DEBT_LOCK_THRESHOLD = 20;  // nợ > 20h → khoá preset Crunch
+
+// ------------------------------------------------------------
+// Stage 8 - Task checklist tuần
+// ------------------------------------------------------------
+
+/** Pool tối đa 5 task (quyết định 1). Nhiều hơn thì lưới không còn đọc được. */
+export const MAX_POOL_TASKS = 5;
+
+/** Tối đa 3 task mỗi ngày, CHẶN CỨNG (quyết định 3). */
+export const MAX_TASKS_PER_DAY = 3;
+
+/** Tối thiểu 1 task/ngày chỉ là GỢI Ý - ngày trống vẫn hợp lệ. */
+export const MIN_TASKS_PER_DAY = 1;
+
+export const TASK_TITLE_MAX = 32;
+export const TASK_MIN_DURATION = 5;
+export const TASK_MAX_DURATION = 8 * 60;
+
+/** Firestore: users/{uid}/taskPool/{taskId} */
+export interface PoolTask {
+  id: string;
+  title: string;
+  /** Thời lượng dự kiến mỗi lần làm, tính bằng phút. */
+  durationMin: number;
+  category: Category;
+  /** Thứ tự hàng trong lưới. */
+  order: number;
+  /**
+   * Xoá = set mốc này, KHÔNG hard-delete (quyết định 14). Tuần cũ vẫn phải
+   * hiện được task, kể cả sau khi nó rời pool.
+   */
+  archivedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * Một ô đã bật trong lưới, kèm BẢN CHỤP thời điểm gán.
+ *
+ * `title` / `durationMin` / `category` cố ý lặp lại dữ liệu của pool. Đọc từ
+ * pool lúc hiển thị thì đổi Running 45' → 30' sẽ khiến một tuần từng "chưa
+ * xong" tự nhiên thành "đã xong" - lịch sử bị viết lại (quyết định 14).
+ */
+export interface PlannedCell {
+  taskId: string;
+  /** 0 = CN … 6 = T7, khớp `logicalWeekday()`. */
+  dow: number;
+  title: string;
+  durationMin: number;
+  category: Category;
+}
+
+/** Firestore: users/{uid}/weekPlans/{week} - MỘT doc cho cả tuần (≤ 35 ô). */
+export interface WeekPlan {
+  week: string;
+  cells: PlannedCell[];
+  updatedAt: number;
+}
+
+// ------------------------------------------------------------
+// Stage 8 - Bedtime
+// ------------------------------------------------------------
+
+/**
+ * Firestore: users/{uid}/dayLogs/{logicalDate}
+ *
+ * Bedtime là MỘT MỐC, không phải một khoảng, nên nó không sống trong
+ * `activities`: không có target, không vào ngân sách 89h, không xuất hiện ở
+ * Balance / By day / When.
+ */
+export interface DayLog {
+  /** "2026-08-26" - ngày logic, cũng là doc id. */
+  date: string;
+  /** Epoch ms lúc đi ngủ. `null` = chưa ghi hôm đó. */
+  bedtimeAt: number | null;
+  updatedAt: number;
+}

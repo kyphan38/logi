@@ -22,6 +22,7 @@ const INTENT_TITLE: Record<ParsedCommand['intent'], string> = {
   log_past: 'Log this?',
   schedule: 'Schedule this?',
   edit: 'Change this?',
+  bedtime: 'Log bedtime?',
   clarify: 'One question',
   unknown: 'Not sure',
 };
@@ -45,9 +46,11 @@ export default function ParseConfirmCard({
   const [label, setLabel] = useState(cmd.label ?? '');
   const [startStr, setStartStr] = useState(cmd.startAt ? toLocalInput(cmd.startAt) : '');
   const [endStr, setEndStr] = useState(cmd.endAt ? toLocalInput(cmd.endAt) : '');
+  const [bedStr, setBedStr] = useState(cmd.bedtimeAt ? toLocalInput(cmd.bedtimeAt) : '');
   const [target, setTarget] = useState(cmd.targetActivityId ?? '');
 
-  const needsTime = cmd.intent !== 'stop';
+  const isBedtime = cmd.intent === 'bedtime';
+  const needsTime = cmd.intent !== 'stop' && !isBedtime;
   // 'start' = đang chạy. Không có giờ kết thúc, và không được hỏi giờ kết thúc.
   const running = cmd.intent === 'start';
   const needsEnd = cmd.intent === 'log_past';
@@ -59,11 +62,13 @@ export default function ParseConfirmCard({
 
   const startAt = fromLocalInput(startStr);
   const endAt = running ? null : fromLocalInput(endStr);
+  const bedAt = fromLocalInput(bedStr);
 
   // Thiếu field nào thì tính TẠI ĐÂY, theo đúng thứ đang hiện trên card.
   // Danh sách `missing` lúc mở card cũ ngay khi người dùng chọn xong, nên
   // trước đây câu lỗi hiện lên mà không ô nào đỏ - và ngược lại.
   const gaps: { field: MissingField; name: string }[] = [];
+  if (isBedtime && bedAt === null) gaps.push({ field: 'bedtimeAt', name: 'Bedtime' });
   if (needsTarget && target === '') gaps.push({ field: 'target', name: 'Session' });
   if (categoryRequired && category === '') gaps.push({ field: 'category', name: 'Category' });
   if (needsStart && startAt === null) gaps.push({ field: 'startAt', name: 'Start' });
@@ -88,6 +93,7 @@ export default function ParseConfirmCard({
       label: label.trim() || null,
       startAt,
       endAt,
+      bedtimeAt: isBedtime ? bedAt : cmd.bedtimeAt,
       targetActivityId: target || null,
     });
   }
@@ -112,6 +118,21 @@ export default function ParseConfirmCard({
       ) : null}
 
       <div className="mt-3 flex flex-col gap-3">
+        {isBedtime ? (
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              Bedtime <span className="font-normal">(a marker, not a session)</span>
+            </span>
+            <input
+              type="datetime-local"
+              value={bedStr}
+              disabled={busy}
+              onChange={(e) => setBedStr(e.target.value)}
+              className={FIELD + hi('bedtimeAt')}
+            />
+          </label>
+        ) : null}
+
         {needsTarget ? (
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Session</span>

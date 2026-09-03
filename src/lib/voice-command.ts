@@ -11,10 +11,18 @@ import {
   stopActivity,
   updateActivity,
 } from '@/lib/activities';
+import { clearBedtime, setBedtime } from '@/lib/bedtime-store';
+import { formatBedtime } from '@/lib/bedtime';
 import type { ParsedCommand } from '@/lib/parse-sanitize';
 import { CATEGORY_LABEL } from '@/types/logi';
 
-export { planVoice, mentionsSleep, SLEEP_RETIRED_MESSAGE } from '@/lib/voice-plan';
+export {
+  planVoice,
+  mentionsSleep,
+  mentionsBedtime,
+  SLEEP_RETIRED_MESSAGE,
+  BEDTIME_FALLBACK_MESSAGE,
+} from '@/lib/voice-plan';
 export type { MissingField, VoicePlan } from '@/lib/voice-plan';
 
 /**
@@ -28,6 +36,8 @@ export interface VoiceRepo {
   updateActivity: typeof updateActivity;
   deleteActivity: typeof deleteActivity;
   getActivity: typeof getActivity;
+  setBedtime: typeof setBedtime;
+  clearBedtime: typeof clearBedtime;
 }
 
 const LIVE: VoiceRepo = {
@@ -37,6 +47,8 @@ const LIVE: VoiceRepo = {
   updateActivity,
   deleteActivity,
   getActivity,
+  setBedtime,
+  clearBedtime,
 };
 
 export interface VoiceWrite {
@@ -94,6 +106,20 @@ export async function applyVoice(
         ...prov,
       });
       return { activityId: id, message: `Logged ${name}.`, undo: () => repo.deleteActivity(uid, id) };
+    }
+
+    case 'bedtime': {
+      // Mốc đi ngủ, KHÔNG phải activity. Không category, không target, không
+      // vào ngân sách 89h - chỉ một mốc trong dayLogs.
+      const at = cmd.bedtimeAt!;
+      const date = await repo.setBedtime(uid, at);
+      return {
+        // Bedtime không có activity nên không sửa tiếp bằng voice được.
+        // Chuỗi rỗng để nơi gọi biết mà bỏ qua `lastCreated`.
+        activityId: '',
+        message: `Bedtime ${formatBedtime(at)} logged.`,
+        undo: () => repo.clearBedtime(uid, date),
+      };
     }
 
     case 'stop': {

@@ -25,7 +25,12 @@ export interface NowTile {
   over: boolean;
   /** Không có target (VD Work ngày Chủ nhật) → không vẽ dải. */
   noTarget: boolean;
-  /** `1.5 / 3.0h`, hoặc `0.0 / -` khi ngày đó không có target. */
+  /**
+   * `1.5 / 3.0h today`, hoặc `0.0 / - today` khi ngày đó không có target.
+   *
+   * Chữ "today" cố ý có mặt: banner báo số CẢ TUẦN với đúng tên category này,
+   * nên nút mà thiếu "today" là hai con số vênh nhau không nhãn nào phân biệt.
+   */
   label: string;
 }
 
@@ -56,7 +61,7 @@ export function nowTiles(
       fill,
       over,
       noTarget,
-      label: noTarget ? `${h1(a)} / -` : `${h1(a)} / ${h1(t)}h`,
+      label: noTarget ? `${h1(a)} / - today` : `${h1(a)} / ${h1(t)}h today`,
     };
   });
 }

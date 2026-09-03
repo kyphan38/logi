@@ -18,6 +18,7 @@ export function act(o: {
   endAt?: number | null;
   status?: ActivityStatus;
   label?: string | null;
+  taskId?: string | null;
 }): Activity {
   const startAt = o.startAt;
   const endAt = o.endAt ?? null;
@@ -34,6 +35,7 @@ export function act(o: {
     source: 'manual',
     confidence: null,
     rawText: null,
+    taskId: o.taskId ?? null,
     createdAt: startAt,
     updatedAt: startAt,
   };

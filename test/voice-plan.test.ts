@@ -15,6 +15,7 @@ function cmd(o: Partial<ParsedCommand>): ParsedCommand {
     label: null,
     startAt: null,
     endAt: null,
+    bedtimeAt: null,
     confidence: 0.95,
     clarifyQuestion: null,
     clarifyOptions: null,

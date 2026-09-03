@@ -135,7 +135,7 @@ test('xung đột cuối tuần thắng mọi deviation', () => {
 
 test('nêu số, không dạy đời', () => {
   const line = pickBalance(onPlan(WED_2041, { work: 10 }), WEEKLY, WED_2041);
-  assert.match(line!.text, /^Work \d+\.\d+h · \d+\.\d+h expected by now \([+-]?\d+%\)$/);
+  assert.match(line!.text, /^Work \d+\.\d+h · \d+\.\d+h expected by now this week \([+-]?\d+%\)$/);
 });
 
 test('con số expected KHÔNG đứng cạnh dấu / như thể là target tuần', () => {

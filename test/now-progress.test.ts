@@ -34,7 +34,7 @@ test('fill = actual / target', () => {
   assert.equal(w.actual, 4);
   assert.equal(Math.round(w.fill * 1000) / 1000, Math.round((4 / 9.5) * 1000) / 1000);
   assert.equal(w.over, false);
-  assert.equal(w.label, '4.0 / 9.5h');
+  assert.equal(w.label, '4.0 / 9.5h today');
 });
 
 test('vượt target → fill kẹp ở 1, cờ over bật', () => {
@@ -51,7 +51,7 @@ test('Chủ nhật: Work không có target → không vẽ dải, nhãn 0.0 / -'
   assert.equal(w.target, 0);
   assert.equal(w.noTarget, true);
   assert.equal(w.fill, 0);
-  assert.equal(w.label, '0.0 / -');
+  assert.equal(w.label, '0.0 / - today');
 });
 
 test('có log mà ngày đó không target → vẫn không vẽ dải, số vẫn đúng', () => {
@@ -61,7 +61,7 @@ test('có log mà ngày đó không target → vẫn không vẽ dải, số v�
   const w = tileOf(tilesOn(SUN, acts), 'work');
   assert.equal(w.actual, 2.5);
   assert.equal(w.noTarget, true);
-  assert.equal(w.label, '2.5 / -');
+  assert.equal(w.label, '2.5 / - today');
 });
 
 test('chưa có weekTarget → mọi nút đều noTarget, không đoán bừa', () => {
