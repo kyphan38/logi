@@ -12,9 +12,18 @@ import {
   updateActivity,
   validateTimes,
 } from '@/lib/activities';
-import { logicalDate } from '@/lib/balance';
+import { logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
 import { formatDuration, fromLocalInput, shortDate, toLocalInput } from '@/lib/datetime';
-import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
+import { cellsOfDow, shortDuration } from '@/lib/tasks';
+import { subscribeWeekPlan } from '@/lib/task-store';
+import { useTaskLookup } from '@/hooks/useTasks';
+import {
+  CATEGORIES,
+  CATEGORY_LABEL,
+  type Activity,
+  type Category,
+  type PlannedCell,
+} from '@/types/logi';
 
 export type SheetTarget =
   | { mode: 'edit'; activity: Activity }
@@ -23,7 +32,12 @@ export type SheetTarget =
 /** Undo sau khi xoá: session đang chạy thì bật chạy lại, còn lại tạo record cũ. */
 export async function restoreActivity(uid: string, a: Activity): Promise<void> {
   if (a.endAt === null) {
-    await startActivity(uid, { category: a.category, label: a.label, startAt: a.startAt });
+    await startActivity(uid, {
+      category: a.category,
+      label: a.label,
+      startAt: a.startAt,
+      taskId: a.taskId,
+    });
     return;
   }
   await createPastActivity(uid, {
@@ -32,6 +46,7 @@ export async function restoreActivity(uid: string, a: Activity): Promise<void> {
     startAt: a.startAt,
     endAt: a.endAt,
     status: a.status,
+    taskId: a.taskId,
   });
 }
 
@@ -68,6 +83,10 @@ export default function RecordSheet({
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  // Gắn tay session vào task (Stage 8, đường lui cho voice): chỉ session bấm từ
+  // checklist mới tự có taskId; còn lại muốn tính thì chọn tay ở đây. App không
+  // bao giờ tự đoán.
+  const [taskId, setTaskId] = useState(editing?.taskId ?? '');
 
   // Sheet mở thì khoá cuộn trang nền - cuộn lan ra sau lưng rất khó chịu.
   // Khoá đúng <main> (chỗ duy nhất cuộn được), KHÔNG đụng vào body: body có
@@ -139,6 +158,35 @@ export default function RecordSheet({
   const valid = !errors.start && !errors.end;
   const duration = start !== null && end !== null ? formatDuration(end - start) : '-';
 
+  // Task ứng viên = những ô đã lên kế hoạch đúng ngày của session này. Đọc từ
+  // BẢN CHỤP của tuần đó, không từ pool - đổi pool không làm lệch lựa chọn cũ.
+  const planWeek = start !== null ? logicalWeek(start) : null;
+  const planDow = start !== null ? logicalWeekday(start) : null;
+  const [planCells, setPlanCells] = useState<PlannedCell[]>([]);
+  // Đổi ngày → đổi tuần: xoá ngay trong lúc render (tránh hiện task của tuần
+  // cũ). Cùng pattern reset render-time với mọi hook subscribe trong app.
+  const [prevPlanWeek, setPrevPlanWeek] = useState(planWeek);
+  if (prevPlanWeek !== planWeek) {
+    setPrevPlanWeek(planWeek);
+    setPlanCells([]);
+  }
+  useEffect(() => {
+    if (!planWeek) return;
+    return subscribeWeekPlan(uid, planWeek, (p) => setPlanCells(p.cells), () =>
+      setPlanCells([]),
+    );
+  }, [uid, planWeek]);
+  const candidates = planDow !== null ? cellsOfDow(planCells, planDow) : [];
+  // Task của record cũ có thể đã rời pool hoặc không nằm trong ngày này nữa -
+  // vẫn phải gọi được tên để không mất lựa chọn đang có.
+  const { byId: taskLookup } = useTaskLookup(!!editing?.taskId);
+  const missingTaskTitle =
+    editing?.taskId && !candidates.some((c) => c.taskId === editing.taskId)
+      ? (taskLookup.get(editing.taskId)?.title ??
+        candidates.find((c) => c.taskId === editing.taskId)?.title ??
+        null)
+      : null;
+
   async function save() {
     if (!valid || busy || start === null) return;
     setBusy(true);
@@ -153,6 +201,7 @@ export default function RecordSheet({
             label: text,
             startAt: start,
             endAt: end,
+            taskId: taskId || null,
             // Đang chạy mà điền End → session kết thúc, không còn 'active'.
             ...(editing.endAt === null && end !== null ? { status: 'done' as const } : {}),
           }),
@@ -160,7 +209,10 @@ export default function RecordSheet({
         );
       } else if (end === null) {
         // Thêm tay một việc chưa xong: mở session chạy từ giờ đã ghi.
-        await capWait(startActivity(uid, { category, label: text, startAt: start }), late);
+        await capWait(
+          startActivity(uid, { category, label: text, startAt: start, taskId: taskId || null }),
+          late
+        );
       } else {
         await capWait(
           createPastActivity(uid, {
@@ -168,6 +220,7 @@ export default function RecordSheet({
             label: text,
             startAt: start,
             endAt: end,
+            taskId: taskId || null,
           }),
           late
         );
@@ -274,6 +327,30 @@ export default function RecordSheet({
               className={FIELD}
             />
           </label>
+
+          {(candidates.length > 0 || missingTaskTitle !== null || taskId !== '') && (
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Task <span className="font-normal">(optional - counts toward the checklist)</span>
+              </span>
+              <select
+                value={taskId}
+                disabled={busy}
+                onChange={(e) => setTaskId(e.target.value)}
+                className={FIELD}
+              >
+                <option value="">No task</option>
+                {candidates.map((c) => (
+                  <option key={c.taskId} value={c.taskId}>
+                    {c.title} · {shortDuration(c.durationMin)}
+                  </option>
+                ))}
+                {missingTaskTitle !== null && editing?.taskId ? (
+                  <option value={editing.taskId as string}>{missingTaskTitle}</option>
+                ) : null}
+              </select>
+            </label>
+          )}
 
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Start</span>

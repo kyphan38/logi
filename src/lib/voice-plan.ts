@@ -8,7 +8,7 @@ import { AUTO_COMMIT_THRESHOLD } from '@/lib/gemini-parse';
 import type { ParsedCommand } from '@/lib/parse-sanitize';
 import type { Activity } from '@/types/logi';
 
-export type MissingField = 'category' | 'startAt' | 'endAt' | 'target';
+export type MissingField = 'category' | 'startAt' | 'endAt' | 'bedtimeAt' | 'target';
 
 export type VoicePlan =
   /** Đủ tin và đủ field → ghi luôn, kèm toast Undo. */
@@ -24,6 +24,18 @@ export type VoicePlan =
 
 /** Câu trả lời duy nhất cho một câu nói về giấc ngủ. */
 export const SLEEP_RETIRED_MESSAGE = 'Sleep is no longer tracked.';
+
+/** Model bó tay với một câu về GIỜ ĐI NGỦ: không mở sheet activity (ghi vào đó
+ *  là tạo session nhầm), chỉ đường tới nút bedtime ở Now. */
+export const BEDTIME_FALLBACK_MESSAGE = 'Tap the bedtime button in Now to log it.';
+
+/** "bedtime", "went to bed", "going to bed" - mốc đi ngủ, KHÁC với "slept",
+ *  "nap", "woke up" (những thứ đó vẫn là retired). */
+const BEDTIME_WORDS = /\b(bedtime|went to bed|go to bed|going to bed|off to bed)\b/i;
+
+export function mentionsBedtime(transcript: string): boolean {
+  return BEDTIME_WORDS.test(transcript);
+}
 
 /**
  * Chỉ soi `transcript`, và CHỈ khi model đã bó tay (`intent === 'unknown'`).
@@ -49,6 +61,8 @@ function requiredOf(cmd: ParsedCommand): MissingField[] {
     case 'stop':
     case 'edit':
       return ['target'];
+    case 'bedtime':
+      return ['bedtimeAt'];
     default:
       return [];
   }
@@ -59,6 +73,7 @@ function missingOf(cmd: ParsedCommand): MissingField[] {
     if (f === 'category') return cmd.category === null;
     if (f === 'startAt') return cmd.startAt === null;
     if (f === 'endAt') return cmd.endAt === null;
+    if (f === 'bedtimeAt') return cmd.bedtimeAt === null;
     return cmd.targetActivityId === null;
   });
 }
@@ -74,6 +89,11 @@ export interface PlanContext {
 
 export function planVoice(cmd: ParsedCommand, ctx: PlanContext): VoicePlan {
   if (cmd.intent === 'unknown') {
+    // Câu về giờ đi ngủ mà model không parse được: vẫn KHÔNG mở sheet
+    // activity. Sheet đó mà ghi là thành một session leisure nhầm.
+    if (mentionsBedtime(cmd.transcript)) {
+      return { kind: 'retired', cmd, message: BEDTIME_FALLBACK_MESSAGE };
+    }
     return mentionsSleep(cmd.transcript)
       ? { kind: 'retired', cmd, message: SLEEP_RETIRED_MESSAGE }
       : { kind: 'manual', cmd };

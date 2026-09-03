@@ -27,7 +27,49 @@ service cloud.firestore {
         // Chặn record vô lý ngay ở tầng DB, không tin client
         && (d.endAt == null || d.endAt - d.startAt <= 15 * 60 * 60 * 1000)
         && d.logicalDate is string
-        && d.logicalWeek is string;
+        && d.logicalWeek is string
+        // Stage 8: task sinh ra session này. Vắng field = record cũ.
+        && (!d.keys().hasAny(['taskId']) || d.taskId == null || d.taskId is string);
+    }
+
+    // Stage 8 - task trong pool. `archivedAt` là cách xoá duy nhất, nên
+    // rules không cho delete: tuần cũ phải tra được tên task đã bỏ.
+    function validPoolTask(d) {
+      return d.keys().hasAll(['title', 'durationMin', 'category', 'order'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 32
+        && d.durationMin is int && d.durationMin >= 5 && d.durationMin <= 8 * 60
+        && validCategory(d.category)
+        && d.order is int
+        && (!d.keys().hasAny(['archivedAt']) || d.archivedAt == null || d.archivedAt is number);
+    }
+
+    // Stage 8 - một ô đã bật, mang bản chụp lúc gán. `title`/`durationMin`
+    // KHÔNG được đọc lại từ pool, nên rules bắt buộc chúng có mặt ở đây.
+    function validCell(c) {
+      return c.keys().hasAll(['taskId', 'dow', 'title', 'durationMin', 'category'])
+        && c.taskId is string
+        && c.dow is int && c.dow >= 0 && c.dow <= 6
+        && c.title is string
+        && c.durationMin is number
+        && validCategory(c.category);
+    }
+
+    function validWeekPlan(d) {
+      return d.keys().hasAll(['week', 'cells'])
+        && d.week is string
+        && d.cells is list
+        // Trần 5 task x 7 ngày. Chặn ở đây để một client lỗi không bơm
+        // được doc khổng lồ.
+        && d.cells.size() <= 35
+        // Rules không lặp được trên list. Kiểm ô đầu là chốt chặn hình dạng:
+        // cả mảng do một hàm duy nhất (`snapshotOf`) sinh ra.
+        && (d.cells.size() == 0 || validCell(d.cells[0]));
+    }
+
+    function validDayLog(d) {
+      return d.keys().hasAll(['date'])
+        && d.date is string
+        && (!d.keys().hasAny(['bedtimeAt']) || d.bedtimeAt == null || d.bedtimeAt is number);
     }
 
     match /users/{uid} {
@@ -45,6 +87,30 @@ service cloud.firestore {
         allow create: if isOwner(uid);
         allow update: if isOwner(uid)
           && (resource.data.lockedAt == null);
+        allow delete: if false;
+      }
+
+      // taskPool/{taskId} - tối đa 5 task đang dùng
+      match /taskPool/{taskId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validPoolTask(request.resource.data);
+        // Xoá = set archivedAt. Hard-delete chỉ dành cho Undo ngay sau khi
+        // tạo, lúc chưa tuần nào chụp task này.
+        allow delete: if isOwner(uid) && resource.data.createdAt > request.time.toMillis() - 60 * 1000;
+      }
+
+      // weekPlans/{week} - VD "2026-W35", một doc cho cả tuần
+      match /weekPlans/{week} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validWeekPlan(request.resource.data);
+        allow delete: if false;
+      }
+
+      // dayLogs/{logicalDate} - VD "2026-08-26". Mốc bedtime sống ở đây,
+      // KHÔNG phải trong activities.
+      match /dayLogs/{date} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validDayLog(request.resource.data);
         allow delete: if false;
       }
 

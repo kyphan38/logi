@@ -17,6 +17,8 @@ export interface ParsedCommand {
   label: string | null;
   startAt: number | null;
   endAt: number | null;
+  /** Lúc đi ngủ, epoch ms. Chỉ có nghĩa khi intent = bedtime - không bao giờ thành activity. */
+  bedtimeAt: number | null;
   confidence: number;
   clarifyQuestion: string | null;
   clarifyOptions: string[] | null;
@@ -30,6 +32,7 @@ const INTENTS: readonly Intent[] = [
   'log_past',
   'schedule',
   'edit',
+  'bedtime',
   'clarify',
   'unknown',
 ];
@@ -84,6 +87,9 @@ export function sanitizeParse(
   // --- mốc thời gian ----------------------------------------------
   const startAt = toMs(r.startAt);
   let endAt = toMs(r.endAt);
+  // Mốc đi ngủ: chỉ đọc khi đúng intent bedtime. Câu khác có chữ giờ thì đó là
+  // giờ session, không phải giờ đi ngủ - không đoán hộ.
+  const bedtimeAt = intent === 'bedtime' ? toMs(r.bedtimeAt) : null;
 
   if (startAt !== null) {
     if (now - startAt > MAX_BACKDATE_MS) askBack('That looks more than 7 days ago. Is that right?');
@@ -130,12 +136,32 @@ export function sanitizeParse(
     ? r.clarifyOptions.map(clip).filter((s): s is string => s !== null).slice(0, 5)
     : [];
 
+  // Bedtime không phải session: không category, không label, không start/end.
+  // Giữ đúng một mốc duy nhất để tầng ghi không thể tạo activity nhầm.
+  if (intent === 'bedtime') {
+    category = null;
+    return {
+      intent,
+      category,
+      label: null,
+      startAt: null,
+      endAt: null,
+      bedtimeAt,
+      confidence,
+      clarifyQuestion: question,
+      clarifyOptions: opts2.length ? opts2 : null,
+      targetActivityId,
+      transcript: clip(r.transcript) ?? '',
+    };
+  }
+
   return {
     intent,
     category,
     label: clip(r.label),
     startAt,
     endAt,
+    bedtimeAt: null,
     confidence,
     clarifyQuestion: intent === 'clarify' ? (question ?? 'Sorry, what was that?') : question,
     clarifyOptions: opts2.length ? opts2 : null,

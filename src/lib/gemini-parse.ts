@@ -14,8 +14,8 @@ export const PARSE_SCHEMA = {
   properties: {
     intent: {
       type: 'string',
-      enum: ['start', 'stop', 'log_past', 'schedule', 'edit', 'clarify', 'unknown'],
-      description: 'start = bắt đầu ngay; log_past = hồi tố; schedule = bắt đầu sau N phút; edit = sửa record vừa tạo; clarify = thiếu thông tin cần hỏi lại',
+      enum: ['start', 'stop', 'log_past', 'schedule', 'edit', 'bedtime', 'clarify', 'unknown'],
+      description: 'start = bắt đầu ngay; log_past = hồi tố; schedule = bắt đầu sau N phút; edit = sửa record vừa tạo; bedtime = mốc giờ đi ngủ, KHÔNG phải session; clarify = thiếu thông tin cần hỏi lại',
     },
     category: {
       type: 'string',
@@ -52,6 +52,11 @@ export const PARSE_SCHEMA = {
       items: { type: 'string' },
       description: 'Tối đa 3 lựa chọn hiện thành nút bấm.',
     },
+    bedtimeAt: {
+      type: 'string',
+      nullable: true,
+      description: 'ISO 8601 kèm offset +07:00. Chỉ dùng khi intent = bedtime: lúc đi ngủ.',
+    },
     targetActivityId: {
       type: 'string',
       nullable: true,
@@ -66,11 +71,13 @@ export const PARSE_SCHEMA = {
 } as const;
 
 export interface ParseResult {
-  intent: 'start' | 'stop' | 'log_past' | 'schedule' | 'edit' | 'clarify' | 'unknown';
+  intent: 'start' | 'stop' | 'log_past' | 'schedule' | 'edit' | 'bedtime' | 'clarify' | 'unknown';
   category: Category | null;
   label: string | null;
   startAt: string | null;
   endAt: string | null;
+  /** Lúc đi ngủ, ISO 8601. Chỉ có nghĩa khi intent = bedtime. */
+  bedtimeAt: string | null;
   confidence: number;
   clarifyQuestion: string | null;
   clarifyOptions: string[] | null;
@@ -110,10 +117,18 @@ CATEGORIES - map every activity to exactly one:
 
 If an activity fits none, pick the nearest and drop confidence below 0.7.
 
-SLEEP IS NOT TRACKED. There is no sleep category any more. If the utterance is
-about sleeping, napping, going to bed, or waking up, emit intent=unknown with
-category=null, and keep the spoken words in \`transcript\` as they are. Do NOT
-map it onto leisure or any other category, and do not silently drop it.
+SLEEP IS NOT TRACKED as a session. There is no sleep category any more.
+Going to bed is recorded as a single bedtime MARKER, never as an activity:
+
+- "going to bed now", "I went to bed at 11:30", "bedtime 23:45"
+  → intent=bedtime, bedtimeAt = that moment, category=null.
+  "now" means CURRENT TIME. "at 11:30" resolves like any other clock time.
+- Anything else about sleeping, napping, or waking up ("I slept 8 hours",
+  "I woke up at 6") → intent=unknown with category=null, keep the spoken
+  words in \`transcript\` as they are.
+
+Do NOT map bedtime or sleep onto leisure or any other category, and do not
+silently drop it. A bedtime utterance MUST NEVER create an activity.
 
 USER'S TYPICAL SCHEDULE - use this to resolve ambiguous times:
 - 04:30 wake, self-study until 06:00–06:30

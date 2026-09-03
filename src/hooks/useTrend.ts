@@ -14,14 +14,23 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { listByRange } from '@/lib/activities';
+import { listDayLogs } from '@/lib/bedtime-store';
 import { weeksOf } from '@/lib/range';
 import { listWeekTargets } from '@/lib/targets';
+import { listWeekPlans } from '@/lib/task-store';
 import { trendBuckets, trendWindow, type TrendSpan } from '@/lib/trend';
-import type { Activity, Category } from '@/types/logi';
+import type { Activity, Category, DayLog, WeekPlan } from '@/types/logi';
+
+/** Chế độ của card TREND. Bedtime và tasks cần thêm dữ liệu ngoài activities. */
+export type TrendExtra = 'none' | 'bedtime' | 'tasks';
 
 export interface TrendData {
   activities: Activity[];
   weekTargets: Map<string, Record<Category, number>>;
+  /** Chỉ có khi extra = bedtime: mốc đi ngủ trong cửa sổ. */
+  dayLogs: DayLog[];
+  /** Chỉ có khi extra = tasks: kế hoạch của các tuần trong cửa sổ. */
+  weekPlans: Map<string, WeekPlan>;
   loading: boolean;
   error: string | null;
   reload: () => void;
@@ -29,21 +38,25 @@ export interface TrendData {
 
 const EMPTY: Activity[] = [];
 const EMPTY_TARGETS = new Map<string, Record<Category, number>>();
+const EMPTY_LOGS: DayLog[] = [];
+const EMPTY_PLANS = new Map<string, WeekPlan>();
 
 interface Cached {
   /** Khoảng mà số này thuộc về. Thiếu nó thì cột "6 tuần" nằm dưới nhãn "6 tháng". */
   key: string;
   activities: Activity[];
   weekTargets: Map<string, Record<Category, number>>;
+  dayLogs: DayLog[];
+  weekPlans: Map<string, WeekPlan>;
 }
 
-export function useTrend(span: TrendSpan, now: number): TrendData {
+export function useTrend(span: TrendSpan, now: number, extra: TrendExtra = 'none'): TrendData {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
 
   const buckets = trendBuckets(span, now);
   const win = trendWindow(buckets);
-  const key = uid ? `${uid}|${win.from}|${win.to}` : null;
+  const key = uid ? `${uid}|${win.from}|${win.to}|${extra}` : null;
 
   const cache = useRef(new Map<string, Cached>());
   const [data, setData] = useState<Cached | null>(null);
@@ -72,18 +85,21 @@ export function useTrend(span: TrendSpan, now: number): TrendData {
 
     void (async () => {
       try {
-        // Hai query song song: activities của cả cửa sổ + target của mọi tuần
-        // nó chạm tới. Không bao giờ lặp query theo từng cột.
-        const [activities, targetDocs] = await Promise.all([
+        // Query song song: activities của cả cửa sổ + target của mọi tuần nó
+        // chạm tới. Bedtime / tasks chỉ đọc khi đúng chế độ cần. Không bao giờ
+        // lặp query theo từng cột.
+        const [activities, targetDocs, dayLogs, weekPlans] = await Promise.all([
           listByRange(uid, win),
           listWeekTargets(uid, weeksOf(win)),
+          extra === 'bedtime' ? listDayLogs(uid, win.from, win.to) : Promise.resolve(EMPTY_LOGS),
+          extra === 'tasks' ? listWeekPlans(uid, weeksOf(win)) : Promise.resolve(EMPTY_PLANS),
         ]);
         if (!alive) return;
 
         const weekTargets = new Map<string, Record<Category, number>>();
         for (const [w, t] of targetDocs) weekTargets.set(w, t.weekly);
 
-        const next = { key, activities, weekTargets };
+        const next = { key, activities, weekTargets, dayLogs, weekPlans };
         cache.current.set(key, next);
         setData(next);
       } catch (e) {
@@ -103,6 +119,8 @@ export function useTrend(span: TrendSpan, now: number): TrendData {
   return {
     activities: fresh?.activities ?? EMPTY,
     weekTargets: fresh?.weekTargets ?? EMPTY_TARGETS,
+    dayLogs: fresh?.dayLogs ?? EMPTY_LOGS,
+    weekPlans: fresh?.weekPlans ?? EMPTY_PLANS,
     loading: !fresh && (loading || error === null),
     error,
     reload: () => {

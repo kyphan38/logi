@@ -170,3 +170,26 @@ test('sanitize: end <= start vẫn là log_past, không rơi vào lưới đỡ'
   assert.equal(r.intent, 'log_past');
   assert.equal(r.endAt, null);
 });
+
+test('sanitize: bedtime giữ đúng một mốc, KHÔNG thành activity', () => {
+  const r = sanitizeParse(
+    base({
+      intent: 'bedtime',
+      category: 'leisure',
+      bedtimeAt: new Date(NOW - H).toISOString(),
+      transcript: 'going to bed now',
+    }),
+    opts,
+  );
+  assert.equal(r.intent, 'bedtime');
+  assert.equal(r.bedtimeAt, NOW - H);
+  assert.equal(r.category, null, 'bedtime không được mang category');
+  assert.equal(r.startAt, null);
+  assert.equal(r.endAt, null);
+});
+
+test('sanitize: câu không phải bedtime thì bedtimeAt luôn null', () => {
+  const r = sanitizeParse(base({ bedtimeAt: new Date(NOW - H).toISOString() }), opts);
+  assert.equal(r.intent, 'log_past');
+  assert.equal(r.bedtimeAt, null);
+});

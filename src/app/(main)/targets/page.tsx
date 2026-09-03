@@ -12,6 +12,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 import Toasts from '@/components/Toasts';
+import WeekPlanSection from '@/components/WeekPlanSection';
 import WeeklyReview from '@/components/WeeklyReview';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTick, useToasts } from '@/hooks/useActivities';
@@ -403,6 +404,10 @@ function TargetsView() {
           )}
 
           <DebtSection debt={debt} applied={target?.debtApplied ?? {}} />
+
+          {/* Checklist tuần (Stage 8): lưới task × ngày, sống ở tab này vì nó
+              là ý định trước khi tuần bắt đầu - cùng họ với target. */}
+          <WeekPlanSection currentWeek={week} />
         </>
       )}
 
