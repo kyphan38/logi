@@ -95,13 +95,22 @@ test('daySummary: CN không có target Fitness nhưng có log → vẫn hiện',
   assert.equal(line.low, false, 'target 0 thì không thể "thiếu"');
 });
 
-test('daySummary: hôm nay target pro-rate theo dayProgress', () => {
+test('daySummary: không có doneBefore → mẫu số là standard, không nhảy số', () => {
   const actual = { ...zero(), work: 4 };
-  const full = daySummary(actual, PRESETS.normal.weekly, TUE, 1);
-  const half = daySummary(actual, PRESETS.normal.weekly, TUE, 0.5);
-  const w = (ls: typeof full) => ls.find((l) => l.category === 'work')!.target;
-  assert.equal(+w(full).toFixed(2), 9.5);
-  assert.equal(+w(half).toFixed(2), 4.75, '10h sáng mà so cả ngày thì cái gì cũng thiếu');
+  const ls = daySummary(actual, PRESETS.normal.weekly, TUE);
+  const w = ls.find((l) => l.category === 'work')!;
+  assert.equal(+w.target.toFixed(2), 9.5);
+  assert.equal(+w.standard.toFixed(2), 9.5);
+});
+
+test('daySummary: có doneBefore → mẫu số là gợi ý bù, standard vẫn giữ nguyên', () => {
+  const weekly = PRESETS.normal.weekly;
+  // Thứ Hai học 10h, standard chỉ 3h → thứ Ba phải nhẹ đi.
+  const before = { ...zero(), learn: 10 };
+  const ls = daySummary(zero(), weekly, TUE, before);
+  const l = ls.find((c) => c.category === 'learn')!;
+  assert.equal(+l.standard.toFixed(1), 3, 'standard không đổi');
+  assert.ok(l.target < l.standard, `bù rồi thì nhẹ hơn, target=${l.target}`);
 });
 
 test('daySummary: dưới 50% target → low; đạt hoặc vượt → không low', () => {

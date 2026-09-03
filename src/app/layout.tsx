@@ -46,8 +46,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       {/* `overscroll-none`: chặn kiểu nảy cao su của iOS, vì nó kéo cả
-          thanh cố định trôi theo. Chỗ cuộn thật nằm trong AppShell. */}
-      <body className="flex min-h-dvh flex-col overscroll-none">
+          thanh cố định trôi theo. Chỗ cuộn thật nằm trong AppShell.
+
+          `suppressHydrationWarning`: extension trình duyệt (WOT, Grammarly…)
+          gắn thuộc tính vào <body> trước khi React chạy, làm dev overlay báo
+          hydration mismatch giả. Chỉ tắt cảnh báo ở đúng thẻ này - phần con
+          vẫn được kiểm tra bình thường. */}
+      <body className="flex min-h-dvh flex-col overscroll-none" suppressHydrationWarning>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

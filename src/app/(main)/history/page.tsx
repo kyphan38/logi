@@ -97,15 +97,27 @@ export default function HistoryPage() {
     [segments, win, nowMinute],
   );
 
-  // Đối chiếu với target CẢ NGÀY của đúng ngày trong tuần đó - kể cả hôm nay.
+  // Giờ đã log ở các ngày TRƯỚC ngày đang xem, trong cùng tuần logic. Đây là
+  // đầu vào của gợi ý bù: thứ Hai học 10h thì thứ Ba phải biết điều đó.
   //
-  // Trước đây hôm nay được pro-rate theo giờ, nên con số target tự bò lên suốt
-  // ngày: 9 giờ sáng thấy `0.0/0.4`, 10 giờ tối thấy `0.0/1.5`. Cùng một ô mà
-  // đọc hai lần ra hai nghĩa thì không ai tin nó nữa. Giờ mẫu số đứng yên, chỉ
-  // tử số chạy.
+  // Cố tình không cộng giờ của chính ngày đang xem. Cộng vào thì mẫu số tụt dần
+  // suốt ngày trong lúc mình đang đuổi theo nó - nhìn hai lần ra hai đích.
+  const doneBefore = useMemo(() => {
+    if (strip.loading) return null;
+    const out = actualHours(
+      strip.activities.filter((a) => logicalDate(a.startAt) < selected),
+      nowMinute,
+    );
+    return out;
+  }, [strip.loading, strip.activities, selected, nowMinute]);
+
+  // Đối chiếu với gợi ý của đúng ngày đó. Mẫu số chốt lúc 04:00 và đứng yên cả
+  // ngày - chỉ tử số chạy. Trước đây hôm nay được pro-rate theo giờ nên target
+  // tự bò lên: 9 giờ sáng thấy `0.0/0.4`, 10 giờ tối thấy `0.0/1.5`. Cùng một ô
+  // mà đọc hai lần ra hai nghĩa thì không ai tin nó nữa.
   const summary = useMemo(
-    () => daySummary(totals, weekTarget?.weekly ?? null, logicalWeekday(win.start)),
-    [totals, weekTarget, win],
+    () => daySummary(totals, weekTarget?.weekly ?? null, logicalWeekday(win.start), doneBefore),
+    [totals, weekTarget, win, doneBefore],
   );
 
   // Bố cục co giãn đã bỏ khoảng đêm trống, nên không cần tự cuộn tới 06:00
@@ -148,6 +160,8 @@ export default function HistoryPage() {
           trackedH={trackedH}
           gapH={gapH}
           overlap={overlap}
+          today={selected === today}
+          planned={doneBefore !== null}
         />
       </header>
 
@@ -200,11 +214,17 @@ function SummaryGauge({
   trackedH,
   gapH,
   overlap,
+  today,
+  planned,
 }: {
   lines: DayLine[];
   trackedH: number;
   gapH: number;
   overlap: number;
+  /** Ngày đang xem là hôm nay → mới có chuyện "còn bao nhiêu". */
+  today: boolean;
+  /** Mẫu số là gợi ý bù, không phải chia theo baseline. */
+  planned: boolean;
 }) {
   const h = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
 
@@ -227,9 +247,30 @@ function SummaryGauge({
     <div className="mt-3">
       <div className="grid grid-cols-4 gap-2">
         {CATEGORIES.map((c) => (
-          <Gauge key={c} line={by.get(c) ?? { category: c, actual: 0, target: 0, low: false }} />
+          <Gauge
+            key={c}
+            today={today}
+            line={
+              by.get(c) ?? {
+                category: c,
+                actual: 0,
+                target: 0,
+                standard: 0,
+                met: false,
+                capped: false,
+                low: false,
+              }
+            }
+          />
         ))}
       </div>
+      {/* Nói một lần mẫu số là gì. Không có dòng này thì con số đổi mỗi ngày mà
+          không ai biết vì sao - trông như lỗi. */}
+      {planned ? (
+        <p className="mt-1.5 text-[11px] leading-snug text-ink-muted">
+          Đích chia phần còn lại của tuần cho những ngày chưa qua.
+        </p>
+      ) : null}
       {overlap > 0 ? (
         <p className="mt-1.5 text-[11px] tabular-nums text-ink-muted">{h(overlap)}h overlap</p>
       ) : null}
@@ -237,12 +278,23 @@ function SummaryGauge({
   );
 }
 
-/** Một ô gauge: nhãn / thanh / số. Thanh cao 6px, không viền. */
-function Gauge({ line }: { line: DayLine }) {
-  const { category: c, actual, target } = line;
+/** Một ô gauge: nhãn / thanh / số / ghi chú. Thanh cao 6px, không viền. */
+function Gauge({ line, today }: { line: DayLine; today: boolean }) {
+  const { category: c, actual, target, met, capped } = line;
   const h = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
 
   const { fill, over, noTarget, dim } = gaugeShape(actual, target);
+
+  // Dòng dưới cùng. Ưu tiên: xong tuần → còn thiếu hôm nay → bị trần chặn.
+  // Chỗ này luôn chừa sẵn chiều cao, nếu không 4 cột sẽ so le nhau.
+  const left = target - actual;
+  const note = met
+    ? 'đủ tuần'
+    : today && !noTarget && left > 0.05
+      ? `còn ${h(left)}h`
+      : capped
+        ? 'chạm trần'
+        : '';
 
   return (
     <div className={`min-w-0 ${dim ? 'opacity-40' : ''}`}>
@@ -284,6 +336,9 @@ function Gauge({ line }: { line: DayLine }) {
         </span>
         <span className="text-ink-muted">/{noTarget ? '-' : h(target)}</span>
       </p>
+
+      {/* Luôn chiếm chỗ, kể cả khi rỗng - 4 cột phải thẳng chân nhau. */}
+      <p className="mt-0.5 h-3.5 truncate text-[10px] tabular-nums text-ink-muted">{note}</p>
     </div>
   );
 }
