@@ -178,6 +178,41 @@ export function subscribeWeekTarget(
   );
 }
 
+/**
+ * Lắng nghe target của nhiều tuần liền nhau theo thời gian thực (cho Analytics).
+ */
+export function subscribeWeekTargets(
+  uid: string,
+  weeks: string[],
+  cb: (map: Map<string, WeekTarget>) => void,
+  onError?: (e: unknown) => void
+): Unsubscribe {
+  if (weeks.length === 0) {
+    cb(new Map());
+    return () => {};
+  }
+
+  const sorted = [...weeks].sort();
+  const q = query(
+    weekCol(uid),
+    where(documentId(), '>=', sorted[0]),
+    where(documentId(), '<=', sorted[sorted.length - 1]),
+    orderBy(documentId())
+  );
+  const want = new Set(weeks);
+  return onSnapshot(
+    q,
+    (snap) => {
+      const out = new Map<string, WeekTarget>();
+      for (const d of snap.docs) {
+        if (want.has(d.id)) out.set(d.id, toWeekTarget(d.id, d.data()));
+      }
+      cb(out);
+    },
+    (e) => onError?.(e)
+  );
+}
+
 export function subscribeDebt(
   uid: string,
   cb: (debt: DebtBalance) => void,
