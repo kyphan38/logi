@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { rebalance, validateTargets } from '@/lib/balance';
+import { dragBounds, MAX_PINNED, rebalance, validateTargets } from '@/lib/balance';
 import {
   TargetError,
   WEEK_CLOSED,
@@ -180,4 +180,75 @@ test('previewSwitch: cộng lại debtApplied, không tiêu nợ thêm lần n�
 test('totalDebt cộng mọi category', () => {
   assert.equal(totalDebt({}), 0);
   assert.equal(totalDebt({ learn: 12, fitness: 3 }), 15);
+});
+
+// ---------------------------------------------------------------------------
+// Ghim category (pin) - kéo cái này thì không được lấy giờ của cái kia
+// ---------------------------------------------------------------------------
+
+test('ghim Learn: kéo Work lên thì Learn không suy suyển', () => {
+  const w = PRESETS.normal.weekly;
+  const out = rebalance(w, 'work', w.work + 6, ['learn']);
+  assert.equal(out.learn, w.learn, 'Learn bị lấy mất giờ dù đã ghim');
+  assert.ok(Math.abs(total(out) - TOTAL_BUDGET) < 0.05, 'tổng vẫn phải là 89h');
+});
+
+test('ghim chính cái đang kéo thì bị bỏ qua - không ai tự khoá tay mình', () => {
+  const w = PRESETS.normal.weekly;
+  const out = rebalance(w, 'work', w.work + 4, ['work', 'learn']);
+  assert.equal(out.work, w.work + 4);
+  assert.equal(out.learn, w.learn);
+});
+
+test('ghim 3 cái: cái thứ tư là phần còn lại, kéo nó không đổi được gì', () => {
+  const w = PRESETS.normal.weekly;
+  const out = rebalance(w, 'leisure', 20, ['work', 'learn', 'fitness']);
+  assert.deepEqual(out, w, 'không có ai bù thì thà đứng yên còn hơn lệch 89h');
+});
+
+test('dragBounds: không ghim gì thì trần là 89h trừ sàn của ba cái kia', () => {
+  const w = PRESETS.normal.weekly;
+  const floors = CATEGORIES.filter((c) => c !== 'work').reduce(
+    (a, c) => a + (HARD_FLOOR[c] ?? 0),
+    0
+  );
+  assert.deepEqual(dragBounds(w, 'work'), {
+    min: HARD_FLOOR.work ?? 0,
+    max: TOTAL_BUDGET - floors,
+  });
+});
+
+test('dragBounds: mỗi cái ghim thêm là trần của cái đang kéo tụt xuống', () => {
+  const w = PRESETS.normal.weekly;
+  const free = dragBounds(w, 'work').max;
+  const one = dragBounds(w, 'work', ['learn']).max;
+  const two = dragBounds(w, 'work', ['learn', 'leisure']).max;
+  assert.ok(one < free, `${one} phải nhỏ hơn ${free}`);
+  assert.ok(two < one, `${two} phải nhỏ hơn ${one}`);
+});
+
+test('kéo tới đúng trần của dragBounds thì ngân sách vẫn khớp 89h', () => {
+  const w = PRESETS.normal.weekly;
+  for (const c of CATEGORIES) {
+    const pinned = CATEGORIES.filter((x) => x !== c).slice(0, 2);
+    const { max } = dragBounds(w, c, pinned);
+    const out = rebalance(w, c, max, pinned);
+    assert.ok(
+      Math.abs(total(out) - TOTAL_BUDGET) < 0.05,
+      `kéo ${c} lên trần ${max} → tổng ${total(out)}`
+    );
+    assert.equal(validateTargets(out).ok, true, `${c} ở trần mà vẫn báo lỗi`);
+  }
+});
+
+test('ghim rồi kéo vẫn không ai thủng sàn', () => {
+  const w = PRESETS.normal.weekly;
+  const out = rebalance(w, 'learn', 70, ['work']);
+  for (const c of CATEGORIES) {
+    assert.ok(out[c] >= (HARD_FLOOR[c] ?? 0) - 0.001, `${c} = ${out[c]} thủng sàn`);
+  }
+});
+
+test('MAX_PINNED là 3 - ghim cả bốn thì không còn gì để kéo', () => {
+  assert.equal(MAX_PINNED, CATEGORIES.length - 1);
 });
