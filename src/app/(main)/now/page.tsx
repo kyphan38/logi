@@ -443,6 +443,7 @@ export default function NowPage() {
               pending={pendingIds.has(a.id)}
               compact={active.length >= COMPACT_FROM}
               onStop={() => handleStop(a.id)}
+              onEdit={() => setSheet({ mode: 'edit', activity: a })}
             />
           ))}
           {active.length > 1 ? (
