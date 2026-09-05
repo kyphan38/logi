@@ -1,12 +1,8 @@
 'use client';
 
 import { useTick } from '@/hooks/useActivities';
-import { countdown } from '@/lib/datetime';
+import { clockTime, countdown } from '@/lib/datetime';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
-
-function clock(ts: number): string {
-  return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
 
 /**
  * Session đã hẹn giờ, chưa chạy (Task 6). Nằm phía trên các session đang chạy
@@ -63,7 +59,7 @@ export default function ScheduledCard({
         ) : null}
 
         <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-          Starts at {clock(activity.startAt)}
+          Starts at {clockTime(activity.startAt)}
         </p>
 
         <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight">
