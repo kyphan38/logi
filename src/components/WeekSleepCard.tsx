@@ -78,9 +78,11 @@ export default function WeekSleepCard({ range }: { range: Range }) {
   return (
     <Card
       title="Sleep"
-      footnote="One dot per night. Nights with no bedtime stay empty."
+      footnote="One dot per night, at the time you went to bed. Later night = lower dot. Nights with no bedtime stay empty."
     >
-      <BedtimeDots points={points} />
+      {/* 7 cột thì đủ chỗ ghi giờ ngay cạnh chấm - khỏi phải hover xem tooltip,
+          vốn không có trên điện thoại. */}
+      <BedtimeDots points={points} showValue />
       <p className="text-[13px] tabular-nums text-ink-soft">
         {have.length}/{points.length} nights logged · median{' '}
         <span className="text-ink">{formatScale(medianScale(have))}</span>
