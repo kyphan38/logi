@@ -2,6 +2,7 @@
 // logi - Layout cho Timeline (History)
 // Hàm thuần, không đụng React. Mọi tính toán vị trí block nằm ở đây.
 // ---------------------------------------------------------------------------
+import { clockTime } from '@/lib/datetime';
 import { DAY_CUTOFF_HOUR, type Activity } from '@/types/logi';
 
 /** Chiều cao 1 giờ (px) → 1 ngày = 1440px. */
@@ -258,9 +259,7 @@ export function toPx(ts: number, win: DayWindow): number {
 
 /** "10:00 PM – 4:30 AM". Nhãn "→ next day" và thời lượng vẽ riêng ở Timeline. */
 export function formatClockRange(start: number, end: number): string {
-  const t = (ts: number) =>
-    new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  return `${t(start)} – ${t(end)}`;
+  return `${clockTime(start)} – ${clockTime(end)}`;
 }
 
 export function formatGap(ms: number): string {

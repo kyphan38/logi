@@ -1,6 +1,7 @@
 'use client';
 
 import { useElapsed } from '@/hooks/useActivities';
+import { clockTime } from '@/lib/datetime';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
 /** 2:41:07 - luôn derive từ số giây, không cộng dồn. */
@@ -9,10 +10,6 @@ function hms(totalSec: number): string {
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
   return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function clock(ts: number): string {
-  return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 export default function ActiveSessionCard({
@@ -54,7 +51,7 @@ export default function ActiveSessionCard({
         </span>
         <span className="shrink-0 text-sm font-semibold tabular-nums">{hms(elapsed)}</span>
         <span className="truncate text-xs text-zinc-400 dark:text-zinc-500">
-          since {clock(activity.startAt)}
+          since {clockTime(activity.startAt)}
         </span>
         {pending ? (
           <span
@@ -109,7 +106,7 @@ export default function ActiveSessionCard({
         ) : null}
 
         <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-          Started {clock(activity.startAt)}
+          Started {clockTime(activity.startAt)}
         </p>
 
         <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">{hms(elapsed)}</p>

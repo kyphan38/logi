@@ -30,6 +30,11 @@ export function formatDuration(ms: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+/** ts → "7:15 AM" theo locale máy. Nhãn giờ trên card ở màn Now. */
+export function clockTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
 /** ts → "Aug 25" - dùng cho toast đổi ngày. */
 export function shortDate(ts: number): string {
   return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
