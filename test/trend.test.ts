@@ -6,51 +6,67 @@ import {
   TREND_SPANS,
   elapsedFraction,
   hasLogged,
-  spanParts,
+  spanWeeks,
   trendBuckets,
   trendCompare,
   trendWindow,
   type TrendPoint,
 } from '@/lib/trend';
+import { weekDiff } from '@/lib/week';
 import { at } from './_helpers.ts';
 
 // Thứ Hai 2026-08-31, 12:00. Tuần logic: 2026-W36.
 const NOW = at('2026-08-31', '12:00');
 
 // ---------------------------------------------------------------------------
-// spanParts
+// spanWeeks
 // ---------------------------------------------------------------------------
 
-test('spanParts: đọc được cả 4 span trong dropdown', () => {
-  assert.deepEqual(spanParts('3w'), { unit: 'week', count: 3 });
-  assert.deepEqual(spanParts('6w'), { unit: 'week', count: 6 });
-  assert.deepEqual(spanParts('3m'), { unit: 'month', count: 3 });
-  assert.deepEqual(spanParts('6m'), { unit: 'month', count: 6 });
+test('TREND_SPANS chỉ còn tuần, mặc định 6w', () => {
+  assert.deepEqual(
+    TREND_SPANS.map((s) => s.value),
+    ['6w', '12w', '26w']
+  );
+  assert.ok(TREND_SPANS.some((s) => s.value === DEFAULT_SPAN));
+  assert.equal(DEFAULT_SPAN, '6w');
 });
 
-test('spanParts: mọi span trong TREND_SPANS đều hợp lệ', () => {
+test('spanWeeks đọc số tuần', () => {
+  assert.equal(spanWeeks('6w'), 6);
+  assert.equal(spanWeeks('12w'), 12);
+  assert.equal(spanWeeks('26w'), 26);
+});
+
+test('trendBuckets ra đúng số cột, cũ → mới, cột cuối là kỳ đang chạy', () => {
   for (const s of TREND_SPANS) {
-    const p = spanParts(s.value);
-    assert.ok(p.count > 0, `${s.value} count = ${p.count}`);
-    assert.ok(p.unit === 'week' || p.unit === 'month');
+    const b = trendBuckets(s.value, NOW);
+    assert.equal(b.length, spanWeeks(s.value));
+    assert.equal(b[b.length - 1].partial, true);
+    assert.equal(b.slice(0, -1).every((x) => x.partial === false), true);
+    // khoá tuần, không còn khoá tháng
+    assert.ok(b.every((x) => /^\d{4}-W\d{2}$/.test(x.key)));
+    // cũ → mới
+    for (let i = 1; i < b.length; i++) assert.ok(b[i].range.from > b[i - 1].range.from);
   }
 });
 
-test('DEFAULT_SPAN nằm trong danh sách - không mở ra một dropdown trống', () => {
-  assert.ok(TREND_SPANS.some((s) => s.value === DEFAULT_SPAN));
+test('26w: cột đầu cách cột cuối đúng 25 tuần', () => {
+  const b = trendBuckets('26w', NOW);
+  assert.equal(b.length, 26);
+  assert.equal(weekDiff(b[0].key, b[25].key), 25);
 });
 
 // ---------------------------------------------------------------------------
 // trendBuckets - tuần
 // ---------------------------------------------------------------------------
 
-test('3 tuần = đúng 3 cột, cột cuối là TUẦN NÀY', () => {
-  const b = trendBuckets('3w', NOW);
-  assert.equal(b.length, 3);
-  assert.equal(b[2].key, '2026-W36');
-  assert.equal(b[2].partial, true, 'tuần này chưa xong');
+test('6 tuần = đúng 6 cột, cột cuối là TUẦN NÀY', () => {
+  const b = trendBuckets('6w', NOW);
+  assert.equal(b.length, 6);
+  assert.equal(b[5].key, '2026-W36');
+  assert.equal(b[5].partial, true, 'tuần này chưa xong');
   assert.equal(b[0].partial, false);
-  assert.equal(b[1].partial, false);
+  assert.equal(b[4].partial, false);
 });
 
 test('cột tuần đi liên tục, không nhảy cóc và không lặp', () => {
@@ -59,51 +75,12 @@ test('cột tuần đi liên tục, không nhảy cóc và không lặp', () => 
 });
 
 test('mỗi cột tuần là 7 ngày, riêng cột đang chạy dừng ở HÔM NAY', () => {
-  const b = trendBuckets('3w', NOW);
-  assert.equal(b[0].range.from, '2026-08-17');
-  assert.equal(b[0].range.to, '2026-08-23');
+  const b = trendBuckets('6w', NOW);
+  assert.equal(b[0].range.from, '2026-07-27');
+  assert.equal(b[0].range.to, '2026-08-02');
   // Cột cuối không kéo dài tới Chủ nhật: chưa sống tới đó thì chưa đo được.
-  assert.equal(b[2].range.from, '2026-08-31');
-  assert.equal(b[2].range.to, '2026-08-31');
-});
-
-// ---------------------------------------------------------------------------
-// trendBuckets - tháng
-// ---------------------------------------------------------------------------
-
-test('3 tháng = 3 cột, cột cuối là tháng này và đang dở', () => {
-  const b = trendBuckets('3m', NOW);
-  assert.deepEqual(
-    b.map((x) => x.key),
-    ['2026-06', '2026-07', '2026-08']
-  );
-  assert.deepEqual(
-    b.map((x) => x.label),
-    ['Jun', 'Jul', 'Aug']
-  );
-  assert.equal(b[2].partial, true);
-});
-
-test('cột tháng trọn vẹn chạy hết ngày cuối tháng, kể cả tháng 30 ngày', () => {
-  const b = trendBuckets('3m', NOW);
-  assert.equal(b[0].range.from, '2026-06-01');
-  assert.equal(b[0].range.to, '2026-06-30');
-  assert.equal(b[1].range.to, '2026-07-31');
-});
-
-test('6 tháng bước qua ranh giới năm mà không nhảy về tháng 13', () => {
-  const b = trendBuckets('6m', at('2026-02-15', '12:00'));
-  assert.deepEqual(
-    b.map((x) => x.key),
-    ['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02']
-  );
-});
-
-test('tháng Hai năm nhuận vẫn ra 29 ngày', () => {
-  const b = trendBuckets('3m', at('2024-03-10', '12:00'));
-  const feb = b.find((x) => x.key === '2024-02');
-  assert.ok(feb);
-  assert.equal(feb.range.to, '2024-02-29');
+  assert.equal(b[5].range.from, '2026-08-31');
+  assert.equal(b[5].range.to, '2026-08-31');
 });
 
 // ---------------------------------------------------------------------------
@@ -111,7 +88,7 @@ test('tháng Hai năm nhuận vẫn ra 29 ngày', () => {
 // ---------------------------------------------------------------------------
 
 test('trendWindow ôm trọn từ cột đầu tới cột cuối', () => {
-  for (const span of ['3w', '6w', '3m', '6m'] as const) {
+  for (const span of ['6w', '12w', '26w'] as const) {
     const b = trendBuckets(span, NOW);
     const w = trendWindow(b);
     assert.equal(w.from, b[0].range.from, `${span} from`);
@@ -132,19 +109,13 @@ test('cột đã xong luôn tính đủ 100% target', () => {
 });
 
 test('tuần này mới qua thứ Hai → khoảng 1/7 target, không phải cả tuần', () => {
-  const b = trendBuckets('3w', NOW);
-  const f = elapsedFraction(b[2], NOW);
+  const b = trendBuckets('6w', NOW);
+  const f = elapsedFraction(b[5], NOW);
   assert.ok(f > 0 && f <= 0.2, `f = ${f}`);
 });
 
-test('tháng này ngày 31 → gần trọn tháng', () => {
-  const b = trendBuckets('3m', NOW);
-  const f = elapsedFraction(b[2], NOW);
-  assert.ok(f > 0.9 && f <= 1, `f = ${f}`);
-});
-
 test('elapsedFraction không bao giờ vượt 1 - cột dở không thể nặng hơn cột đủ', () => {
-  for (const span of ['3w', '6w', '3m', '6m'] as const) {
+  for (const span of ['6w', '12w', '26w'] as const) {
     for (const b of trendBuckets(span, NOW)) {
       const f = elapsedFraction(b, NOW);
       assert.ok(f > 0 && f <= 1, `${span}/${b.key} = ${f}`);
