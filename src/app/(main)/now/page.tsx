@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import ActiveSessionCard from '@/components/ActiveSessionCard';
 import BalanceBanner from '@/components/BalanceBanner';
+import BedtimeSheet from '@/components/BedtimeSheet';
 import CategoryGrid from '@/components/CategoryGrid';
 import ClarifyCard from '@/components/ClarifyCard';
 import StaleSessionModal from '@/components/StaleSessionModal';
@@ -27,7 +28,7 @@ import {
   useToasts,
   useWeekActivities,
 } from '@/hooks/useActivities';
-import { logBedtime, useDayLog } from '@/hooks/useBedtime';
+import { bedtimeDate, logBedtime, useRecentBedtime } from '@/hooks/useBedtime';
 import { useReminders } from '@/hooks/useReminders';
 import { useReviewDue } from '@/hooks/useReview';
 import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
@@ -149,9 +150,10 @@ export default function NowPage() {
     );
   }, [todayCells, todayActivities, active, nowMinute]);
 
-  // Bedtime là mốc trong dayLogs, không phải activity. Nút nhỏ trong header:
-  // bấm là ghi `now`, đã ghi thì hiện giờ đã ghi, bấm lại để sửa.
-  const { log: bedtimeLog } = useDayLog(today);
+  // Bedtime là mốc trong dayLogs, không phải activity. Nút nhỏ trong header
+  // chỉ hiện đêm nay; sheet mới là chỗ thấy và sửa được cả đêm qua.
+  const { tonight: bedtimeLog, lastNight } = useRecentBedtime(today);
+  const [bedtimeOpen, setBedtimeOpen] = useState(false);
 
   // Session `active` quá 15h. `active` là stream realtime nên danh sách này tự
   // cập nhật khi mount, khi app quay lại foreground (useTick bắt 'focus'),
@@ -304,30 +306,56 @@ export default function NowPage() {
     }
   }
 
-  /** Bấm nút bedtime: ghi `now` vào dayLogs của ngày logic mà nó rơi vào. */
-  async function handleBedtime() {
+  /** Mốc đang có của một đêm, để Undo trả lại đúng cái cũ chứ không xoá trắng. */
+  function bedtimeOf(date: string): number | null {
+    if (date === bedtimeLog.date) return bedtimeLog.bedtimeAt;
+    if (date === lastNight.date) return lastNight.bedtimeAt;
+    return null;
+  }
+
+  /** Undo dùng chung cho ghi và xoá: có mốc cũ thì ghi lại, không thì xoá. */
+  function restoreBedtime(date: string, prev: number | null) {
+    if (!uid) return;
+    const back = prev === null ? clearBedtime(uid, date) : logBedtime(uid, prev);
+    void back.catch((e) => push(`Could not undo. ${(e as Error).message}`));
+  }
+
+  /** Ghi mốc đi ngủ. `at` có thể là tối qua - ngày logic suy ra từ chính nó. */
+  async function handleBedtime(at: number) {
     if (!uid || busy) return;
+    setBedtimeOpen(false);
     setBusy(true);
+    const date = bedtimeDate(at);
+    const prev = bedtimeOf(date);
     try {
-      const at = Date.now();
-      const save = logBedtime(uid, at);
-      await capWait(save, (e) => push(`Sync failed. ${(e as Error).message}`));
-      const date = await save;
+      await capWait(logBedtime(uid, at), (e) => push(`Sync failed. ${(e as Error).message}`));
       push(
         date === today
           ? `Bedtime ${formatBedtime(at)} logged.`
-          : `Bedtime ${formatBedtime(at)} logged for ${date}.`,
-        {
-          label: 'Undo',
-          run: () => {
-            void clearBedtime(uid, date).catch((e) =>
-              push(`Could not undo. ${(e as Error).message}`)
-            );
-          },
-        }
+          : `Bedtime ${formatBedtime(at)} logged for ${prettyLogicalDate(date)}.`,
+        { label: 'Undo', run: () => restoreBedtime(date, prev) }
       );
     } catch (e) {
       push(`Could not log bedtime. ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Xoá mốc ghi nhầm. Chỉ có trong sheet - ngoài header không ai xoá nhầm được. */
+  async function handleClearBedtime(date: string) {
+    if (!uid || busy) return;
+    setBedtimeOpen(false);
+    setBusy(true);
+    const prev = bedtimeOf(date);
+    try {
+      await capWait(clearBedtime(uid, date), (e) => push(`Sync failed. ${(e as Error).message}`));
+      push(`Bedtime cleared for ${prettyLogicalDate(date)}.`, {
+        label: 'Undo',
+        run: () => restoreBedtime(date, prev),
+      });
+    } catch (e) {
+      push(`Could not clear bedtime. ${(e as Error).message}`);
     } finally {
       setBusy(false);
     }
@@ -360,12 +388,12 @@ export default function NowPage() {
               thêm một khối chiều cao nào. */}
           <button
             type="button"
-            onClick={() => void handleBedtime()}
+            onClick={() => setBedtimeOpen(true)}
             disabled={busy}
             aria-label={
               bedtimeLog.bedtimeAt
-                ? `Bedtime ${formatBedtime(bedtimeLog.bedtimeAt)}, tap to update`
-                : 'Log bedtime now'
+                ? `Bedtime ${formatBedtime(bedtimeLog.bedtimeAt)}, tap to edit`
+                : 'Log bedtime'
             }
             className="text-xs tabular-nums text-zinc-400 transition active:scale-95 disabled:opacity-50 dark:text-zinc-500"
           >
@@ -559,6 +587,18 @@ export default function NowPage() {
             onCancel={voice.cancelPending}
           />
         </VoiceSheet>
+      ) : null}
+
+      {bedtimeOpen && uid ? (
+        <BedtimeSheet
+          tonight={bedtimeLog}
+          lastNight={lastNight}
+          now={nowMinute}
+          busy={busy}
+          onPick={(at) => void handleBedtime(at)}
+          onClear={(date) => void handleClearBedtime(date)}
+          onClose={() => setBedtimeOpen(false)}
+        />
       ) : null}
 
       {sheet && uid ? (

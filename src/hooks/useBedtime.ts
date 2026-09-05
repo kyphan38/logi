@@ -40,6 +40,29 @@ export function useDayLog(date: string | null) {
   return { log, loading };
 }
 
+/** '2026-09-05' → '2026-09-04'. Lấy trưa hôm trước cho khỏi đụng mốc cắt 04:00. */
+function prevDate(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return logicalDate(new Date(y, m - 1, d - 1, 12).getTime());
+}
+
+/**
+ * Mốc của đêm nay và đêm qua.
+ *
+ * Luật "giờ gần nhất trong quá khứ" không bao giờ với xa hơn 24 tiếng, nên mọi
+ * mốc ghi được từ sheet đều rơi vào đúng một trong hai đêm này - đủ để vừa hiện
+ * trạng thái vừa biết giá trị cũ trước khi ghi đè.
+ */
+export function useRecentBedtime(date: string | null) {
+  const tonight = useDayLog(date);
+  const lastNight = useDayLog(date ? prevDate(date) : null);
+  return {
+    tonight: tonight.log,
+    lastNight: lastNight.log,
+    loading: tonight.loading || lastNight.loading,
+  };
+}
+
 /** Ghi "đi ngủ lúc này". Trả về ngày logic mà mốc rơi vào (qua 00:00 thì là hôm trước). */
 export async function logBedtime(uid: string, at: number): Promise<string> {
   return saveBedtime(uid, at);
