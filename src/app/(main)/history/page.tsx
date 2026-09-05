@@ -149,11 +149,19 @@ export default function HistoryPage() {
             <h1 className="text-2xl font-semibold tracking-tight">History</h1>
             <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
               {prettyDate(selected)}
-              {bedtimeLog.bedtimeAt !== null && (
-                <span className="tabular-nums"> · 🌙 {formatBedtime(bedtimeLog.bedtimeAt)}</span>
-              )}
             </p>
           </div>
+          {/* Bedtime đứng cùng hàng với nút +, KHÔNG nối vào dòng ngày: dòng đó
+              có `truncate`, nên "Wednesday, Sep 24" hơi dài là mốc giờ bị cắt
+              mất. Cùng cỡ chữ và cùng token màu với nút 🌙 bên màn Now để hai
+              trang đọc ra một thứ giống nhau. Ở đây chỉ để xem - sửa mốc vẫn là
+              việc của BedtimeSheet bên Now, vốn hỏi "tối nay / đêm qua" chứ
+              không nhận một ngày bất kỳ. */}
+          {bedtimeLog.bedtimeAt !== null && (
+            <span className="shrink-0 text-xs tabular-nums text-zinc-400 dark:text-zinc-500">
+              🌙 {formatBedtime(bedtimeLog.bedtimeAt)}
+            </span>
+          )}
           <button
             type="button"
             onClick={() => setSheet(newRecordDefaults(selected, today, nowMinute))}
