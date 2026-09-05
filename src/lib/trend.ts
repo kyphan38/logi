@@ -3,7 +3,7 @@
 //
 // Khác `bucket.ts`: ở đó các cột được cắt ra từ khoảng đang xem trên màn hình.
 // Ở đây cửa sổ tự dựng từ hôm nay lùi về sau, KHÔNG phụ thuộc `RangePicker` -
-// câu hỏi "mấy tháng nay Learn đi lên hay đi xuống" không liên quan gì tới
+// câu hỏi "mấy tuần nay Learn đi lên hay đi xuống" không liên quan gì tới
 // khoảng đang xem.
 //
 // Kỳ cuối luôn là kỳ ĐANG chạy và bị đánh dấu `partial`: tuần này mới tới thứ
@@ -16,91 +16,59 @@ import { daysBetween, weekOf, type Range } from '@/lib/range';
 import { addDays } from '@/lib/timeline';
 import { addWeeks, weekLabel, weekStart } from '@/lib/week';
 
-export type TrendSpan = '3w' | '6w' | '3m' | '6m';
+export type TrendSpan = '6w' | '12w' | '26w';
 
-// Nhãn gọn để 3 dropdown của card Trend vừa một hàng ở 375px. Bỏ chữ "Last"
-// mà nghĩa không đổi: "6 weeks" vẫn hiểu là 6 tuần gần nhất.
+// Nhãn gọn để chip vừa một hàng ở 375px. Bỏ chữ "Last" mà nghĩa không đổi:
+// "12 weeks" vẫn hiểu là 12 tuần gần nhất.
+//
+// Không còn span theo THÁNG. Tháng có 4 hoặc 5 tuần nên cột tháng dài tự nhiên
+// cao hơn — đó là lịch, không phải xu hướng. Cả app chạy theo tuần (weekTargets,
+// WeeklyReview, ngân sách 89h/tuần) nên trend cũng phải đếm bằng tuần thì cột
+// mới so được với cột.
 export const TREND_SPANS: readonly { value: TrendSpan; label: string }[] = [
-  { value: '3w', label: '3 weeks' },
   { value: '6w', label: '6 weeks' },
-  { value: '3m', label: '3 months' },
-  { value: '6m', label: '6 months' },
+  { value: '12w', label: '12 weeks' },
+  { value: '26w', label: '26 weeks' },
 ];
 
 export const DEFAULT_SPAN: TrendSpan = '6w';
 
-const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** `'12w'` → `12`. */
+export function spanWeeks(span: TrendSpan): number {
+  return Number(span.slice(0, -1));
+}
 
 export interface TrendBucket {
-  /** Khoá ổn định cho React/Recharts: "2026-W35" hoặc "2026-08". */
+  /** Khoá ổn định cho React/Recharts: "2026-W35". */
   key: string;
-  /** Nhãn trục X: "W35" hoặc "Aug". */
+  /** Nhãn trục X: "W35". */
   label: string;
   range: Range;
   /** Kỳ chưa kết thúc - cột thấp không có nghĩa là làm ít. */
   partial: boolean;
 }
 
-/** `'3w'` → `{ unit: 'week', count: 3 }`. */
-export function spanParts(span: TrendSpan): { unit: 'week' | 'month'; count: number } {
-  const count = Number(span.slice(0, -1));
-  return { unit: span.endsWith('w') ? 'week' : 'month', count };
-}
-
-/** Ngày cuối cùng của tháng chứa `date` ("2026-02" → "2026-02-28"). */
-function endOfMonth(ym: string): string {
-  const [y, m] = ym.split('-').map(Number);
-  return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
-}
-
-/** Lùi `n` tháng từ "2026-08" → "2026-05". */
-function addMonths(ym: string, n: number): string {
-  const [y, m] = ym.split('-').map(Number);
-  const d = new Date(y, m - 1 + n, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
 /**
  * Các cột của một span, cũ → mới. Cột cuối cùng là kỳ đang chạy.
  *
- * Kỳ đang chạy dừng ở HÔM NAY chứ không kéo tới cuối tuần/cuối tháng: ngày
- * chưa tới thì không có dữ liệu, mà target vẫn cộng đủ → cột sẽ trông hụt.
+ * Kỳ đang chạy dừng ở HÔM NAY chứ không kéo tới cuối tuần: ngày chưa tới thì
+ * không có dữ liệu, mà target vẫn cộng đủ → cột sẽ trông hụt.
  */
 export function trendBuckets(span: TrendSpan, now: number = Date.now()): TrendBucket[] {
   const today = logicalDate(now);
-  const { unit, count } = spanParts(span);
+  const count = spanWeeks(span);
+  const current = weekOf(today);
   const out: TrendBucket[] = [];
 
-  if (unit === 'week') {
-    const current = weekOf(today);
-    for (let i = count - 1; i >= 0; i--) {
-      const w = addWeeks(current, -i);
-      const from = logicalDate(weekStart(w));
-      const last = addDays(from, 6);
-      const partial = i === 0;
-      out.push({
-        key: w,
-        label: weekLabel(w),
-        range: { from, to: partial ? today : last, kind: 'custom', isPartial: partial },
-        partial,
-      });
-    }
-    return out;
-  }
-
-  const currentMonth = today.slice(0, 7);
   for (let i = count - 1; i >= 0; i--) {
-    const ym = addMonths(currentMonth, -i);
+    const w = addWeeks(current, -i);
+    const from = logicalDate(weekStart(w));
+    const last = addDays(from, 6);
     const partial = i === 0;
     out.push({
-      key: ym,
-      label: MONTH[Number(ym.slice(5, 7)) - 1],
-      range: {
-        from: `${ym}-01`,
-        to: partial ? today : endOfMonth(ym),
-        kind: 'custom',
-        isPartial: partial,
-      },
+      key: w,
+      label: weekLabel(w),
+      range: { from, to: partial ? today : last, kind: 'custom', isPartial: partial },
       partial,
     });
   }
@@ -119,10 +87,7 @@ export function trendWindow(buckets: TrendBucket[]): { from: string; to: string 
  */
 export function elapsedFraction(b: TrendBucket, now: number = Date.now()): number {
   if (!b.partial) return 1;
-  const [y, m] = b.range.from.split('-').map(Number);
-  // Tuần luôn 7 ngày; tháng thì hỏi lịch (ngày 0 của tháng sau = ngày cuối).
-  const full = b.key.includes('W') ? 7 : new Date(y, m, 0).getDate();
-  return Math.min(1, daysBetween(b.range.from, logicalDate(now)) / full);
+  return Math.min(1, daysBetween(b.range.from, logicalDate(now)) / 7);
 }
 
 // ---------------------------------------------------------------------------
