@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import BalanceBars, { categoryOrder } from '@/components/BalanceBars';
@@ -9,31 +9,47 @@ import LogQualityNote from '@/components/LogQualityNote';
 import ExportSheet from '@/components/ExportSheet';
 import Heatmap from '@/components/Heatmap';
 import InsightPanel from '@/components/InsightPanel';
-import RangePicker from '@/components/RangePicker';
-import RangeTable from '@/components/RangeTable';
 import StackedDays from '@/components/StackedDays';
-import TrendCard from '@/components/TrendCard';
+import Tabs, { TabPanel } from '@/components/Tabs';
+import TrendHoursCard from '@/components/TrendHoursCard';
+import TrendSleepCard from '@/components/TrendSleepCard';
+import TrendSpanChips from '@/components/TrendSpanChips';
+import TrendTasksCard from '@/components/TrendTasksCard';
+import WeekSleepCard from '@/components/WeekSleepCard';
 import { useTick } from '@/hooks/useActivities';
 import { fetchAllTime, useExportNudge } from '@/hooks/useBackup';
 import { useRangeData } from '@/hooks/useRangeData';
-import { bucketMode } from '@/lib/bucket';
+import { useTrend } from '@/hooks/useTrend';
 import { isThin, logQuality } from '@/lib/log-quality';
-import { buildRange, rangeLabel, type Range } from '@/lib/range';
+import { buildRange, rangeLabel } from '@/lib/range';
 import {
   actualForRange,
   deviationsForRange,
   expectedForRange,
   overlapForRange,
 } from '@/lib/range-target';
+import { DEFAULT_SPAN, trendBuckets, type TrendSpan } from '@/lib/trend';
 
 export default function AnalyticsPage() {
   // Ngày logic đổi lúc 04:00 nên phút là đủ mịn; giây chỉ làm chart nháy.
   const now = useTick(60_000, true);
 
-  // Mặc định `this_week`: Analytics chỉ có nghĩa từ 2 ngày trở lên (mục 8.1).
-  const [range, setRange] = useState<Range>(() => buildRange('this_week', Date.now()));
+  // Tab Week luôn là TUẦN NÀY. Bỏ "Last week" vì WeeklyReview đã lo việc nhìn
+  // lại tuần trước, và bỏ "Custom" vì nó chỉ thật sự cần cho Export - ExportSheet
+  // đã có sẵn lựa chọn "All time".
+  const range = useMemo(() => buildRange('this_week', now), [now]);
   const [exporting, setExporting] = useState(false);
   const { activities, weekTargets, lateWeeks, loading, error, reload } = useRangeData(range);
+
+  const base = useId();
+  const [tab, setTab] = useState<'week' | 'trend'>('week');
+  const [span, setSpan] = useState<TrendSpan>(DEFAULT_SPAN);
+
+  // Gọi vô điều kiện (luật của hook). Nó chỉ chạy khi có `uid`; ở tab Week nó
+  // vẫn fetch nền — chấp nhận, đổi lại bấm sang tab Trend là có ngay, và
+  // `useTrend` đã có cache theo phiên.
+  const buckets = useMemo(() => trendBuckets(span, now), [span, now]);
+  const trend = useTrend(span, now);
 
   const { user } = useAuth();
   const uid = user?.uid ?? null;
@@ -52,7 +68,6 @@ export default function AnalyticsPage() {
   }, [activities, weekTargets, range, now]);
 
   const empty = !loading && activities.length === 0;
-  const singleDay = range.from === range.to;
 
   return (
     <div className="flex flex-col gap-6">
@@ -85,7 +100,23 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      <RangePicker value={range} onChange={setRange} now={now} />
+      <div className="sticky top-0 z-20 -mx-5 bg-surface-0 px-5 pb-3 pt-1">
+        <Tabs
+          base={base}
+          label="Analytics view"
+          value={tab}
+          onChange={setTab}
+          items={[
+            { value: 'week', label: 'Week' },
+            { value: 'trend', label: 'Trend' },
+          ]}
+        />
+        {tab === 'trend' && (
+          <div className="mt-2">
+            <TrendSpanChips value={span} onChange={setSpan} />
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="flex items-center justify-between gap-3 rounded-md border border-line-strong bg-surface-1 p-3">
@@ -100,38 +131,27 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {loading ? (
-        <Skeleton />
-      ) : empty ? (
-        <EmptyState onThisWeek={() => setRange(buildRange('this_week', now))} />
-      ) : (
-        <>
-          {/* Bảng đứng trước - câu hỏi hay gặp nhất là "khoảng này tôi thế nào". */}
-          <RangeTable activities={activities} range={range} weekTargets={weekTargets} now={now} />
-
-          {/* Chất lượng log đứng TRƯỚC mọi chart: log thưa thì các con
-              số bên dưới không nói lên điều gì, phải biết trước khi đọc. */}
-          <LogQualityNote quality={view.quality} overlap={view.overlap} />
-
-          <Card
-            title="Balance"
-            footnote="One scale for all four bars. The notch is the target for this range."
-          >
-            <BalanceBars rows={view.rows} showDeviation={!isThin(view.quality)} />
-          </Card>
-
-          {/* Khoảng một ngày: By day một cột và When một cột đều không nói lên
-              điều gì mà History không nói rõ hơn (mục 8.1). */}
-          {singleDay ? (
-            <Card label="Daily and hourly patterns">
-              <p className="text-[13px] text-ink-muted">
-                Pick 2+ days to see daily and hourly patterns.
-              </p>
-            </Card>
+      {tab === 'week' ? (
+        <TabPanel base={base} value="week">
+          {loading ? (
+            <Skeleton />
+          ) : empty ? (
+            <EmptyState />
           ) : (
             <>
+              {/* Chất lượng log đứng TRƯỚC mọi chart: log thưa thì các con
+                  số bên dưới không nói lên điều gì, phải biết trước khi đọc. */}
+              <LogQualityNote quality={view.quality} overlap={view.overlap} />
+
               <Card
-                title={`By ${bucketMode(range)}`}
+                title="Balance"
+                footnote="One scale for all four bars. The notch is the target for this range."
+              >
+                <BalanceBars rows={view.rows} showDeviation={!isThin(view.quality)} />
+              </Card>
+
+              <Card
+                title="By day"
                 footnote="Y axis is hours, not % of a day - logging two things at once can push a column past 24h."
               >
                 <StackedDays
@@ -143,27 +163,59 @@ export default function AnalyticsPage() {
                 />
               </Card>
 
-              <Card title="When" footnote="Darker cell = more hours logged in that hour.">
+              <Card title="By hour" footnote="Darker cell = more hours logged in that hour.">
                 <Heatmap activities={activities} range={range} now={now} />
               </Card>
+
+              <WeekSleepCard range={range} />
+
+              {/* Sau chart, không phải trước: chart trả lời "cái gì đã xảy ra",
+                  phần này chỉ chọn ra cái đáng để ý. Đọc ngược lại thì người dùng
+                  tin lời AI hơn tin số của chính mình. */}
+              <InsightPanel
+                activities={activities}
+                range={range}
+                weekTargets={weekTargets}
+                now={now}
+              />
             </>
           )}
-
-          {/* Trend KHÔNG dùng `range` của picker: câu hỏi "mấy tháng nay đi lên
-              hay đi xuống" không liên quan tới khoảng đang xem. Nó có cửa sổ
-              riêng, chọn bằng hai dropdown trong khung. */}
-          <TrendCard now={now} />
-
-          {/* Sau chart, không phải trước: chart trả lời "cái gì đã xảy ra",
-              phần này chỉ chọn ra cái đáng để ý. Đọc ngược lại thì người dùng
-              tin lời AI hơn tin số của chính mình. */}
-          <InsightPanel
-            activities={activities}
-            range={range}
-            weekTargets={weekTargets}
-            now={now}
-          />
-        </>
+        </TabPanel>
+      ) : (
+        <TabPanel base={base} value="trend">
+          {trend.error ? (
+            <Card label="Trend">
+              <div className="flex items-center justify-between gap-3">
+                <p className="min-w-0 text-[13px] text-ink-soft">{trend.error}</p>
+                <button
+                  type="button"
+                  onClick={trend.reload}
+                  className="shrink-0 rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink transition active:scale-[0.98]"
+                >
+                  Retry
+                </button>
+              </div>
+            </Card>
+          ) : trend.loading ? (
+            <Skeleton />
+          ) : (
+            <>
+              <TrendHoursCard
+                buckets={buckets}
+                activities={trend.activities}
+                weekTargets={trend.weekTargets}
+                now={now}
+              />
+              <TrendTasksCard
+                buckets={buckets}
+                activities={trend.activities}
+                weekPlans={trend.weekPlans}
+                now={now}
+              />
+              <TrendSleepCard buckets={buckets} dayLogs={trend.dayLogs} />
+            </>
+          )}
+        </TabPanel>
       )}
 
       {exporting && (
@@ -194,20 +246,11 @@ function Skeleton() {
   );
 }
 
-function EmptyState({ onThisWeek }: { onThisWeek: () => void }) {
+function EmptyState() {
   return (
     <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-line-strong px-4 py-10 text-center">
-      <div className="flex flex-col gap-1">
-        <p className="text-sm text-ink-soft">Nothing logged in this period.</p>
-        <p className="text-[13px] text-ink-muted">Try a range where you have records.</p>
-      </div>
-      <button
-        type="button"
-        onClick={onThisWeek}
-        className="rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink transition active:scale-[0.98]"
-      >
-        This week
-      </button>
+      <p className="text-sm text-ink-soft">Nothing logged this week.</p>
+      <p className="text-[13px] text-ink-muted">Start a session in Now.</p>
     </div>
   );
 }

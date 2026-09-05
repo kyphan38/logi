@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 // logi - Thanh tab cho Analytics
 //
-// Trước đây ba khái niệm thời gian (RangePicker, "By day", span của Trend) nằm
+// Trước đây ba khái niệm thời gian (picker chọn khoảng, "By day", span của Trend) nằm
 // chồng nhau trong một trang cuộn dọc, không rõ cái nào chi phối cái nào. Tab
 // cắt hẳn: mỗi tab một câu hỏi, một cách đếm thời gian.
 //

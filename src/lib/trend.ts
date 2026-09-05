@@ -2,7 +2,7 @@
 // logi - Trend: MỘT category, nhiều kỳ liên tiếp
 //
 // Khác `bucket.ts`: ở đó các cột được cắt ra từ khoảng đang xem trên màn hình.
-// Ở đây cửa sổ tự dựng từ hôm nay lùi về sau, KHÔNG phụ thuộc `RangePicker` -
+// Ở đây cửa sổ tự dựng từ hôm nay lùi về sau, KHÔNG phụ thuộc picker chọn khoảng -
 // câu hỏi "mấy tuần nay Learn đi lên hay đi xuống" không liên quan gì tới
 // khoảng đang xem.
 //
