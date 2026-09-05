@@ -145,10 +145,14 @@ export interface TrendCompare {
  * Bỏ kỳ dở dang và kỳ trống. Dưới 2 kỳ dùng được thì ẩn hẳn dòng chữ - thà
  * không nói còn hơn nói một xu hướng dựng từ một điểm.
  *
- * Chênh dưới 0.5h coi là `flat`: nửa tiếng qua sáu tuần là nhiễu, không phải
- * chuyển biến.
+ * `flatBelow` là ngưỡng coi như đứng yên, tính theo cùng đơn vị với `hours`.
+ * Mặc định 0.5 (giờ). Khi điểm là phần trăm thì chỗ gọi truyền 5 - lệch 5 điểm
+ * phần trăm qua nhiều tuần là nhiễu, không phải chuyển biến.
  */
-export function trendCompare(points: readonly TrendPoint[]): TrendCompare | null {
+export function trendCompare(
+  points: readonly TrendPoint[],
+  flatBelow = 0.5
+): TrendCompare | null {
   const usable = points.filter((p) => !p.partial && p.hours !== null);
   if (usable.length < 2) return null;
 
@@ -159,6 +163,74 @@ export function trendCompare(points: readonly TrendPoint[]): TrendCompare | null
     from,
     to,
     diff,
-    word: Math.abs(diff) < 0.5 ? 'flat' : diff > 0 ? 'up' : 'down',
+    word: Math.abs(diff) < flatBelow ? 'flat' : diff > 0 ? 'up' : 'down',
   };
+}
+
+// ---------------------------------------------------------------------------
+// Cắt kỳ trống ở ĐẦU
+//
+// "26 tuần" nghĩa là TỐI ĐA 26 tuần. Tài khoản mới chỉ có 3 tuần dữ liệu mà vẽ
+// đủ 26 ô thì 23 ô đầu là chỗ chết — chart trông như hỏng. Cắt phần đầu rồi thì
+// chip không phải chạy theo tuổi tài khoản nữa: bấm 26w hôm nay ra 3 cột, vài
+// tháng nữa nó tự đầy lên.
+//
+// CHỈ cắt ở đầu. Tuần trống ở GIỮA phải giữ - đó là tuần bạn thật sự nghỉ, là
+// thông tin, không phải chỗ thừa.
+// ---------------------------------------------------------------------------
+
+/**
+ * Sàn số cột. Một chart 1 cột trông như lỗi render chứ không như dữ liệu; 3 cột
+ * là mức tối thiểu để mắt thấy được một hình dạng.
+ */
+export const MIN_TREND_BUCKETS = 3;
+
+/**
+ * Bỏ các kỳ trống ở đầu mảng. Không kỳ nào có dữ liệu → `[]` (chỗ gọi tự hiện
+ * trạng thái rỗng của nó).
+ *
+ * Nếu cắt xong còn dưới `MIN_TREND_BUCKETS` thì nhả bớt ra cho đủ sàn: mấy ô
+ * trống thêm vào là tuần có thật, để trống là đúng.
+ */
+export function trimLeadingEmpty<T>(buckets: readonly T[], hasData: (b: T) => boolean): T[] {
+  const first = buckets.findIndex(hasData);
+  if (first === -1) return [];
+  const start = Math.min(first, Math.max(0, buckets.length - MIN_TREND_BUCKETS));
+  return buckets.slice(start);
+}
+
+// ---------------------------------------------------------------------------
+// Bar hay line
+//
+// Bar trả lời "nhiều hay ít so với target" nhưng trên 375px chỉ đẹp tới ~13 cột;
+// quá đó thì cột mảnh và nhãn trục X chồng nhau. Line trả lời "đang lên hay
+// xuống" và chịu được nhiều điểm - đổi bởi SỐ CỘT, không phải bởi span, vì span
+// đã bị cắt đầu nên không đoán được số cột từ tên span.
+// ---------------------------------------------------------------------------
+
+export const MAX_BARS = 13;
+
+export function chartKind(bucketCount: number): 'bars' | 'line' {
+  return bucketCount > MAX_BARS ? 'line' : 'bars';
+}
+
+/**
+ * Nhãn trục X thưa ra khi nhiều cột: 1 nhãn / 4 cột. Trả về giá trị cho prop
+ * `interval` của Recharts XAxis (0 = hiện hết, 3 = bỏ 3 hiện 1).
+ */
+export function labelInterval(bucketCount: number): number {
+  return bucketCount > MAX_BARS ? 3 : 0;
+}
+
+/**
+ * Phần trăm so với target của cùng kỳ đó. `null` khi kỳ không có dữ liệu hoặc
+ * target bằng 0 - chia cho 0 ra Infinity, mà "không đặt target" không phải là
+ * "trượt target".
+ *
+ * Span dài vẽ tỉ lệ chứ không vẽ giờ: qua 26 tuần target có thể đổi nhiều lần,
+ * đường chuẩn sẽ nhấp nhô khó đọc, còn mốc 100% thì luôn nằm một chỗ.
+ */
+export function onTrackPct(actual: number | null, expected: number): number | null {
+  if (actual === null || expected <= 0) return null;
+  return (actual / expected) * 100;
 }
