@@ -18,6 +18,8 @@ import { roundDown } from '@/lib/datetime';
 import { dayGaps, dayWindow, layoutDay } from '@/lib/timeline';
 import { daySummary, gaugeShape, type DayLine } from '@/lib/day-target';
 import { useWeekTarget } from '@/hooks/useTargets';
+import { useDayLog } from '@/hooks/useBedtime';
+import { formatBedtime } from '@/lib/bedtime';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
 function prettyDate(date: string): string {
@@ -122,6 +124,14 @@ export default function HistoryPage() {
 
   // Bố cục co giãn đã bỏ khoảng đêm trống, nên không cần tự cuộn tới 06:00
   // nữa. Đổi ngày thì về đầu danh sách là đủ.
+  // Bedtime nằm ở `dayLogs`, không phải activity, nên `useDayActivities` không
+  // kéo nó về - đó là lý do History trước giờ không thấy mốc đã ghi ở Now.
+  //
+  // Khoá theo NGÀY LOGIC: `setBedtime` lưu bằng `logicalDate(at)` nên đêm 02:00
+  // thứ Bảy đã nằm sẵn ở thứ Sáu. Ở đây chỉ đọc lại đúng khoá đó, không tự lùi
+  // ngày lần nữa - lùi hai lần thì mốc rơi về thứ Năm.
+  const { log: bedtimeLog } = useDayLog(selected);
+
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -139,6 +149,9 @@ export default function HistoryPage() {
             <h1 className="text-2xl font-semibold tracking-tight">History</h1>
             <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
               {prettyDate(selected)}
+              {bedtimeLog.bedtimeAt !== null && (
+                <span className="tabular-nums"> · 🌙 {formatBedtime(bedtimeLog.bedtimeAt)}</span>
+              )}
             </p>
           </div>
           <button
