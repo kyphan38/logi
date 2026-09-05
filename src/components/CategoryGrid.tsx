@@ -7,6 +7,8 @@ import type { NowTile } from '@/lib/day-progress';
 import { MOVE_LIMIT_PX, isRealTap, type Press } from '@/lib/tap-guard';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Category } from '@/types/logi';
 
+import StartWhenSheet, { type StartWhen } from './StartWhenSheet';
+
 // -----------------------------------------------------------------------------
 // logi - Lưới 4 nút Start (AMENDMENT-remove-sleep 6b + 6c)
 //
@@ -17,9 +19,8 @@ import { CATEGORY_COLOR, CATEGORY_LABEL, type Category } from '@/types/logi';
 // ở `isRealTap()`, không phải ở một bước hỏi lại.
 // -----------------------------------------------------------------------------
 
-/** Giữ lâu hơn ngưỡng của `isRealTap` → mở sheet lùi giờ, không phải Start. */
+/** Giữ lâu hơn ngưỡng của `isRealTap` → mở sheet chọn giờ, không phải Start. */
 const LONG_PRESS_MS = 500;
-const ADJUST_CHOICES = [5, 15, 30] as const;
 
 /** Đoạn hổ phách ở mép phải khi vượt target. */
 const OVER_PCT = 14;
@@ -29,16 +30,24 @@ export default function CategoryGrid({
   tiles,
   running,
   busy,
+  now,
   onStart,
   onFocusRunning,
+  onEditRunning,
 }: {
   /** Tiến độ hôm nay của cả 4 category, theo đúng thứ tự CATEGORIES. */
   tiles: NowTile[];
   running: Set<Category>;
   busy: boolean;
-  /** minutesAgo = 0 → bắt đầu ngay. */
-  onStart: (category: Category, minutesAgo: number) => void;
+  /** Mốc "bây giờ" của trang, để nhãn giờ trong sheet khớp với mốc được ghi. */
+  now: number;
+  onStart: (category: Category, when: StartWhen) => void;
   onFocusRunning: (category: Category) => void;
+  /**
+   * Giữ lâu một nút ĐANG chạy. `Before` trên category đang chạy chắc chắn ném
+   * `duplicate`, nên ý định thật gần như luôn là "tôi bắt đầu sai giờ".
+   */
+  onEditRunning: (category: Category) => void;
 }) {
   const [sheetFor, setSheetFor] = useState<Category | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,7 +85,8 @@ export default function CategoryGrid({
     clear();
     timer.current = setTimeout(() => {
       longFired.current = true;
-      setSheetFor(c);
+      if (running.has(c)) onEditRunning(c);
+      else setSheetFor(c);
     }, LONG_PRESS_MS);
   };
 
@@ -113,7 +123,7 @@ export default function CategoryGrid({
     };
     if (!isRealTap(p)) return;
     if (running.has(c)) onFocusRunning(c);
-    else onStart(c, 0);
+    else onStart(c, { startAt: null, scheduled: false });
   };
 
   return (
@@ -135,8 +145,8 @@ export default function CategoryGrid({
               onContextMenu={(e) => e.preventDefault()}
               aria-label={
                 isRunning
-                  ? `${CATEGORY_LABEL[c]} running, ${t.label}, tap to view`
-                  : `Start ${CATEGORY_LABEL[c]}, ${t.label}`
+                  ? `${CATEGORY_LABEL[c]} running, ${t.label}, tap to view, hold to edit`
+                  : `Start ${CATEGORY_LABEL[c]}, ${t.label}, hold to pick a time`
               }
               className={[
                 // Viền HAIRLINE xám cho mọi nút. Bốn viền pastel cạnh nhau là thứ
@@ -165,7 +175,13 @@ export default function CategoryGrid({
 
               {isRunning ? (
                 <span className="absolute right-2 top-1.5 text-[10px] opacity-80">running</span>
-              ) : null}
+              ) : (
+                // Cử chỉ giữ-lâu không tự lộ ra. Một dấu mờ ở góc là đủ để người
+                // dùng thử một lần, mà không thành nút thứ hai trên cùng cái nút.
+                <span aria-hidden="true" className="absolute right-2 top-1 text-sm text-ink-muted">
+                  ⋯
+                </span>
+              )}
 
               {/* Dải tiến độ. Không target thì KHÔNG vẽ - một dải rỗng trông
                   như "chưa làm gì", trong khi thật ra hôm nay không đặt mục tiêu. */}
@@ -195,50 +211,16 @@ export default function CategoryGrid({
       </div>
 
       {sheetFor ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Start with adjusted time"
-          onClick={() => setSheetFor(null)}
-        >
-          <div
-            className="w-full max-w-md rounded-t-lg bg-surface-2 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
-            style={{ overscrollBehavior: 'contain' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-base font-semibold">
-              Start {CATEGORY_LABEL[sheetFor]} with adjusted time
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              When did you actually start?
-            </p>
-
-            <div className="mt-4 flex flex-col gap-2">
-              {ADJUST_CHOICES.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className="min-h-12 rounded-sm border border-line text-sm font-medium active:scale-[0.99]"
-                  onClick={() => {
-                    const c = sheetFor;
-                    setSheetFor(null);
-                    onStart(c, m);
-                  }}
-                >
-                  started {m} minutes ago
-                </button>
-              ))}
-              <button
-                type="button"
-                className="min-h-12 rounded-sm text-sm text-ink-soft"
-                onClick={() => setSheetFor(null)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <StartWhenSheet
+          category={sheetFor}
+          now={now}
+          onClose={() => setSheetFor(null)}
+          onPick={(when) => {
+            const c = sheetFor;
+            setSheetFor(null);
+            onStart(c, when);
+          }}
+        />
       ) : null}
     </>
   );

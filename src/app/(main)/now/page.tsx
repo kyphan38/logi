@@ -12,6 +12,7 @@ import ParseConfirmCard from '@/components/ParseConfirmCard';
 import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
+import { type StartWhen } from '@/components/StartWhenSheet';
 import TaskChecklist from '@/components/TaskChecklist';
 import Toasts from '@/components/Toasts';
 import VoiceSheet from '@/components/VoiceSheet';
@@ -37,7 +38,7 @@ import { actualHours, findStale, logicalDate, logicalWeekday, overlapHours } fro
 import { pickBalance } from '@/lib/banner';
 import { clearBedtime } from '@/lib/bedtime-store';
 import { formatBedtime } from '@/lib/bedtime';
-import { formatDuration, roundDown } from '@/lib/datetime';
+import { clockTime, formatDuration, roundDown } from '@/lib/datetime';
 import { nowTiles } from '@/lib/day-progress';
 import { checklistFor, type ChecklistRow } from '@/lib/tasks';
 import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
@@ -157,19 +158,28 @@ export default function NowPage() {
   // và ngay khi người dùng xử lý xong từng cái.
   const stale = useMemo(() => findStale(active, nowMinute), [active, nowMinute]);
 
-  async function handleStart(category: Category, minutesAgo: number) {
+  /**
+   * `when.startAt === null` là đường thường ngày: một chạm, bắt đầu ngay.
+   * `scheduled` thì record nằm im tới giờ, `promoteScheduled()` bật nó lên.
+   */
+  async function handleStart(category: Category, when: StartWhen) {
     if (!uid || busy) return;
     setBusy(true);
     try {
       // Offline: cache đã ghi ngay, đừng bắt nút chờ server ack.
       const started = startActivity(uid, {
         category,
-        startAt: minutesAgo > 0 ? Date.now() - minutesAgo * 60_000 : undefined,
+        startAt: when.startAt ?? undefined,
+        status: when.scheduled ? 'scheduled' : 'active',
       });
       await capWait(started, (e) => push(`Sync failed. ${(e as Error).message}`));
       // Lớp 3 của 6c: Start chỉ một chạm, nên phải luôn có đường lui 5 giây.
       // `started` giữ riêng vì `capWait` có thể trả về trước khi có id.
-      push(`Started ${CATEGORY_LABEL[category]}`, {
+      const done =
+        when.scheduled && when.startAt !== null
+          ? `${CATEGORY_LABEL[category]} scheduled for ${clockTime(when.startAt)}`
+          : `Started ${CATEGORY_LABEL[category]}`;
+      push(done, {
         label: 'Undo',
         run: () => {
           void started
@@ -186,6 +196,12 @@ export default function NowPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Giữ lâu một nút đang chạy = "tôi bắt đầu sai giờ" → mở thẳng sheet sửa. */
+  function editRunning(category: Category) {
+    const a = active.find((x) => x.category === category);
+    if (a) setSheet({ mode: 'edit', activity: a });
   }
 
   /** Huỷ session đã hẹn: xoá hẳn record, kèm Undo vì bấm nhầm thì mất luôn lịch. */
@@ -377,7 +393,7 @@ export default function NowPage() {
         <ReminderBanner
           reminder={reminder}
           busy={busy}
-          onStartLearn={() => handleStart('learn', 0)}
+          onStartLearn={() => handleStart('learn', { startAt: null, scheduled: false })}
           onDismiss={dismissReminder}
         />
       ) : (
@@ -441,8 +457,10 @@ export default function NowPage() {
         tiles={tiles}
         running={running}
         busy={busy}
+        now={nowMinute}
         onStart={handleStart}
         onFocusRunning={focusRunning}
+        onEditRunning={editRunning}
       />
 
       {todayActivities.length === 0 &&
