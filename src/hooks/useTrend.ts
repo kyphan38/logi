@@ -21,15 +21,12 @@ import { listWeekPlans } from '@/lib/task-store';
 import { trendBuckets, trendWindow, type TrendSpan } from '@/lib/trend';
 import type { Activity, Category, DayLog, WeekPlan } from '@/types/logi';
 
-/** Chế độ của card TREND. Bedtime và tasks cần thêm dữ liệu ngoài activities. */
-export type TrendExtra = 'none' | 'bedtime' | 'tasks';
-
 export interface TrendData {
   activities: Activity[];
   weekTargets: Map<string, Record<Category, number>>;
-  /** Chỉ có khi extra = bedtime: mốc đi ngủ trong cửa sổ. */
+  /** Mốc đi ngủ trong cửa sổ. */
   dayLogs: DayLog[];
-  /** Chỉ có khi extra = tasks: kế hoạch của các tuần trong cửa sổ. */
+  /** Kế hoạch của các tuần trong cửa sổ. */
   weekPlans: Map<string, WeekPlan>;
   loading: boolean;
   error: string | null;
@@ -50,13 +47,16 @@ interface Cached {
   weekPlans: Map<string, WeekPlan>;
 }
 
-export function useTrend(span: TrendSpan, now: number, extra: TrendExtra = 'none'): TrendData {
+// Lấy đủ bốn nguồn trong MỘT lượt. Tab Trend hiện cả ba card cùng lúc nên
+// tách theo `extra` chỉ làm activities bị đọc ba lần với ba cache key khác
+// nhau. 26 tuần vẫn là một query trên `logicalDate`, không phải 26 query.
+export function useTrend(span: TrendSpan, now: number): TrendData {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
 
   const buckets = trendBuckets(span, now);
   const win = trendWindow(buckets);
-  const key = uid ? `${uid}|${win.from}|${win.to}|${extra}` : null;
+  const key = uid ? `${uid}|${win.from}|${win.to}` : null;
 
   const cache = useRef(new Map<string, Cached>());
   const [data, setData] = useState<Cached | null>(null);
@@ -86,13 +86,12 @@ export function useTrend(span: TrendSpan, now: number, extra: TrendExtra = 'none
     void (async () => {
       try {
         // Query song song: activities của cả cửa sổ + target của mọi tuần nó
-        // chạm tới. Bedtime / tasks chỉ đọc khi đúng chế độ cần. Không bao giờ
-        // lặp query theo từng cột.
+        // chạm tới + bedtime + tasks. Không bao giờ lặp query theo từng cột.
         const [activities, targetDocs, dayLogs, weekPlans] = await Promise.all([
           listByRange(uid, win),
           listWeekTargets(uid, weeksOf(win)),
-          extra === 'bedtime' ? listDayLogs(uid, win.from, win.to) : Promise.resolve(EMPTY_LOGS),
-          extra === 'tasks' ? listWeekPlans(uid, weeksOf(win)) : Promise.resolve(EMPTY_PLANS),
+          listDayLogs(uid, win.from, win.to),
+          listWeekPlans(uid, weeksOf(win)),
         ]);
         if (!alive) return;
 
