@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import DateStrip, { type DayBar } from '@/components/DateStrip';
+import DayBedtimeSheet from '@/components/DayBedtimeSheet';
 import RecordSheet, { restoreActivity, type SheetTarget } from '@/components/RecordSheet';
 import Timeline from '@/components/Timeline';
 import Toasts from '@/components/Toasts';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  capWait,
   useDayActivities,
   useTick,
   useToasts,
@@ -18,7 +20,8 @@ import { roundDown } from '@/lib/datetime';
 import { dayGaps, dayWindow, layoutDay } from '@/lib/timeline';
 import { daySummary, gaugeShape, type DayLine } from '@/lib/day-target';
 import { useWeekTarget } from '@/hooks/useTargets';
-import { useDayLog } from '@/hooks/useBedtime';
+import { bedtimeDate, logBedtime, useDayLog } from '@/hooks/useBedtime';
+import { clearBedtime } from '@/lib/bedtime-store';
 import { formatBedtime } from '@/lib/bedtime';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
@@ -132,6 +135,65 @@ export default function HistoryPage() {
   // ngày lần nữa - lùi hai lần thì mốc rơi về thứ Năm.
   const { log: bedtimeLog } = useDayLog(selected);
 
+  // --- Sửa bedtime của ngày đang xem --------------------------------------
+  // Sheet bên Now chỉ với được hai đêm gần nhất, nên quên ghi ba đêm là mốc đó
+  // mất luôn. History đã có sẵn ngày đang chọn - chỗ tự nhiên nhất để ghi bù.
+  const [bedtimeOpen, setBedtimeOpen] = useState(false);
+  const [bedtimeBusy, setBedtimeBusy] = useState(false);
+
+  /** Undo dùng chung cho ghi và xoá: có mốc cũ thì trả lại, không thì xoá. */
+  function restoreBedtime(date: string, prev: number | null) {
+    if (!uid) return;
+    const back = prev === null ? clearBedtime(uid, date) : logBedtime(uid, prev);
+    void back.catch((e) => push(`Could not undo. ${(e as Error).message}`));
+  }
+
+  /**
+   * Mốc cũ của đêm sắp ghi đè, để Undo trả lại đúng cái cũ chứ không xoá trắng.
+   * Chỉ biết mốc của ngày ĐANG XEM; `at` luôn rơi vào chính ngày đó, nhưng nếu
+   * lệch thì thà nhận `null` còn hơn trả lại một con số của đêm khác.
+   */
+  function bedtimeOf(date: string): number | null {
+    return date === bedtimeLog.date ? bedtimeLog.bedtimeAt : null;
+  }
+
+  async function handleBedtime(at: number) {
+    if (!uid || bedtimeBusy) return;
+    setBedtimeOpen(false);
+    setBedtimeBusy(true);
+    const date = bedtimeDate(at);
+    const prev = bedtimeOf(date);
+    try {
+      await capWait(logBedtime(uid, at), (e) => push(`Sync failed. ${(e as Error).message}`));
+      push(`Bedtime ${formatBedtime(at)} logged for ${prettyDate(date)}.`, {
+        label: 'Undo',
+        run: () => restoreBedtime(date, prev),
+      });
+    } catch (e) {
+      push(`Could not log bedtime. ${(e as Error).message}`);
+    } finally {
+      setBedtimeBusy(false);
+    }
+  }
+
+  async function handleClearBedtime(date: string) {
+    if (!uid || bedtimeBusy) return;
+    setBedtimeOpen(false);
+    setBedtimeBusy(true);
+    const prev = bedtimeOf(date);
+    try {
+      await capWait(clearBedtime(uid, date), (e) => push(`Sync failed. ${(e as Error).message}`));
+      push(`Bedtime cleared for ${prettyDate(date)}.`, {
+        label: 'Undo',
+        run: () => restoreBedtime(date, prev),
+      });
+    } catch (e) {
+      push(`Could not clear bedtime. ${(e as Error).message}`);
+    } finally {
+      setBedtimeBusy(false);
+    }
+  }
+
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -154,14 +216,27 @@ export default function HistoryPage() {
           {/* Bedtime đứng cùng hàng với nút +, KHÔNG nối vào dòng ngày: dòng đó
               có `truncate`, nên "Wednesday, Sep 24" hơi dài là mốc giờ bị cắt
               mất. Cùng cỡ chữ và cùng token màu với nút 🌙 bên màn Now để hai
-              trang đọc ra một thứ giống nhau. Ở đây chỉ để xem - sửa mốc vẫn là
-              việc của BedtimeSheet bên Now, vốn hỏi "tối nay / đêm qua" chứ
-              không nhận một ngày bất kỳ. */}
-          {bedtimeLog.bedtimeAt !== null && (
-            <span className="shrink-0 text-xs tabular-nums text-zinc-400 dark:text-zinc-500">
-              🌙 {formatBedtime(bedtimeLog.bedtimeAt)}
-            </span>
-          )}
+              trang đọc ra một thứ giống nhau.
+              Đêm chưa ghi vẫn hiện nút, chỉ mờ đi: nếu ẩn hẳn thì ngày cũ không
+              còn chỗ nào bấm vào để ghi bù - mà đó chính là việc người ta mở
+              History lên để làm. */}
+          <button
+            type="button"
+            onClick={() => setBedtimeOpen(true)}
+            disabled={bedtimeBusy}
+            aria-label={
+              bedtimeLog.bedtimeAt === null
+                ? `Add bedtime for ${prettyDate(selected)}`
+                : `Edit bedtime for ${prettyDate(selected)}`
+            }
+            className={`min-h-11 shrink-0 px-1 text-xs tabular-nums transition active:scale-95 disabled:opacity-40 ${
+              bedtimeLog.bedtimeAt === null
+                ? 'text-zinc-300 dark:text-zinc-600'
+                : 'text-zinc-400 dark:text-zinc-500'
+            }`}
+          >
+            🌙 {bedtimeLog.bedtimeAt === null ? '–' : formatBedtime(bedtimeLog.bedtimeAt)}
+          </button>
           <button
             type="button"
             onClick={() => setSheet(newRecordDefaults(selected, today, nowMinute))}
@@ -200,6 +275,20 @@ export default function HistoryPage() {
           />
         )}
       </div>
+
+      {bedtimeOpen && uid ? (
+        <DayBedtimeSheet
+          // Đổi ngày trong lúc sheet mở thì dựng lại từ đầu, nếu không ô giờ
+          // vẫn giữ giá trị của đêm cũ.
+          key={selected}
+          date={selected}
+          log={bedtimeLog}
+          busy={bedtimeBusy}
+          onPick={(at) => void handleBedtime(at)}
+          onClear={(date) => void handleClearBedtime(date)}
+          onClose={() => setBedtimeOpen(false)}
+        />
+      ) : null}
 
       {sheet && uid ? (
         <RecordSheet

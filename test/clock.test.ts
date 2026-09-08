@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveClockTime, toClockInput, relativeLabel } from '@/lib/clock';
+import { resolveClockTime, resolveClockOnDate, toClockInput, relativeLabel } from '@/lib/clock';
 import { logicalDate } from '@/lib/balance';
 import { at, MIN, H } from './_helpers.ts';
 
@@ -103,4 +103,55 @@ test('relativeLabel nói cả hai chiều', () => {
   assert.equal(relativeLabel(now + 30 * MIN, now), 'in 30m');
   assert.equal(relativeLabel(now, now), 'just now');
   assert.equal(relativeLabel(now - 30_000, now), 'just now');
+});
+
+// --- resolveClockOnDate: ngày cho trước, không phải đoán ---------------------
+
+test('giờ sau 04:00 ở lại đúng ngày lịch của đêm đó', () => {
+  assert.equal(resolveClockOnDate('23:30', '2026-09-05'), at('2026-09-05', '23:30'));
+  assert.equal(resolveClockOnDate('22:00', '2026-09-05'), at('2026-09-05', '22:00'));
+});
+
+test('giờ trước 04:00 rơi sang ngày lịch kế tiếp - vẫn là đêm đó', () => {
+  assert.equal(resolveClockOnDate('01:00', '2026-09-05'), at('2026-09-06', '01:00'));
+  assert.equal(resolveClockOnDate('00:00', '2026-09-05'), at('2026-09-06', '00:00'));
+});
+
+test('04:00 là mép: ở lại, 03:59 thì sang ngày sau', () => {
+  assert.equal(resolveClockOnDate('04:00', '2026-09-05'), at('2026-09-05', '04:00'));
+  assert.equal(resolveClockOnDate('03:59', '2026-09-05'), at('2026-09-06', '03:59'));
+});
+
+test('mốc trả về luôn thuộc đúng ngày logic được yêu cầu', () => {
+  // Đây là lời hứa duy nhất của hàm này: History ghi vào ngày đang xem, không
+  // phải một đêm bên cạnh.
+  for (const hhmm of ['22:00', '23:00', '00:00', '01:00', '03:59', '04:00', '12:00']) {
+    const ts = resolveClockOnDate(hhmm, '2026-09-05');
+    assert.notEqual(ts, null);
+    assert.equal(logicalDate(ts as number), '2026-09-05', hhmm);
+  }
+});
+
+test('vượt mép tháng và mép năm', () => {
+  assert.equal(resolveClockOnDate('00:30', '2026-09-30'), at('2026-10-01', '00:30'));
+  assert.equal(resolveClockOnDate('00:30', '2026-12-31'), at('2027-01-01', '00:30'));
+  assert.equal(logicalDate(resolveClockOnDate('00:30', '2026-12-31') as number), '2026-12-31');
+});
+
+test('không xa được quá 24 tiếng thì mới cần hàm này - ngày cũ vẫn ghi được', () => {
+  const ts = resolveClockOnDate('23:15', '2026-08-11');
+  assert.equal(ts, at('2026-08-11', '23:15'));
+  assert.equal(logicalDate(ts as number), '2026-08-11');
+});
+
+test('giờ sai định dạng → null', () => {
+  for (const bad of ['', 'nope', '25:00', '07:60', '7:5', '07-15']) {
+    assert.equal(resolveClockOnDate(bad, '2026-09-05'), null, bad);
+  }
+});
+
+test('ngày sai định dạng hoặc không có thật → null', () => {
+  for (const bad of ['', 'nope', '2026-9-5', '2026-13-01', '2026-00-10', '2026-09-31', '2026-02-30']) {
+    assert.equal(resolveClockOnDate('23:00', bad), null, bad);
+  }
 });
