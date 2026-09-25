@@ -109,10 +109,24 @@ export default function EventRow({
 
       {ahead > 0 && (
         <span
-          className="shrink-0 self-start text-[11px] tabular-nums text-ink-muted"
+          className="flex shrink-0 select-none items-center gap-1 self-start text-[11px] tabular-nums text-ink-muted"
           title={`${ahead} reminder${ahead === 1 ? '' : 's'} still to come`}
         >
-          🔔 {ahead}
+          {/* SVG một nét, KHÔNG emoji. Trình duyệt vẽ 🔔 bằng bảng màu riêng
+              của nó - vàng chói, không theo được màu chữ, và sai tông ở dark
+              mode. Hình này trùng khít icon tab dưới cùng. */}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            aria-hidden="true"
+            className="h-3 w-3"
+          >
+            <path d="M6 16.5h12L16.5 14V10a4.5 4.5 0 0 0-9 0v4z" strokeLinejoin="round" />
+            <path d="M10 19.5h4" strokeLinecap="round" />
+          </svg>
+          {ahead}
         </span>
       )}
     </button>
