@@ -66,6 +66,21 @@ service cloud.firestore {
         && (d.cells.size() == 0 || validCell(d.cells[0]));
     }
 
+    function validEvent(d) {
+      return d.keys().hasAll(['title', 'date', 'archivedAt'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 60
+        // "2026-10-15". Rules không có regex ngày, nên kiểm độ dài + hai gạch.
+        && d.date is string && d.date.size() == 10
+        && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        // Giờ là tuỳ chọn. "11:30" - 24 tiếng, luôn 5 ký tự.
+        && (!d.keys().hasAny(['time']) || d.time == null
+            || (d.time is string && d.time.matches('([01][0-9]|2[0-3]):[0-5][0-9]')))
+        && (!d.keys().hasAny(['note']) || d.note == null
+            || (d.note is string && d.note.size() <= 140))
+        && (d.archivedAt == null || d.archivedAt is number)
+        && (!d.keys().hasAny(['notified']) || d.notified is map);
+    }
+
     function validDayLog(d) {
       return d.keys().hasAll(['date'])
         && d.date is string
@@ -112,6 +127,16 @@ service cloud.firestore {
         allow read: if isOwner(uid);
         allow create, update: if isOwner(uid) && validDayLog(request.resource.data);
         allow delete: if false;
+      }
+
+      // events/{eventId} - Stage 9, sự kiện sắp tới của tab Reminder.
+      // Xoá = set archivedAt: doc phải ở lại để `notified` không bị reset,
+      // nếu không thì khôi phục một việc sẽ bắn lại mọi mốc đã gửi.
+      match /events/{eventId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validEvent(request.resource.data);
+        allow delete: if isOwner(uid)
+          && resource.data.createdAt > request.time.toMillis() - 60 * 1000;
       }
 
       // meta/debt, meta/settings
