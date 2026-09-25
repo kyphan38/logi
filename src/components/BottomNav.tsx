@@ -11,6 +11,7 @@ const TABS: Tab[] = [
   { href: '/history', label: 'History', icon: <IconHistory /> },
   { href: '/targets', label: 'Targets', icon: <IconTargets /> },
   { href: '/analytics', label: 'Analytics', icon: <IconAnalytics /> },
+  { href: '/reminders', label: 'Reminder', icon: <IconReminder /> },
 ];
 
 export default function BottomNav() {
@@ -98,6 +99,15 @@ function IconTargets() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
       <circle cx="12" cy="12" r="8" />
       <circle cx="12" cy="12" r="3.5" />
+    </svg>
+  );
+}
+
+function IconReminder() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
+      <path d="M6 16.5h12L16.5 14V10a4.5 4.5 0 0 0-9 0v4z" strokeLinejoin="round" />
+      <path d="M10 19.5h4" strokeLinecap="round" />
     </svg>
   );
 }

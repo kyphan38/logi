@@ -248,3 +248,55 @@ export interface DayLog {
   bedtimeAt: number | null;
   updatedAt: number;
 }
+
+// ------------------------------------------------------------
+// Stage 9 - Sự kiện sắp tới (tab "Reminder")
+// ------------------------------------------------------------
+
+/**
+ * Các mốc nhắc trước, tính bằng ngày. GIẢM DẦN.
+ *
+ * Năm mốc là đủ dày để không quên, đủ thưa để không thành tiếng ồn. Thêm mốc
+ * nữa thì người dùng bắt đầu bỏ qua mọi thông báo của app.
+ */
+export const MILESTONES = [14, 7, 3, 1, 0] as const;
+export type Milestone = (typeof MILESTONES)[number];
+
+/** Giờ gửi push nhắc sự kiện, giờ địa phương. Một lần mỗi ngày. */
+export const EVENT_PUSH_HOUR = 6;
+
+/**
+ * Trần sự kiện đang chờ. Có trần thì subscribe cả collection là an toàn:
+ * không phân trang, không cửa sổ ngày, không query phức tạp.
+ */
+export const MAX_EVENTS = 40;
+
+export const EVENT_TITLE_MAX = 60;
+export const EVENT_NOTE_MAX = 140;
+
+/** Firestore: users/{uid}/events/{eventId} */
+export interface EventItem {
+  id: string;
+  title: string;
+  /** "2026-10-15" - ngày logic, mốc cắt 04:00 giống mọi ngày khác trong app. */
+  date: string;
+  /**
+   * "11:30" (24 giờ), hoặc `null` = cả ngày.
+   *
+   * CHỈ để hiển thị. Mốc nhắc vẫn tính bằng ngày, và push vẫn gửi lúc 06:00 -
+   * giờ ở đây không đổi lịch gửi. Nhắc trước vài tiếng là việc khác, chưa làm.
+   */
+  time: string | null;
+  note: string | null;
+  /**
+   * Mốc nào đã push rồi: `{ "14": 1760... }`.
+   *
+   * Nằm ngay trên doc sự kiện chứ không ở `meta/pushLog`: cờ "đã gửi" ở cạnh
+   * dữ liệu nó nói về thì không bao giờ lệch, kể cả khi sự kiện bị đổi ngày.
+   */
+  notified: Record<string, number>;
+  /** Xoá mềm, giống `taskPool`. */
+  archivedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}

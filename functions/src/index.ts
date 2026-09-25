@@ -17,6 +17,7 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { logger } from 'firebase-functions';
 
+import { countdownText, daysBetween, isMilestone, whenLabel } from './events';
 import { dayStart, logicalDate, logicalWeek, logicalWeekday, markAt } from './time';
 
 initializeApp();
@@ -199,6 +200,114 @@ export const trimPushLog = onSchedule(
       const drop: Record<string, unknown> = {};
       for (const d of dates.slice(0, dates.length - keep)) drop[d] = FieldValue.delete();
       await ref.update(drop);
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Stage 9 - Push nhắc SỰ KIỆN
+//
+// Tách hẳn khỏi `pushReminders`. Hai thứ khác nhau về bản chất: nhắc học là
+// thói quen, tính theo giờ trong ngày; sự kiện là một mốc trên lịch, tính theo
+// ngày. Gộp chung thì nhắc sự kiện sẽ nuốt mất nhắc học (hàm kia chỉ gửi MỘT
+// cái mỗi lần chạy), hoặc ngược lại.
+//
+// Chạy MỘT lần mỗi ngày lúc 06:00. Không cần 15 phút/lần: mốc tính bằng ngày,
+// chạy thêm 95 lần nữa cũng không đổi kết quả, chỉ tốn read.
+// ---------------------------------------------------------------------------
+
+
+interface EventRow {
+  title?: string;
+  date?: string;
+  /** "11:30", hoặc vắng = cả ngày. Không đổi lịch gửi, chỉ vào câu thông báo. */
+  time?: string | null;
+  notified?: Record<string, number>;
+}
+
+/** Mỗi lần gửi tối đa 2 dòng. Dài hơn thì màn khoá cắt mất, đọc còn tệ hơn. */
+const MAX_LINES = 2;
+
+export const pushEvents = onSchedule(
+  {
+    schedule: 'every day 06:00',
+    timeZone: 'Asia/Ho_Chi_Minh',
+    region: 'asia-southeast1',
+    retryCount: 0,
+  },
+  async () => {
+    const now = Date.now();
+    const today = logicalDate(now);
+    const devices = await db.collectionGroup('meta').where('token', '>', '').get();
+
+    for (const device of devices.docs) {
+      if (device.id !== 'fcm') continue;
+      const uid = device.ref.parent.parent?.id;
+      const token = (device.data() as { token?: string }).token;
+      if (!uid || !token) continue;
+
+      const snap = await db
+        .collection(`users/${uid}/events`)
+        .where('archivedAt', '==', null)
+        .get();
+
+      // Mốc chỉ khớp ĐÚNG số ngày - không gửi bù. Bỏ lỡ một ngày thì mốc đó
+      // trôi luôn: "In 7 days" gửi vào ngày còn 6 là thông báo sai.
+      const due: { id: string; line: string; days: number }[] = [];
+      for (const row of snap.docs) {
+        const e = row.data() as EventRow;
+        if (!e.title || !e.date) continue;
+        const days = daysBetween(today, e.date);
+        if (!isMilestone(days)) continue;
+        if ((e.notified ?? {})[String(days)] != null) continue;
+        due.push({ id: row.id, days, line: `${e.title} - ${countdownText(days)}` });
+      }
+      if (due.length === 0) continue;
+
+      due.sort((a, b) => a.days - b.days);
+      const first = due[0]!;
+      const head = snap.docs.find((d) => d.id === first.id)!.data() as EventRow;
+
+      const msg =
+        due.length === 1
+          ? {
+              title: head.title!,
+              body: `${countdownText(first.days)} - ${whenLabel(head.date!, head.time ?? null)}`,
+            }
+          : {
+              title: `${due.length} reminders`,
+              body:
+                due.slice(0, MAX_LINES).map((d) => d.line).join(' · ') +
+                (due.length > MAX_LINES ? ` and ${due.length - MAX_LINES} more` : ''),
+            };
+
+      try {
+        await getMessaging().send({
+          token,
+          data: { title: msg.title, body: msg.body, tag: 'events', url: '/reminders' },
+          webpush: { headers: { Urgency: 'high', TTL: '86400' } },
+        });
+      } catch (e) {
+        const code = (e as { code?: string }).code ?? '';
+        if (code.includes('registration-token-not-registered') || code.includes('invalid-argument')) {
+          await device.ref.set({ token: FieldValue.delete() }, { merge: true });
+          logger.info('dropped dead token');
+        } else {
+          logger.error('event push failed', code);
+        }
+        // Gửi hỏng thì KHÔNG đánh dấu - để lần chạy ngày mai còn thử lại được
+        // (nếu mốc đó vẫn chưa trôi qua).
+        continue;
+      }
+
+      // Đánh dấu SAU khi gửi xong, và ghi lên chính doc sự kiện. Cờ nằm cạnh
+      // dữ liệu nó nói về thì không bao giờ lệch, kể cả khi đổi ngày.
+      for (const d of due) {
+        await db.doc(`users/${uid}/events/${d.id}`).set(
+          { notified: { [String(d.days)]: now } },
+          { merge: true }
+        );
+      }
     }
   }
 );
