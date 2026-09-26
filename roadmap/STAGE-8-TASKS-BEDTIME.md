@@ -1,5 +1,8 @@
 # STAGE 8 — Task checklist tuần + Bedtime
 
+> **2026-09-26: phần task tuần đã gỡ**, thay bằng Routine — xem
+> `STAGE-10-ROUTINE.md`. Phần Bedtime vẫn dùng.
+
 > Hai tính năng mới, làm chung một lượt vì cùng đụng vào màn Now và card TREND.
 >
 > Plan này nêu **quyết định và ràng buộc**, không đặc tả từng pixel. Chi tiết

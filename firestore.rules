@@ -28,42 +28,34 @@ service cloud.firestore {
         && (d.endAt == null || d.endAt - d.startAt <= 15 * 60 * 60 * 1000)
         && d.logicalDate is string
         && d.logicalWeek is string
-        // Stage 8: task sinh ra session này. Vắng field = record cũ.
+        // Stage 8 (đã gỡ): record cũ còn `taskId`. App không ghi field này
+        // nữa, nhưng update record cũ vẫn phải qua được.
         && (!d.keys().hasAny(['taskId']) || d.taskId == null || d.taskId is string);
     }
 
-    // Stage 8 - task trong pool. `archivedAt` là cách xoá duy nhất, nên
-    // rules không cho delete: tuần cũ phải tra được tên task đã bỏ.
-    function validPoolTask(d) {
-      return d.keys().hasAll(['title', 'durationMin', 'category', 'order'])
-        && d.title is string && d.title.size() > 0 && d.title.size() <= 32
-        && d.durationMin is int && d.durationMin >= 5 && d.durationMin <= 8 * 60
-        && validCategory(d.category)
+    // Stage 10 - nhóm routine. Mục nằm trong mảng `items`; rules không lặp
+    // được trên list, nên chỉ kiểm hình dạng mục đầu - cả mảng do một hàm
+    // duy nhất (`saveItems`) sinh ra.
+    function validRoutineItem(i) {
+      return i.keys().hasAll(['id', 'text', 'days'])
+        && i.id is string
+        && i.text is string && i.text.size() <= 80
+        && i.days is list && i.days.size() <= 7;
+    }
+
+    function validRoutine(d) {
+      return d.keys().hasAll(['title', 'order', 'items'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 40
         && d.order is int
+        && d.items is list
+        && (d.items.size() == 0 || validRoutineItem(d.items[0]))
         && (!d.keys().hasAny(['archivedAt']) || d.archivedAt == null || d.archivedAt is number);
     }
 
-    // Stage 8 - một ô đã bật, mang bản chụp lúc gán. `title`/`durationMin`
-    // KHÔNG được đọc lại từ pool, nên rules bắt buộc chúng có mặt ở đây.
-    function validCell(c) {
-      return c.keys().hasAll(['taskId', 'dow', 'title', 'durationMin', 'category'])
-        && c.taskId is string
-        && c.dow is int && c.dow >= 0 && c.dow <= 6
-        && c.title is string
-        && c.durationMin is number
-        && validCategory(c.category);
-    }
-
-    function validWeekPlan(d) {
-      return d.keys().hasAll(['week', 'cells'])
-        && d.week is string
-        && d.cells is list
-        // Trần 5 task x 7 ngày. Chặn ở đây để một client lỗi không bơm
-        // được doc khổng lồ.
-        && d.cells.size() <= 35
-        // Rules không lặp được trên list. Kiểm ô đầu là chốt chặn hình dạng:
-        // cả mảng do một hàm duy nhất (`snapshotOf`) sinh ra.
-        && (d.cells.size() == 0 || validCell(d.cells[0]));
+    function validRoutineCheck(d) {
+      return d.keys().hasAll(['date', 'checked'])
+        && d.date is string && d.date.size() == 10
+        && d.checked is map;
     }
 
     function validEvent(d) {
@@ -105,19 +97,30 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // taskPool/{taskId} - tối đa 5 task đang dùng
+      // taskPool / weekPlans - task tuần Stage 8, đã gỡ khỏi app. Dữ liệu cũ
+      // giữ nguyên để còn đọc được, nhưng không ai ghi vào nữa.
       match /taskPool/{taskId} {
         allow read: if isOwner(uid);
-        allow create, update: if isOwner(uid) && validPoolTask(request.resource.data);
-        // Xoá = set archivedAt. Hard-delete chỉ dành cho Undo ngay sau khi
-        // tạo, lúc chưa tuần nào chụp task này.
-        allow delete: if isOwner(uid) && resource.data.createdAt > request.time.toMillis() - 60 * 1000;
+        allow write: if false;
       }
-
-      // weekPlans/{week} - VD "2026-W35", một doc cho cả tuần
       match /weekPlans/{week} {
         allow read: if isOwner(uid);
-        allow create, update: if isOwner(uid) && validWeekPlan(request.resource.data);
+        allow write: if false;
+      }
+
+      // routines/{groupId} - Stage 10, template routine lặp lại theo thứ.
+      // Xoá = set archivedAt, giống events.
+      match /routines/{groupId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validRoutine(request.resource.data);
+        allow delete: if false;
+      }
+
+      // routineChecks/{logicalDate} - VD "2026-09-26". Tick của một ngày.
+      // Ngày mới = doc mới, nên "reset" không cần xoá gì.
+      match /routineChecks/{date} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validRoutineCheck(request.resource.data);
         allow delete: if false;
       }
 
