@@ -46,13 +46,6 @@ export interface Activity {
   /** Transcript thô, để debug khi parse sai. Không lưu audio. */
   rawText: string | null;
 
-  /**
-   * Task trong checklist đã sinh ra session này (Stage 8, quyết định 5).
-   * `null` = bấm từ lưới 4 nút, từ voice, hay nhập tay - KHÔNG tính vào task.
-   * Gắn tay được ở `RecordSheet`, nhưng app không bao giờ tự đoán.
-   */
-  taskId: string | null;
-
   createdAt: number;
   updatedAt: number;
 }
@@ -173,64 +166,6 @@ export const DEBT_CARRYOVER_CAP = 10;   // trần giờ cộng thêm mỗi tuầ
 export const DEBT_LOCK_THRESHOLD = 20;  // nợ > 20h → khoá preset Crunch
 
 // ------------------------------------------------------------
-// Stage 8 - Task checklist tuần
-// ------------------------------------------------------------
-
-/** Pool tối đa 5 task (quyết định 1). Nhiều hơn thì lưới không còn đọc được. */
-export const MAX_POOL_TASKS = 5;
-
-/** Tối đa 3 task mỗi ngày, CHẶN CỨNG (quyết định 3). */
-export const MAX_TASKS_PER_DAY = 3;
-
-/** Tối thiểu 1 task/ngày chỉ là GỢI Ý - ngày trống vẫn hợp lệ. */
-export const MIN_TASKS_PER_DAY = 1;
-
-export const TASK_TITLE_MAX = 32;
-export const TASK_MIN_DURATION = 5;
-export const TASK_MAX_DURATION = 8 * 60;
-
-/** Firestore: users/{uid}/taskPool/{taskId} */
-export interface PoolTask {
-  id: string;
-  title: string;
-  /** Thời lượng dự kiến mỗi lần làm, tính bằng phút. */
-  durationMin: number;
-  category: Category;
-  /** Thứ tự hàng trong lưới. */
-  order: number;
-  /**
-   * Xoá = set mốc này, KHÔNG hard-delete (quyết định 14). Tuần cũ vẫn phải
-   * hiện được task, kể cả sau khi nó rời pool.
-   */
-  archivedAt: number | null;
-  createdAt: number;
-  updatedAt: number;
-}
-
-/**
- * Một ô đã bật trong lưới, kèm BẢN CHỤP thời điểm gán.
- *
- * `title` / `durationMin` / `category` cố ý lặp lại dữ liệu của pool. Đọc từ
- * pool lúc hiển thị thì đổi Running 45' → 30' sẽ khiến một tuần từng "chưa
- * xong" tự nhiên thành "đã xong" - lịch sử bị viết lại (quyết định 14).
- */
-export interface PlannedCell {
-  taskId: string;
-  /** 0 = CN … 6 = T7, khớp `logicalWeekday()`. */
-  dow: number;
-  title: string;
-  durationMin: number;
-  category: Category;
-}
-
-/** Firestore: users/{uid}/weekPlans/{week} - MỘT doc cho cả tuần (≤ 35 ô). */
-export interface WeekPlan {
-  week: string;
-  cells: PlannedCell[];
-  updatedAt: number;
-}
-
-// ------------------------------------------------------------
 // Stage 8 - Bedtime
 // ------------------------------------------------------------
 
@@ -295,8 +230,54 @@ export interface EventItem {
    * dữ liệu nó nói về thì không bao giờ lệch, kể cả khi sự kiện bị đổi ngày.
    */
   notified: Record<string, number>;
-  /** Xoá mềm, giống `taskPool`. */
+  /** Xoá mềm: doc ở lại, chỉ set mốc này. */
   archivedAt: number | null;
   createdAt: number;
   updatedAt: number;
+}
+
+// ------------------------------------------------------------
+// Stage 10 - Routine (checklist hằng ngày, KHÔNG gắn với thời gian)
+// ------------------------------------------------------------
+
+export const ROUTINE_TITLE_MAX = 40;
+export const ROUTINE_ITEM_MAX = 80;
+
+/**
+ * Một mục trong nhóm. `days` là các thứ mục này hiện ra (0 = CN … 6 = T7,
+ * khớp `logicalWeekday()`). Một mục lặp nhiều ngày thì gõ tên MỘT lần.
+ */
+export interface RoutineItem {
+  id: string;
+  text: string;
+  days: number[];
+}
+
+/**
+ * Firestore: users/{uid}/routines/{groupId}
+ *
+ * Template lặp lại mỗi tuần, không gắn với tuần cụ thể. Sửa lúc nào thì áp
+ * dụng từ lúc đó. Mục nằm ngay trong doc nhóm: một nhóm vài chục mục là vài KB.
+ */
+export interface RoutineGroup {
+  id: string;
+  title: string;
+  order: number;
+  items: RoutineItem[];
+  /** Xoá mềm, giống `events`. */
+  archivedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * Firestore: users/{uid}/routineChecks/{logicalDate}
+ *
+ * Mỗi ngày logic một doc. "Reset" lúc 04:00 là tự nhiên: ngày mới đọc một doc
+ * mới, đang trống. Không có gì phải xoá.
+ */
+export interface RoutineChecks {
+  date: string;
+  /** itemId → lúc tick. Bỏ tick = xoá key. */
+  checked: Record<string, number>;
 }

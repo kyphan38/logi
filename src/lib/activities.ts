@@ -156,8 +156,6 @@ function toActivity(id: string, d: DocumentData): Activity {
     source: d.source ?? 'manual',
     confidence: d.confidence ?? null,
     rawText: d.rawText ?? null,
-    // Record trước Stage 8 không có field này. Thiếu = không thuộc task nào.
-    taskId: d.taskId ?? null,
     createdAt: d.createdAt ?? d.startAt,
     updatedAt: d.updatedAt ?? d.startAt,
   };
@@ -215,12 +213,6 @@ export interface Provenance {
   source?: ActivitySource;
   confidence?: number | null;
   rawText?: string | null;
-  /**
-   * Task trong checklist đã sinh ra session này (Stage 8, quyết định 5).
-   * Chỉ checklist và nút gắn tay ở `RecordSheet` được truyền. Voice và lưới
-   * 4 nút LUÔN để trống - app không bao giờ tự đoán record thuộc task nào.
-   */
-  taskId?: string | null;
 }
 
 export interface StartInput extends Provenance {
@@ -261,7 +253,6 @@ export async function startActivity(uid: string, input: StartInput): Promise<str
     source: input.source ?? 'manual',
     confidence: input.confidence ?? null,
     rawText: input.rawText ?? null,
-    taskId: input.taskId ?? null,
     createdAt: now,
     updatedAt: now,
   });
@@ -304,7 +295,6 @@ export async function updateActivity(
   if (patch.source !== undefined) next.source = patch.source;
   if (patch.confidence !== undefined) next.confidence = patch.confidence ?? null;
   if (patch.rawText !== undefined) next.rawText = patch.rawText ?? null;
-  if (patch.taskId !== undefined) next.taskId = patch.taskId ?? null;
 
   const touchesTime = patch.startAt !== undefined || patch.endAt !== undefined;
   if (touchesTime) {
@@ -354,7 +344,6 @@ export async function createPastActivity(uid: string, input: PastInput): Promise
     source: input.source ?? 'manual',
     confidence: input.confidence ?? null,
     rawText: input.rawText ?? null,
-    taskId: input.taskId ?? null,
     createdAt: now,
     updatedAt: now,
   });
@@ -763,7 +752,6 @@ function restoreDoc(a: Activity) {
     source: a.source ?? 'manual',
     confidence: a.confidence ?? null,
     rawText: a.rawText ?? null,
-    taskId: a.taskId ?? null,
     createdAt: a.createdAt ?? a.startAt,
     updatedAt: Date.now(),
   };

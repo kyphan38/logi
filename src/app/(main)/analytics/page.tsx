@@ -14,7 +14,6 @@ import Tabs, { TabPanel } from '@/components/Tabs';
 import TrendHoursCard from '@/components/TrendHoursCard';
 import TrendSleepCard from '@/components/TrendSleepCard';
 import TrendSpanChips from '@/components/TrendSpanChips';
-import TrendTasksCard from '@/components/TrendTasksCard';
 import WeekSleepCard from '@/components/WeekSleepCard';
 import { useTick } from '@/hooks/useActivities';
 import { fetchAllTime, useExportNudge } from '@/hooks/useBackup';
@@ -204,12 +203,6 @@ export default function AnalyticsPage() {
                 buckets={buckets}
                 activities={trend.activities}
                 weekTargets={trend.weekTargets}
-                now={now}
-              />
-              <TrendTasksCard
-                buckets={buckets}
-                activities={trend.activities}
-                weekPlans={trend.weekPlans}
                 now={now}
               />
               <TrendSleepCard buckets={buckets} dayLogs={trend.dayLogs} />

@@ -14,7 +14,7 @@ import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
 import { type StartWhen } from '@/components/StartWhenSheet';
-import TaskChecklist from '@/components/TaskChecklist';
+import RoutineChecklist from '@/components/RoutineChecklist';
 import Toasts from '@/components/Toasts';
 import VoiceSheet from '@/components/VoiceSheet';
 import WeeklyReview from '@/components/WeeklyReview';
@@ -32,7 +32,7 @@ import { bedtimeDate, logBedtime, useRecentBedtime } from '@/hooks/useBedtime';
 import { useReminders } from '@/hooks/useReminders';
 import { useReviewDue } from '@/hooks/useReview';
 import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
-import { useTodayCells } from '@/hooks/useTasks';
+import { useRoutineChecks, useRoutines } from '@/hooks/useRoutine';
 import { useVoice } from '@/hooks/useVoice';
 import { ActivityError, deleteActivity, startActivity, stopActivity } from '@/lib/activities';
 import { actualHours, findStale, logicalDate, logicalWeekday, overlapHours } from '@/lib/balance';
@@ -41,7 +41,7 @@ import { clearBedtime } from '@/lib/bedtime-store';
 import { formatBedtime } from '@/lib/bedtime';
 import { clockTime, formatDuration, roundDown } from '@/lib/datetime';
 import { nowTiles } from '@/lib/day-progress';
-import { checklistFor, type ChecklistRow } from '@/lib/tasks';
+import { routineForDay } from '@/lib/routine';
 import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
 /** Từ 3 session song song trở lên thì card thu lại, để màn Now vẫn vừa một màn. */
@@ -134,21 +134,15 @@ export default function NowPage() {
     return Math.max(0, (sum - overlapHours(todayActivities, nowMinute)) * 3_600_000);
   }, [todayActivities, nowMinute]);
 
-  // Checklist task hôm nay (Stage 8, quyết định 10): dưới banner, trên lưới nút.
-  // Gộp today + active rồi khử trùng id: session đang chạy từ hôm nay nằm ở cả
-  // hai stream, cộng hai lần là tiến độ nhân đôi.
-  const todayCells = useTodayCells(nowMinute);
-  const checklistRows = useMemo(() => {
-    const seen = new Map(todayActivities.map((a) => [a.id, a] as const));
-    for (const a of active) if (!seen.has(a.id)) seen.set(a.id, a);
-    return checklistFor(
-      todayCells.cells,
-      [...seen.values()],
-      todayCells.date,
-      todayCells.dow,
-      nowMinute
-    );
-  }, [todayCells, todayActivities, active, nowMinute]);
+
+  // Routine hôm nay (Stage 10): chỉ tick, không gắn với giờ. `today` đổi lúc
+  // 04:00 → hook đọc doc tick của ngày mới, đang trống. Đó là cơ chế reset.
+  const { groups: routineGroups } = useRoutines();
+  const routine = useRoutineChecks(today);
+  const routineToday = useMemo(
+    () => routineForDay(routineGroups, logicalWeekday(nowMinute), routine.isChecked),
+    [routineGroups, nowMinute, routine.isChecked]
+  );
 
   // Bedtime là mốc trong dayLogs, không phải activity. Nút nhỏ trong header
   // chỉ hiện đêm nay; sheet mới là chỗ thấy và sửa được cả đêm qua.
@@ -276,36 +270,6 @@ export default function NowPage() {
     }
   }
 
-  /** Bấm một dòng checklist: session mang `taskId` nên được tính vào task. */
-  async function handleTaskStart(row: ChecklistRow) {
-    if (!uid || busy) return;
-    setBusy(true);
-    try {
-      const started = startActivity(uid, {
-        category: row.category,
-        label: row.title,
-        taskId: row.taskId,
-      });
-      await capWait(started, (e) => push(`Sync failed. ${(e as Error).message}`));
-      push(`Started ${row.title}`, {
-        label: 'Undo',
-        run: () => {
-          void started
-            .then((id) => deleteActivity(uid, id))
-            .catch((e) => push(`Could not undo. ${(e as Error).message}`));
-        },
-      });
-    } catch (e) {
-      push(
-        e instanceof ActivityError && e.code === 'duplicate'
-          ? `${CATEGORY_LABEL[row.category]} is already running.`
-          : `Could not start. ${(e as Error).message}`
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
   /** Mốc đang có của một đêm, để Undo trả lại đúng cái cũ chứ không xoá trắng. */
   function bedtimeOf(date: string): number | null {
     if (date === bedtimeLog.date) return bedtimeLog.bedtimeAt;
@@ -428,15 +392,6 @@ export default function NowPage() {
         <BalanceBanner line={balanceLine} />
       )}
 
-      {checklistRows.length > 0 ? (
-        <TaskChecklist
-          rows={checklistRows}
-          busy={busy}
-          onStart={(row) => void handleTaskStart(row)}
-          onStop={(row) => row.runningId && void handleStop(row.runningId)}
-        />
-      ) : null}
-
       {scheduled.length > 0 ? (
         <section className="flex flex-col gap-3" aria-label="Scheduled sessions">
           {scheduled.map((a) => (
@@ -492,8 +447,15 @@ export default function NowPage() {
         onEditRunning={editRunning}
       />
 
+      <RoutineChecklist
+        groups={routineToday}
+        isChecked={routine.isChecked}
+        onToggle={(id) =>
+          void routine.toggle(id).catch((e) => push(`Could not save. ${(e as Error).message}`))
+        }
+      />
+
       {todayActivities.length === 0 &&
-      checklistRows.length === 0 &&
       !activeLoading &&
       active.length === 0 ? (
         <p className="text-sm text-zinc-400 dark:text-zinc-500">
