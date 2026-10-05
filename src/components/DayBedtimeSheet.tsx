@@ -141,7 +141,7 @@ export default function DayBedtimeSheet({
             type="button"
             disabled={busy || typed === null}
             onClick={() => typed !== null && onPick(typed)}
-            className="mt-2 min-h-11 w-full rounded-sm bg-blue-600 text-sm font-medium text-white transition active:scale-[0.99] disabled:opacity-40"
+            className="mt-2 min-h-11 w-full rounded-sm bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 transition active:scale-[0.99] disabled:opacity-40"
           >
             Save
           </button>

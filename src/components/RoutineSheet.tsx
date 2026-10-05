@@ -49,14 +49,14 @@ function RemoveRow({
       <button
         type="button"
         onClick={() => setConfirm(true)}
-        className="mb-3 min-h-11 text-sm text-red-600 dark:text-red-400"
+        className="mb-3 min-h-11 text-sm font-medium text-zinc-900 dark:text-zinc-100"
       >
         {label}
       </button>
     );
   }
   return (
-    <div className="mb-3 rounded-md border border-red-300 p-3 dark:border-red-900">
+    <div className="mb-3 rounded-md border border-zinc-300 p-3 dark:border-zinc-700">
       <p className="mb-3 text-[13px] leading-snug text-ink-soft">{question}</p>
       <div className="flex gap-2">
         <button type="button" onClick={() => setConfirm(false)} className={BTN}>
@@ -66,7 +66,7 @@ function RemoveRow({
           type="button"
           onClick={onRemove}
           disabled={busy}
-          className="min-h-11 flex-1 rounded-lg bg-red-600 text-sm font-medium text-white disabled:opacity-40"
+          className="min-h-11 flex-1 rounded-lg bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
         >
           Remove
         </button>

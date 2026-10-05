@@ -11,7 +11,7 @@ import type { DayLog } from '@/types/logi';
 // ---------------------------------------------------------------------------
 // logi - "Đi ngủ lúc mấy giờ" (Stage 8)
 //
-// Nút 🌙 cũ ghi thẳng `Date.now()`. Nhớ ra lúc 7:30 sáng thì mốc rơi vào sáng
+// Nút bedtime cũ ghi thẳng `Date.now()`. Nhớ ra lúc 7:30 sáng thì mốc rơi vào sáng
 // nay, sai hẳn một đêm; mà ghi nhầm rồi cũng không có đường xoá.
 //
 // Sheet này bày ra CẢ HAI đêm gần nhất, vì 7:30 sáng "đêm qua" với "đêm nay"
@@ -163,7 +163,7 @@ export default function BedtimeSheet({
               type="button"
               disabled={busy || typed === null}
               onClick={() => typed !== null && onPick(typed)}
-              className="mt-2 min-h-11 w-full rounded-sm bg-blue-600 text-sm font-medium text-white transition active:scale-[0.99] disabled:opacity-40"
+              className="mt-2 min-h-11 w-full rounded-sm bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 transition active:scale-[0.99] disabled:opacity-40"
             >
               Save
             </button>

@@ -79,7 +79,7 @@ export default function EventSheet({
           onChange={(e) => setTitle(e.target.value.slice(0, EVENT_TITLE_MAX))}
           placeholder="Passport renewal"
           autoFocus
-          className="mb-4 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700 dark:text-zinc-100"
+          className="mb-4 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-100"
         />
 
         <div className="mb-1 flex items-baseline justify-between gap-3">
@@ -109,7 +109,7 @@ export default function EventSheet({
           // Sửa việc cũ thì bỏ chặn, vì ngày của nó vốn đã ở quá khứ.
           min={event ? undefined : today}
           onChange={(e) => setDate(e.target.value)}
-          className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700 dark:text-zinc-100"
+          className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-100"
         />
         {/* Giờ là TUỲ CHỌN - để trống nghĩa là cả ngày. Không đặt giá trị mặc
             định: một giờ app tự điền là một giờ sai mà người dùng không để ý. */}
@@ -118,7 +118,7 @@ export default function EventSheet({
           type="time"
           value={time}
           onChange={(e) => setTime(e.target.value)}
-          className="w-28 shrink-0 rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700 dark:text-zinc-100"
+          className="w-28 shrink-0 rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-100"
         />
         </div>
 
@@ -152,11 +152,11 @@ export default function EventSheet({
           value={note}
           onChange={(e) => setNote(e.target.value.slice(0, EVENT_NOTE_MAX))}
           placeholder="Bring old passport + 2 photos"
-          className="mb-5 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700 dark:text-zinc-100"
+          className="mb-5 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-100"
         />
 
         {confirmArchive ? (
-          <div className="mb-3 rounded-md border border-red-300 p-3 dark:border-red-900">
+          <div className="mb-3 rounded-md border border-zinc-300 p-3 dark:border-zinc-700">
             <p className="mb-3 text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">
               Remove “{event?.title}”? You will stop getting reminders for it.
             </p>
@@ -172,7 +172,7 @@ export default function EventSheet({
                 type="button"
                 onClick={onArchive}
                 disabled={busy}
-                className="min-h-11 flex-1 rounded-lg bg-red-600 text-sm font-medium text-white disabled:opacity-40"
+                className="min-h-11 flex-1 rounded-lg bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
               >
                 Remove
               </button>
@@ -183,7 +183,7 @@ export default function EventSheet({
             <button
               type="button"
               onClick={() => setConfirmArchive(true)}
-              className="mb-3 min-h-11 text-sm text-red-600 dark:text-red-400"
+              className="mb-3 min-h-11 text-sm font-medium text-zinc-900 dark:text-zinc-100"
             >
               Remove event
             </button>
@@ -204,7 +204,7 @@ export default function EventSheet({
               onSave({ title: clean, date, time: time || null, note: note.trim() || null })
             }
             disabled={busy || !ok}
-            className="min-h-11 flex-1 rounded-lg bg-blue-600 text-sm font-medium text-white disabled:opacity-40"
+            className="min-h-11 flex-1 rounded-lg bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
           >
             Save
           </button>

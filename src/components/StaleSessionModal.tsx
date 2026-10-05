@@ -153,7 +153,7 @@ export default function StaleSessionModal({
         )}
 
         {error ? (
-          <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="mt-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">
             {error}
           </p>
         ) : null}

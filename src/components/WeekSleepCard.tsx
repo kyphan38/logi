@@ -69,7 +69,7 @@ export default function WeekSleepCard({ range }: { range: Range }) {
     return (
       <Card title="Sleep">
         <p className="py-8 text-center text-[13px] text-ink-muted">
-          No bedtimes logged this week. Tap 🌙 bedtime in Now tonight.
+          No bedtimes logged this week. Tap &quot;bedtime&quot; in Now tonight.
         </p>
       </Card>
     );

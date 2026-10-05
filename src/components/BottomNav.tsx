@@ -48,7 +48,7 @@ export default function BottomNav() {
               'relative flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition',
               'md:h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:rounded-lg md:px-3 md:text-sm',
               active
-                ? 'text-blue-600 md:bg-blue-50 dark:text-blue-400 dark:md:bg-blue-950/40'
+                ? 'text-zinc-900 md:bg-zinc-100 dark:text-zinc-100 dark:md:bg-zinc-800'
                 : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100',
             ].join(' ')}
           >
@@ -67,7 +67,7 @@ export default function BottomNav() {
               aria-hidden="true"
               className={[
                 'absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full md:hidden',
-                active ? 'bg-blue-600 dark:bg-blue-400' : 'bg-transparent',
+                active ? 'bg-zinc-900 dark:bg-zinc-100' : 'bg-transparent',
               ].join(' ')}
             />
           </Link>

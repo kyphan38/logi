@@ -119,7 +119,7 @@ export default function RestorePage() {
       </label>
 
       {error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
           {error}
         </p>
       )}

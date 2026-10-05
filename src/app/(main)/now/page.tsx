@@ -18,6 +18,7 @@ import RoutineChecklist from '@/components/RoutineChecklist';
 import Toasts from '@/components/Toasts';
 import VoiceSheet from '@/components/VoiceSheet';
 import WeeklyReview from '@/components/WeeklyReview';
+import MoonIcon from '@/components/MoonIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   capWait,
@@ -361,7 +362,7 @@ export default function NowPage() {
             }
             className="text-xs tabular-nums text-zinc-400 transition active:scale-95 disabled:opacity-50 dark:text-zinc-500"
           >
-            {bedtimeLog.bedtimeAt ? `🌙 ${formatBedtime(bedtimeLog.bedtimeAt)}` : '🌙 bedtime'}
+            <MoonIcon /> {bedtimeLog.bedtimeAt ? formatBedtime(bedtimeLog.bedtimeAt) : 'bedtime'}
           </button>
         </div>
       </header>
@@ -485,7 +486,7 @@ export default function NowPage() {
                 type="button"
                 onClick={() => void commitStop(zeroStop.id, zeroStop.at)}
                 disabled={busy}
-                className="flex-1 rounded-sm bg-blue-600 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+                className="flex-1 rounded-sm bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
               >
                 Save
               </button>

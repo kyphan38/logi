@@ -63,7 +63,7 @@ export default function TrendSleepCard({
     return (
       <Card title="Sleep">
         <p className="py-8 text-center text-[13px] text-ink-muted">
-          No bedtimes logged in this period. Tap 🌙 bedtime in Now tonight.
+          No bedtimes logged in this period. Tap &quot;bedtime&quot; in Now tonight.
         </p>
         <p className="mt-1 text-xs text-ink-muted">
           Each week is the median bedtime, with the min–max range.

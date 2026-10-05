@@ -47,7 +47,7 @@ export default function ScheduledCard({
               title="Waiting to sync"
               aria-label="Waiting to sync"
               role="img"
-              className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-ink-muted"
             />
           ) : null}
         </div>

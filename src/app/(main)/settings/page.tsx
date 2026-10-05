@@ -3,11 +3,11 @@
 // ---------------------------------------------------------------------------
 // logi - Settings (Stage 6 Task 2)
 //
-// Chỉ hai thứ: bật push, và đường vào trang khôi phục. Không phải màn hình
+// Bật push, chọn theme, và đường vào trang khôi phục. Không phải màn hình
 // dùng hằng ngày nên không có trong thanh điều hướng.
 // ---------------------------------------------------------------------------
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +21,9 @@ import {
   type PushState,
 } from '@/lib/push';
 import { isStandalone } from '@/lib/standalone';
+import { themeStore, type Theme } from '@/lib/theme';
+
+const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -30,6 +33,7 @@ export default function SettingsPage() {
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const theme = useSyncExternalStore(themeStore.subscribe, themeStore.get, themeStore.getServer);
 
   const refresh = useCallback(() => {
     void pushState().then(setState);
@@ -116,13 +120,32 @@ export default function SettingsPage() {
         )}
 
         {error && (
-          <p role="alert" className="text-[13px] text-red-600 dark:text-red-400">
+          <p role="alert" className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
             {error}
           </p>
         )}
       </section>
 
       <InsightData uid={uid} />
+
+      <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
+        <h2 className="text-sm font-medium text-ink">Theme</h2>
+        {/* Lựa chọn hiện tại là chữ đậm, còn lại là chữ mờ bấm được. */}
+        <div className="flex gap-4 text-sm" role="radiogroup" aria-label="Theme">
+          {THEMES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="radio"
+              aria-checked={theme === t}
+              onClick={() => themeStore.set(t)}
+              className={theme === t ? 'font-medium text-ink' : 'text-ink-muted'}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
         <h2 className="text-sm font-medium text-ink">Your data</h2>

@@ -16,24 +16,26 @@ import { MILESTONES, type EventItem } from '@/types/logi';
 
 /** Viền của cả dòng + nền và chữ của khối số. Một mức gấp, một bộ ba. */
 const TONE: Record<Urgency, { row: string; chip: string; num: string }> = {
+  // Chỉ xám (DESIGN.md): gấp thì đậm hơn. Hôm nay là khối số đảo màu (nền
+  // mực), rồi viền mực, rồi viền mờ. Chữ "Today" / số ngày nói phần còn lại.
   today: {
-    row: 'border-red-400 dark:border-red-800',
-    chip: 'bg-red-50 dark:bg-red-950/50',
-    num: 'text-red-600 dark:text-red-400',
+    row: 'border-ink',
+    chip: 'bg-ink',
+    num: 'text-surface-0',
   },
   soon: {
-    row: 'border-amber-400 dark:border-amber-800',
-    chip: 'bg-amber-50 dark:bg-amber-950/50',
-    num: 'text-amber-700 dark:text-amber-400',
+    row: 'border-ink',
+    chip: 'bg-surface-1',
+    num: 'text-ink',
   },
   near: {
-    row: 'border-amber-300 dark:border-amber-900',
-    chip: 'bg-amber-50 dark:bg-amber-950/40',
-    num: 'text-amber-700 dark:text-amber-400',
+    row: 'border-ink-muted',
+    chip: 'bg-surface-1',
+    num: 'text-ink',
   },
   far: {
     row: 'border-line-strong',
-    // Xa thì KHÔNG tô màu - màu là để nói "gấp". Đủ to và đủ đậm là đọc được.
+    // Xa thì viền nhạt - độ đậm là để nói "gấp". Đủ to và đủ đậm là đọc được.
     chip: 'bg-surface-1',
     num: 'text-ink',
   },

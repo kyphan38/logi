@@ -14,7 +14,7 @@ import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/type
 
 const FIELD =
   'min-h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-base dark:border-zinc-800 dark:bg-zinc-900';
-const MISSING = 'border-red-400 dark:border-red-500';
+const MISSING = 'border-zinc-900 dark:border-zinc-100';
 
 const INTENT_TITLE: Record<ParsedCommand['intent'], string> = {
   start: 'Start this?',
@@ -224,7 +224,7 @@ export default function ParseConfirmCard({
         ) : null}
 
         {problem ? (
-          <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+          <p role="alert" className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
             {problem}
           </p>
         ) : null}

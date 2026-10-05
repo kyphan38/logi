@@ -7,6 +7,7 @@ import DayBedtimeSheet from '@/components/DayBedtimeSheet';
 import RecordSheet, { restoreActivity, type SheetTarget } from '@/components/RecordSheet';
 import Timeline from '@/components/Timeline';
 import Toasts from '@/components/Toasts';
+import MoonIcon from '@/components/MoonIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   capWait,
@@ -215,7 +216,7 @@ export default function HistoryPage() {
           </div>
           {/* Bedtime đứng cùng hàng với nút +, KHÔNG nối vào dòng ngày: dòng đó
               có `truncate`, nên "Wednesday, Sep 24" hơi dài là mốc giờ bị cắt
-              mất. Cùng cỡ chữ và cùng token màu với nút 🌙 bên màn Now để hai
+              mất. Cùng cỡ chữ và cùng token màu với nút mặt trăng bên màn Now để hai
               trang đọc ra một thứ giống nhau.
               Đêm chưa ghi vẫn hiện nút, chỉ mờ đi: nếu ẩn hẳn thì ngày cũ không
               còn chỗ nào bấm vào để ghi bù - mà đó chính là việc người ta mở
@@ -235,7 +236,7 @@ export default function HistoryPage() {
                 : 'text-zinc-400 dark:text-zinc-500'
             }`}
           >
-            🌙 {bedtimeLog.bedtimeAt === null ? '–' : formatBedtime(bedtimeLog.bedtimeAt)}
+            <MoonIcon /> {bedtimeLog.bedtimeAt === null ? '–' : formatBedtime(bedtimeLog.bedtimeAt)}
           </button>
           <button
             type="button"
@@ -423,22 +424,22 @@ function Gauge({ line, today }: { line: DayLine; today: boolean }) {
             className="absolute inset-y-0 left-0 rounded-full"
             style={{ width: `${fill * 100}%`, backgroundColor: CATEGORY_COLOR[c] }}
           />
-          {/* Vượt target: vạch hổ phách ở mép phải. Không đổi màu cả thanh -
+          {/* Vượt target: vạch mực đậm ở mép phải. Không đổi màu cả thanh -
               vượt Learn là chuyện tốt, đừng bôi đỏ nó. */}
-          {over ? <span className="absolute inset-y-0 right-0 w-[3px] bg-amber-500" /> : null}
+          {over ? <span className="absolute inset-y-0 right-0 w-[3px] bg-ink" /> : null}
         </div>
       )}
 
       {/* Con số cũng nói luôn tình trạng so với kế hoạch, khỏi phải nhìn kỹ
-          thanh: chưa log gì → xám; vượt kế hoạch → hổ phách (đúng màu vạch ở
-          mép thanh); còn thiếu → chữ thường. Không có đỏ. */}
+          thanh: chưa log gì → xám; vượt kế hoạch → chữ đậm (cùng vạch mực ở
+          mép thanh); còn thiếu → chữ thường. Chỉ xám, theo DESIGN.md. */}
       <p className="mt-1 truncate text-[11px] tabular-nums">
         <span
           className={
             actual <= 0
               ? 'text-ink-muted'
               : over
-                ? 'font-medium text-amber-600 dark:text-amber-500'
+                ? 'font-semibold text-ink'
                 : 'text-ink'
           }
         >

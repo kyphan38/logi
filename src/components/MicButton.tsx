@@ -17,13 +17,9 @@ function MicIcon() {
   );
 }
 
+/** Đang xử lý: một chấm mờ dần rồi hiện lại, không có vòng quay (DESIGN.md). */
 function Spinner() {
-  return (
-    <span
-      className="h-[26px] w-[26px] animate-spin rounded-full border-2 border-current border-t-transparent"
-      aria-hidden="true"
-    />
-  );
+  return <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-current" aria-hidden="true" />;
 }
 
 /**
@@ -87,7 +83,7 @@ export default function MicButton({
       {error ? (
         <p
           role="alert"
-          className="pointer-events-auto max-w-xs rounded-md bg-red-600 px-3 py-2 text-xs text-white shadow-lg"
+          className="pointer-events-auto max-w-xs rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900"
         >
           {error}
         </p>
@@ -97,7 +93,9 @@ export default function MicButton({
         <span
           className={[
             'rounded-full px-3 py-1 text-xs font-medium tabular-nums shadow-lg',
-            armed ? 'bg-red-600 text-white' : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900',
+            armed
+              ? 'bg-white text-zinc-900 ring-1 ring-zinc-900 dark:bg-zinc-900 dark:text-white dark:ring-zinc-100'
+              : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900',
           ].join(' ')}
         >
           {label}
@@ -109,7 +107,7 @@ export default function MicButton({
         {recording ? (
           <span
             aria-hidden="true"
-            className="absolute inset-0 rounded-full bg-red-500/25 transition-transform duration-75"
+            className="absolute inset-0 rounded-full bg-zinc-500/25 transition-transform duration-75"
             style={{ transform: `scale(${1 + level * 0.9})` }}
           />
         ) : null}
@@ -133,7 +131,7 @@ export default function MicButton({
             'disabled:opacity-50',
             recording
               // 64 → 76px.
-              ? 'scale-[1.1875] bg-red-600 text-white ring-4 ring-red-500/40'
+              ? 'scale-[1.1875] bg-white text-zinc-900 ring-4 ring-zinc-900/40 dark:bg-zinc-900 dark:text-white dark:ring-zinc-100/40'
               : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900',
             armed ? 'opacity-60' : '',
           ].join(' ')}
@@ -142,7 +140,7 @@ export default function MicButton({
           {recording ? (
             <span
               aria-hidden="true"
-              className="absolute inset-0 animate-pulse rounded-full ring-2 ring-red-400"
+              className="absolute inset-0 animate-pulse rounded-full ring-2 ring-zinc-400"
             />
           ) : null}
         </button>

@@ -31,7 +31,7 @@ export default function Toasts({
                 t.action?.run();
                 onDismiss(t.id);
               }}
-              className="min-h-11 shrink-0 px-2 font-semibold text-blue-400 active:scale-[0.97] dark:text-blue-600"
+              className="min-h-11 shrink-0 px-2 font-semibold text-white underline underline-offset-2 active:scale-[0.97] dark:text-zinc-900"
             >
               {t.action.label}
             </button>

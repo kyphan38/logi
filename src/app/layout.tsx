@@ -1,17 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { BG_DARK, BG_LIGHT, THEME_SCRIPT } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: "logi",
@@ -36,15 +26,19 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#0a0a0a",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: BG_LIGHT },
+    { media: "(prefers-color-scheme: dark)", color: BG_DARK },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    // data-theme do THEME_SCRIPT đặt trước khi React hydrate.
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       {/* `overscroll-none`: chặn kiểu nảy cao su của iOS, vì nó kéo cả
           thanh cố định trôi theo. Chỗ cuộn thật nằm trong AppShell.
 

@@ -11,7 +11,7 @@ function OfflineBanner() {
   return (
     <div
       role="status"
-      className="bg-amber-400 px-4 py-1 text-center text-xs font-medium text-amber-950"
+      className="bg-zinc-900 px-4 py-1 text-center text-xs font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
       style={{ paddingTop: 'calc(0.25rem + env(safe-area-inset-top))' }}
     >
       Offline - changes will sync

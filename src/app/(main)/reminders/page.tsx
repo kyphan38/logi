@@ -104,13 +104,13 @@ export default function RemindersPage() {
         type="button"
         onClick={() => setSheet('new')}
         disabled={full}
-        className="min-h-11 w-full rounded-lg bg-blue-600 text-sm font-medium text-white active:scale-[0.99] disabled:opacity-40"
+        className="min-h-11 w-full rounded-lg bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 active:scale-[0.99] disabled:opacity-40"
       >
         {full ? `${MAX_EVENTS} events max` : '+ Add event'}
       </button>
 
       {error && (
-        <p className="rounded-md border border-red-300 px-3 py-2 text-[13px] text-red-600 dark:border-red-900 dark:text-red-400">
+        <p className="rounded-md border border-zinc-300 px-3 py-2 text-[13px] font-medium text-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
           {error}
         </p>
       )}

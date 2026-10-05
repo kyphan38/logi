@@ -135,7 +135,7 @@ export default function StartWhenSheet({
               type="button"
               disabled={typed === null}
               onClick={() => typed !== null && commit(typed)}
-              className="mt-2 min-h-11 w-full rounded-sm bg-blue-600 text-sm font-medium text-white active:scale-[0.99] disabled:opacity-40"
+              className="mt-2 min-h-11 w-full rounded-sm bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 active:scale-[0.99] disabled:opacity-40"
             >
               {past ? 'Start' : 'Schedule'}
             </button>

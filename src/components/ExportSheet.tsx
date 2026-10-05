@@ -128,7 +128,7 @@ export default function ExportSheet({
             {scope === 'all' && all ? ` · ${all.weekTargets.size} weeks planned` : ''}
           </p>
           {error && (
-            <p role="alert" className="text-[13px] text-red-600 dark:text-red-400">
+            <p role="alert" className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
               {error}
             </p>
           )}

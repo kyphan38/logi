@@ -1,17 +1,48 @@
 @import "tailwindcss";
 
+/* dark: theo Theme trong Settings (data-theme), "system" thì theo máy. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+/* App viết class zinc-* cứng (kèm dark:). Dải zinc của Tailwind hơi ngả xanh;
+   đổi sang xám trung tính R=G=B của DESIGN.md mà không phải sửa từng class. */
+@theme {
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f4;
+  --color-zinc-200: #e5e5e5;
+  --color-zinc-300: #d4d4d4;
+  --color-zinc-400: #a3a3a3;
+  --color-zinc-500: #737373;
+  --color-zinc-600: #555555;
+  --color-zinc-700: #3a3a3a;
+  --color-zinc-800: #262626;
+  --color-zinc-900: #171717;
+  --color-zinc-950: #0a0a0a;
+}
+
 /* ===========================================================================
    Design tokens (Stage 4.6)
 
    Nguyên tắc: BỚT VIỀN, THÊM NỀN. Card phân biệt bằng nền khác biệt, không
    phải bằng viền bao quanh. Màu chỉ dùng cho category, không dùng cho khung.
+   Còn lại chỉ đen, trắng, xám: giá trị chung của ws/app/DESIGN.md
+   (2026-10-05). Cảnh báo nói bằng chữ và độ đậm, không bằng màu.
 
    Màu gốc category vẫn nằm ở CATEGORY_COLOR trong logi.ts - file này chỉ
    thêm biến thể dẫn xuất (tint / ink). KHÔNG sửa logi.ts.
    =========================================================================== */
 :root {
-  --background: #ffffff;
+  --background: #fafafa;
   --foreground: #171717;
+  --select: rgb(23 23 23 / 0.14);
 
   /* --- Bán kính --- */
   --radius-sm: 8px;    /* button, input, chip */
@@ -20,16 +51,16 @@
   --radius-full: 9999px;
 
   /* --- Bề mặt & viền --- */
-  --surface-0: #ffffff; /* nền trang */
-  --surface-1: #f7f7f8; /* card */
+  --surface-0: #fafafa; /* nền trang */
+  --surface-1: #f4f4f4; /* card */
   --surface-2: #ffffff; /* card nổi / sheet */
-  --border: rgb(0 0 0 / 0.07);        /* hairline */
-  --border-strong: rgb(0 0 0 / 0.16); /* viền đứt vùng untracked */
+  --border: #e5e5e5;        /* hairline */
+  --border-strong: #d4d4d4; /* viền đứt vùng untracked */
 
   /* --- Chữ --- */
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-muted: #a1a1aa;
+  --text-primary: #171717;
+  --text-secondary: #555555;
+  --text-muted: #8a8a8a;
 
   /* --- Category dẫn xuất (tint = nền block, ink = chữ trên tint) ---
      Sinh từ CATEGORY_COLOR bằng script; mọi cặp đạt tương phản >= 4.5. */
@@ -44,22 +75,24 @@
 
   /* --- Bề rộng nội dung tối đa trên desktop --- */
   --content-max: 720px;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --background: #111111;
+    --foreground: #e8e8e8;
+    --select: rgb(232 232 232 / 0.18);
 
-    --surface-0: #0a0a0a;
-    --surface-1: #161618;
-    --surface-2: #1c1c1f;
-    --border: rgb(255 255 255 / 0.09);
-    --border-strong: rgb(255 255 255 / 0.20);
+    --surface-0: #111111;
+    --surface-1: #1a1a1a;
+    --surface-2: #222222;
+    --border: #262626;
+    --border-strong: #3a3a3a;
 
-    --text-primary: #fafafa;
-    --text-secondary: #a1a1aa;
-    --text-muted: #71717a;
+    --text-primary: #e8e8e8;
+    --text-secondary: #a3a3a3;
+    --text-muted: #7a7a7a;
 
     --cat-learn-tint: #272848;
     --cat-learn-ink: #8486f4;
@@ -69,14 +102,42 @@
     --cat-fitness-ink: #10b981;
     --cat-leisure-tint: #452134;
     --cat-leisure-ink: #ee60a6;
+    color-scheme: dark;
   }
+}
+
+/* Chọn tay trong Settings: thắng cài đặt của máy. */
+:root[data-theme="dark"] {
+  --background: #111111;
+  --foreground: #e8e8e8;
+  --select: rgb(232 232 232 / 0.18);
+
+  --surface-0: #111111;
+  --surface-1: #1a1a1a;
+  --surface-2: #222222;
+  --border: #262626;
+  --border-strong: #3a3a3a;
+
+  --text-primary: #e8e8e8;
+  --text-secondary: #a3a3a3;
+  --text-muted: #7a7a7a;
+
+  --cat-learn-tint: #272848;
+  --cat-learn-ink: #8486f4;
+  --cat-work-tint: #473415;
+  --cat-work-ink: #f59e0b;
+  --cat-fitness-tint: #153a2f;
+  --cat-fitness-ink: #10b981;
+  --cat-leisure-tint: #452134;
+  --cat-leisure-ink: #ee60a6;
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Cho phép dùng thẳng trong Tailwind: bg-surface-1, text-muted, rounded-md… */
   --color-surface-0: var(--surface-0);
@@ -93,10 +154,24 @@
   --radius-lg: var(--radius-lg);
 }
 
+html {
+  background: var(--background);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--select);
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 1.5px solid var(--text-muted);
+  outline-offset: 2px;
 }
 
 @layer base {

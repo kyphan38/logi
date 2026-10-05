@@ -299,7 +299,7 @@ export default function RecordSheet({
               className={FIELD}
             />
             {errors.start ? (
-              <span role="alert" className="text-xs text-red-600 dark:text-red-400">
+              <span role="alert" className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
                 {errors.start}
               </span>
             ) : null}
@@ -321,7 +321,7 @@ export default function RecordSheet({
               className={FIELD}
             />
             {errors.end ? (
-              <span role="alert" className="text-xs text-red-600 dark:text-red-400">
+              <span role="alert" className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
                 {errors.end}
               </span>
             ) : null}
@@ -346,7 +346,7 @@ export default function RecordSheet({
         </div>
 
         {failure ? (
-          <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="mt-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">
             {failure}
           </p>
         ) : null}
@@ -360,8 +360,8 @@ export default function RecordSheet({
               className={[
                 'min-h-11 flex-1 rounded-md border text-sm font-medium transition active:scale-[0.99] disabled:opacity-50',
                 confirming
-                  ? 'border-red-600 bg-red-600 text-white'
-                  : 'border-zinc-200 text-red-600 dark:border-zinc-700 dark:text-red-400',
+                  ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'border-zinc-200 font-medium text-zinc-900 dark:border-zinc-700 dark:text-zinc-100',
               ].join(' ')}
             >
               {confirming ? 'Really delete?' : 'Delete'}

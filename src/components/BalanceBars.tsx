@@ -65,17 +65,17 @@ function Bar({
           className="absolute inset-y-0 left-0 rounded-full"
           style={{ width: pct(base), background: CATEGORY_COLOR[row.category] }}
         />
-        {/* Phần vượt target: kẻ sọc để phân biệt được cả trên thanh Work (vốn
-            đã là màu hổ phách) lẫn ở dark mode. */}
+        {/* Phần vượt target: mực đậm kẻ sọc, để phân biệt được với mọi màu
+            category lẫn ở dark mode (chỉ xám, DESIGN.md). */}
         {over > 0 && (
           <div
             className="absolute inset-y-0 rounded-r-full"
             style={{
               left: pct(base),
               width: pct(over),
-              backgroundColor: '#f59e0b',
+              backgroundColor: 'var(--text-primary)',
               backgroundImage:
-                'repeating-linear-gradient(45deg, rgb(0 0 0 / 0.22) 0 3px, transparent 3px 7px)',
+                'repeating-linear-gradient(45deg, var(--surface-0) 0 2px, transparent 2px 6px)',
             }}
           />
         )}

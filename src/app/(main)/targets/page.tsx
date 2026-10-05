@@ -394,7 +394,7 @@ function TargetsView() {
                     type="button"
                     onClick={saveCustom}
                     disabled={busy || !check?.ok}
-                    className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+                    className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
                   >
                     Save
                   </button>
@@ -466,7 +466,7 @@ function ModeCard({
       className={[
         'w-full rounded-md border px-4 py-3 text-left transition',
         selected
-          ? 'border-blue-600 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-950/30'
+          ? 'border-zinc-900 bg-zinc-100/60 dark:border-zinc-100 dark:bg-zinc-800/40'
           : 'border-zinc-200 dark:border-zinc-800',
         off ? 'cursor-not-allowed opacity-50' : 'active:scale-[0.99]',
       ].join(' ')}
@@ -474,7 +474,7 @@ function ModeCard({
       <div className="flex items-center justify-between">
         <span className="font-medium text-zinc-900 dark:text-zinc-100">{label}</span>
         {selected ? (
-          <span className="text-blue-600 dark:text-blue-400">✓</span>
+          <span className="text-zinc-900 dark:text-zinc-100">✓</span>
         ) : suggested ? (
           <span className="text-xs text-zinc-500 dark:text-zinc-400">Suggested</span>
         ) : null}
@@ -515,7 +515,7 @@ function PinButton({
       aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
       className={[
         'shrink-0 rounded p-1 transition',
-        pinned ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-300 dark:text-zinc-600',
+        pinned ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-300 dark:text-zinc-600',
         off ? 'cursor-not-allowed opacity-40' : 'active:scale-90',
       ].join(' ')}
     >
@@ -574,7 +574,7 @@ function Slider({
           />
           {CATEGORY_LABEL[category]}
           {atFloor && (
-            <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
+            <span className="rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
               floor
             </span>
           )}
@@ -608,7 +608,7 @@ function Slider({
         onChange={(e) => onChange(Number(e.target.value))}
         className={[
           'h-1.5 w-full cursor-pointer appearance-none rounded-full disabled:cursor-not-allowed disabled:opacity-50',
-          atFloor ? 'bg-rose-200 dark:bg-rose-900/60' : 'bg-zinc-200 dark:bg-zinc-800',
+          atFloor ? 'bg-zinc-400 dark:bg-zinc-600' : 'bg-zinc-200 dark:bg-zinc-800',
         ].join(' ')}
       />
     </div>
@@ -626,14 +626,14 @@ function TotalRow({ weekly, errors }: { weekly: Weekly; errors: string[] }) {
         <span
           className={[
             'font-mono tabular-nums',
-            ok ? 'text-zinc-900 dark:text-zinc-100' : 'text-amber-600 dark:text-amber-400',
+            ok ? 'text-zinc-900 dark:text-zinc-100' : 'font-medium text-zinc-900 dark:text-zinc-100',
           ].join(' ')}
         >
           {Math.round(total * 10) / 10} / {TOTAL_BUDGET}h {ok ? '✓' : ''}
         </span>
       </div>
       {errors.map((e) => (
-        <p key={e} className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+        <p key={e} className="mt-1 text-xs font-medium text-zinc-900 dark:text-zinc-100">
           {e}
         </p>
       ))}
@@ -695,11 +695,11 @@ function StreakPrompt({
   onKeep: () => void;
 }) {
   return (
-    <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
-      <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+    <div className="mb-6 rounded-md border border-zinc-300 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900">
+      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
         Crunch: {count} of the last {of} weeks.
       </p>
-      <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+      <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">
         Reset your baseline, or is this something to fix?
       </p>
       <div className="mt-3 flex gap-2">
@@ -707,14 +707,14 @@ function StreakPrompt({
           type="button"
           onClick={onReset}
           disabled={busy}
-          className="flex-1 rounded-lg bg-amber-600 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
         >
           Reset baseline
         </button>
         <button
           type="button"
           onClick={onKeep}
-          className="flex-1 rounded-lg border border-amber-400 py-2 text-sm font-medium text-amber-900 dark:text-amber-200"
+          className="flex-1 rounded-lg border border-zinc-400 py-2 text-sm font-medium text-zinc-900 dark:border-zinc-600 dark:text-zinc-100"
         >
           Keep as is
         </button>
@@ -763,7 +763,7 @@ function ConfirmSheet({
                 {h(r.from)} → {h(r.to)}
                 {/* Đổi preset mà không thấy giá phải trả thì cơ chế này vô nghĩa. */}
                 {r.debt > 0 && (
-                  <span className="ml-2 text-amber-600 dark:text-amber-400">
+                  <span className="ml-2 font-medium text-zinc-900 dark:text-zinc-100">
                     +{h(r.debt)} debt
                   </span>
                 )}
@@ -787,7 +787,7 @@ function ConfirmSheet({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+            className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
           >
             Switch
           </button>

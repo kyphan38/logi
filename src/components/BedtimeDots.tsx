@@ -98,7 +98,7 @@ export default function BedtimeDots({
                 {/* Dải min-max. Sớm nhất ở TRÊN nên `top` lấy theo min. */}
                 <span
                   aria-hidden="true"
-                  className="absolute left-1/2 w-[2px] -translate-x-1/2 rounded bg-indigo-300 dark:bg-indigo-700"
+                  className="absolute left-1/2 w-[2px] -translate-x-1/2 rounded bg-zinc-300 dark:bg-zinc-700"
                   style={{
                     top: `${y(p.stats.min)}%`,
                     height: `${Math.max(2, y(p.stats.max) - y(p.stats.min))}%`,
@@ -107,7 +107,7 @@ export default function BedtimeDots({
                 {/* Điểm trung vị */}
                 <span
                   aria-hidden="true"
-                  className="absolute left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-indigo-500"
+                  className="absolute left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100"
                   style={{ top: `calc(${y(p.stats.median)}% - 4px)` }}
                 />
                 {showValue && (

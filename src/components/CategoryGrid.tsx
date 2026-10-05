@@ -22,9 +22,9 @@ import StartWhenSheet, { type StartWhen } from './StartWhenSheet';
 /** Giữ lâu hơn ngưỡng của `isRealTap` → mở sheet chọn giờ, không phải Start. */
 const LONG_PRESS_MS = 500;
 
-/** Đoạn hổ phách ở mép phải khi vượt target. */
+/** Đoạn mực đậm ở mép phải khi vượt target (chỉ xám, DESIGN.md). */
 const OVER_PCT = 14;
-const OVER_COLOR = '#f59e0b';
+const OVER_COLOR = 'var(--text-primary)';
 
 export default function CategoryGrid({
   tiles,
