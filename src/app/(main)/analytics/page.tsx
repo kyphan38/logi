@@ -45,7 +45,7 @@ export default function AnalyticsPage() {
   const [span, setSpan] = useState<TrendSpan>(DEFAULT_SPAN);
 
   // Gọi vô điều kiện (luật của hook). Nó chỉ chạy khi có `uid`; ở tab Week nó
-  // vẫn fetch nền — chấp nhận, đổi lại bấm sang tab Trend là có ngay, và
+  // vẫn fetch nền - chấp nhận, đổi lại bấm sang tab Trend là có ngay, và
   // `useTrend` đã có cache theo phiên.
   const buckets = useMemo(() => trendBuckets(span, now), [span, now]);
   const trend = useTrend(span, now);

@@ -22,7 +22,7 @@ export type TrendSpan = '6w' | '12w' | '26w';
 // "12 weeks" vẫn hiểu là 12 tuần gần nhất.
 //
 // Không còn span theo THÁNG. Tháng có 4 hoặc 5 tuần nên cột tháng dài tự nhiên
-// cao hơn — đó là lịch, không phải xu hướng. Cả app chạy theo tuần (weekTargets,
+// cao hơn - đó là lịch, không phải xu hướng. Cả app chạy theo tuần (weekTargets,
 // WeeklyReview, ngân sách 89h/tuần) nên trend cũng phải đếm bằng tuần thì cột
 // mới so được với cột.
 export const TREND_SPANS: readonly { value: TrendSpan; label: string }[] = [
@@ -171,7 +171,7 @@ export function trendCompare(
 // Cắt kỳ trống ở ĐẦU
 //
 // "26 tuần" nghĩa là TỐI ĐA 26 tuần. Tài khoản mới chỉ có 3 tuần dữ liệu mà vẽ
-// đủ 26 ô thì 23 ô đầu là chỗ chết — chart trông như hỏng. Cắt phần đầu rồi thì
+// đủ 26 ô thì 23 ô đầu là chỗ chết - chart trông như hỏng. Cắt phần đầu rồi thì
 // chip không phải chạy theo tuổi tài khoản nữa: bấm 26w hôm nay ra 3 cột, vài
 // tháng nữa nó tự đầy lên.
 //

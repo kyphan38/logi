@@ -1,4 +1,4 @@
-# STAGE 10 — Routine: checklist hằng ngày theo thứ
+# STAGE 10 - Routine: checklist hằng ngày theo thứ
 
 > Thay thế phần **task tuần** của Stage 8. Bedtime của Stage 8 giữ nguyên.
 
@@ -34,13 +34,13 @@ dùng sửa. Không cần lên kế hoạch lại từng tuần.
 ## 2. Data model
 
 ### Template
-`users/{uid}/routines/{groupId}` — `title`, `order`, `items[]`, `archivedAt`
+`users/{uid}/routines/{groupId}` - `title`, `order`, `items[]`, `archivedAt`
 
 Mỗi mục: `{ id, text, days }`. `days` theo `Date.getDay()` (0 = CN).
 Xoá nhóm = set `archivedAt`, không hard-delete.
 
 ### Tick theo ngày
-`users/{uid}/routineChecks/{logicalDate}` — `{ date, checked: { itemId: epochMs } }`
+`users/{uid}/routineChecks/{logicalDate}` - `{ date, checked: { itemId: epochMs } }`
 
 "Reset" không cần xoá gì: ngày logic mới đọc một doc mới, đang trống. Lịch sử
 tick vẫn còn, nên streak sau này không phải đổi schema.
@@ -61,8 +61,8 @@ nhanh vào hai mục khác nhau không ghi đè nhau.
 
 ## 4. File
 
-- `src/lib/routine.ts` — logic thuần, test ở `test/routine.test.ts`
-- `src/lib/routine-store.ts` — Firestore
-- `src/hooks/useRoutine.ts` — `useRoutines`, `useRoutineChecks(date)`
-- `src/components/RoutineChecklist.tsx` — Now
-- `src/components/RoutineSection.tsx`, `RoutineSheet.tsx` — Targets
+- `src/lib/routine.ts` - logic thuần, test ở `test/routine.test.ts`
+- `src/lib/routine-store.ts` - Firestore
+- `src/hooks/useRoutine.ts` - `useRoutines`, `useRoutineChecks(date)`
+- `src/components/RoutineChecklist.tsx` - Now
+- `src/components/RoutineSection.tsx`, `RoutineSheet.tsx` - Targets

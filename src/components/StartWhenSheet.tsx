@@ -128,7 +128,7 @@ export default function StartWhenSheet({
             {/* Xác nhận sống: nói ra ngày nào, cách bây giờ bao lâu. Đây là chỗ
                 người dùng phát hiện mình vừa gõ nhầm sang đêm hôm trước. */}
             <p className="mt-2 min-h-5 text-xs tabular-nums text-ink-muted">
-              {typed === null ? '—' : `${clockTime(typed)} · ${relativeLabel(typed, now)}`}
+              {typed === null ? '·' : `${clockTime(typed)} · ${relativeLabel(typed, now)}`}
             </p>
 
             <button

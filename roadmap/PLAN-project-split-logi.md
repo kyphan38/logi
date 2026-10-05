@@ -17,8 +17,8 @@ ca dễ nhất, dùng làm mẫu cho cogi và noda.
 | Dữ liệu | `users/yjzds6g7Y6VjmwtgW4QTnUqaX0F2/` → `activities`, `meta`, `weekTargets` (21 doc) |
 | Auth | Google, allowlist theo **email** (`ALLOWED_USER_EMAIL`), không theo UID |
 | Storage | **không dùng** |
-| Functions | `pushReminders`, `trimPushLog` — cả hai là `onSchedule`, region `asia-southeast1`, không có secret |
-| FCM | **có** — `NEXT_PUBLIC_FIREBASE_VAPID_KEY`, token lưu ở `users/{uid}/meta/fcm.token` |
+| Functions | `pushReminders`, `trimPushLog` - cả hai là `onSchedule`, region `asia-southeast1`, không có secret |
+| FCM | **có** - `NEXT_PUBLIC_FIREBASE_VAPID_KEY`, token lưu ở `users/{uid}/meta/fcm.token` |
 | Hosting | Vercel (`vercel.json`) |
 | Indexes | 4 composite trên `activities` + 1 fieldOverride collection-group `meta.token` |
 
@@ -82,7 +82,7 @@ FIREBASE_ADMIN_PRIVATE_KEY="..."  (từ file JSON mới)
 Giữ nguyên: `ALLOWED_USER_EMAIL`, `NEXT_PUBLIC_ALLOWED_USER_EMAIL`,
 `AUTH_COOKIE_NAME`, `AUTH_COOKIE_MAX_AGE_SECONDS`, `GEMINI_API_KEY`.
 
-> Service account cũ (`firebase-adminsdk-fbsvc@kyphan38-apps...`) **đừng xoá vội** —
+> Service account cũ (`firebase-adminsdk-fbsvc@kyphan38-apps...`) **đừng xoá vội** -
 > script copy ở bước 6 cần nó để đọc dữ liệu nguồn.
 
 ---
@@ -121,7 +121,7 @@ Giữ nguyên: `ALLOWED_USER_EMAIL`, `NEXT_PUBLIC_ALLOWED_USER_EMAIL`,
 }
 ```
 
-`src/lib/firebase-client.ts` và `src/lib/firebase-admin.ts` **không cần sửa** —
+`src/lib/firebase-client.ts` và `src/lib/firebase-admin.ts` **không cần sửa** -
 chúng vẫn gọi `getFirestore(app, DB_ID)`, và đã kiểm chứng rằng
 `getFirestore(app, '(default)')` cho ra đúng cùng một thứ với `getFirestore(app)`.
 
@@ -155,7 +155,7 @@ npm run dev
 ```
 
 Đăng nhập bằng `kyphan.work@gmail.com`. Vì allowlist theo email nên vào được ngay.
-App sẽ trống trơn — đúng, chưa copy dữ liệu.
+App sẽ trống trơn - đúng, chưa copy dữ liệu.
 
 Lấy UID mới: Console → Authentication → Users → cột User UID.
 
@@ -207,7 +207,7 @@ Phải thấy `pushReminders` và `trimPushLog`, region `asia-southeast1`.
 Cả hai đều là `onSchedule` nên **không cần** tuỳ chọn database. Không có secret
 nào phải set lại.
 
-`trimPushLog` chạy chủ nhật 03:00, `pushReminders` theo lịch riêng — muốn thử ngay
+`trimPushLog` chạy chủ nhật 03:00, `pushReminders` theo lịch riêng - muốn thử ngay
 thì Console → Cloud Scheduler → Force run.
 
 ---

@@ -1,4 +1,4 @@
-# STAGE 9 — Tab Reminder: sự kiện sắp tới
+# STAGE 9 - Tab Reminder: sự kiện sắp tới
 
 > Một tab để ghi những mốc **phải nhớ**: hạn nộp, lịch khám, đám cưới.
 > App đếm ngược và đẩy thông báo trước 14 / 7 / 3 / 1 ngày, và lại vào đúng ngày.
@@ -8,7 +8,7 @@
 ## 0. Vì sao làm
 
 App đo **giờ theo category** và **task theo tuần**. Cả hai đều lặp lại. Không có
-chỗ nào cho một mốc **xảy ra đúng một lần** — thứ mà quên là hỏng thật.
+chỗ nào cho một mốc **xảy ra đúng một lần** - thứ mà quên là hỏng thật.
 
 Ghi vào Notes hay Calendar thì được, nhưng người dùng đã mở logi mỗi ngày rồi.
 Thêm một app nữa để mở là thêm một app nữa để quên.
@@ -32,15 +32,15 @@ Thêm một app nữa để mở là thêm một app nữa để quên.
 ### Vì sao 1
 
 Bản đầu bỏ hẳn trường giờ. Nhưng người dùng gõ ngay `11:30:` và `6:30` vào ô
-Note — tức là giờ **có** cần, chỉ là không phải lúc nào cũng có.
+Note - tức là giờ **có** cần, chỉ là không phải lúc nào cũng có.
 
 Giờ **không đổi lịch gửi**: mốc vẫn tính bằng ngày, push vẫn 06:00. Nhắc trước
 vài tiếng là tính năng khác, chưa làm. Việc cả ngày (`time === null`) đứng
-trước việc có giờ trong cùng ngày — nó không có mốc nào để xếp vào.
+trước việc có giờ trong cùng ngày - nó không có mốc nào để xếp vào.
 
 ### Vì sao 9
 
-`pushReminders` cố ý chỉ gửi **một** thông báo mỗi lần chạy — nhiều dòng cùng lúc
+`pushReminders` cố ý chỉ gửi **một** thông báo mỗi lần chạy - nhiều dòng cùng lúc
 thì người dùng học cách bỏ qua tất cả. Nhét sự kiện vào đó nghĩa là hôm nào có
 sự kiện thì mất nhắc học, hoặc ngược lại. Hai thứ khác bản chất: nhắc học tính
 theo **giờ trong ngày**, sự kiện tính theo **ngày trên lịch**.
@@ -74,10 +74,10 @@ Cái mới gọi là **Event** trong code, nhãn ngoài UI là **"Reminder"**. T
 | Field | Kiểu | Ghi chú |
 |---|---|---|
 | `title` | string | ≤ 60 ký tự |
-| `date` | string | `"2026-10-15"` — ngày logic, mốc cắt 04:00 |
-| `time` | string \| null | `"11:30"` — 24 tiếng. `null` = cả ngày |
+| `date` | string | `"2026-10-15"` - ngày logic, mốc cắt 04:00 |
+| `time` | string \| null | `"11:30"` - 24 tiếng. `null` = cả ngày |
 | `note` | string \| null | ≤ 140 |
-| `notified` | map | `{ "14": ts, "7": ts }` — mốc đã push |
+| `notified` | map | `{ "14": ts, "7": ts }` - mốc đã push |
 | `archivedAt` | number \| null | xoá mềm |
 | `createdAt` / `updatedAt` | number | |
 
@@ -86,13 +86,13 @@ dữ liệu nó nói về thì không bao giờ lệch, kể cả khi sự kiệ
 
 ### Index
 
-`(archivedAt ASC, date ASC)` — cho query `where archivedAt == null orderBy date`.
+`(archivedAt ASC, date ASC)` - cho query `where archivedAt == null orderBy date`.
 Lọc archive **trong query** chứ không ở client: việc đã xoá tích lại mãi mãi,
 còn việc đang chờ mới có trần 40. Chỉ cái có trần mới được stream.
 
 ---
 
-## 4. Ngày logic — chỗ dễ sai nhất
+## 4. Ngày logic - chỗ dễ sai nhất
 
 `daysUntil` phải trừ theo **ngày lịch**, không phải `(target - now) / 86400000`.
 
@@ -100,8 +100,8 @@ Trừ theo ms thì lúc 23:00 việc của ngày mai ra 0 ngày → thông báo 
 một việc còn chưa tới.
 
 Hai bản chép:
-- `src/lib/events.ts` — bản gốc
-- `functions/src/events.ts` — bản cho Cloud Function, **không import gì cả**
+- `src/lib/events.ts` - bản gốc
+- `functions/src/events.ts` - bản cho Cloud Function, **không import gì cả**
 
 `dateLabel()` tự ghép chuỗi thay vì `toLocaleDateString()`: hàm đó đọc locale và
 múi giờ của máy đang chạy, nên cùng một ngày ra thứ khác nhau giữa app (+07:00)
@@ -135,18 +135,18 @@ Mốc 7 và 14 nói bằng **tuần** vì đó là cách người ta thật sự
 
 ## 6. Push
 
-`pushEvents` — `every day 06:00`, `Asia/Ho_Chi_Minh`, `asia-southeast1`.
+`pushEvents` - `every day 06:00`, `Asia/Ho_Chi_Minh`, `asia-southeast1`.
 
-1. Lấy máy đã bật push (`collectionGroup('meta').where('token','>','')` — index
+1. Lấy máy đã bật push (`collectionGroup('meta').where('token','>','')` - index
    đã có từ Stage 6).
 2. Đọc `events` chưa archive của user đó.
 3. Lọc những cái `daysBetween(today, date)` ∈ {14,7,3,1,0} và chưa có cờ.
 4. Gửi **một** thông báo. Nhiều cái cùng đến hạn thì gộp, tối đa 2 dòng rồi
-   `and N more` — dài hơn thì màn khoá cắt mất.
+   `and N more` - dài hơn thì màn khoá cắt mất.
 5. Đánh dấu `notified` **sau khi gửi xong**. Gửi hỏng thì không đánh dấu, để
    ngày mai còn thử lại (nếu mốc chưa trôi qua).
 
-`public/sw.js` **không đổi** — chỉ nhận `url: '/reminders'`, `tag: 'events'`.
+`public/sw.js` **không đổi** - chỉ nhận `url: '/reminders'`, `tag: 'events'`.
 
 ---
 
@@ -154,13 +154,13 @@ Mốc 7 và 14 nói bằng **tuần** vì đó là cách người ta thật sự
 
 - Sự kiện **lặp lại** hằng năm / hằng tháng (quyết định 8)
 - Giờ trong ngày, nếu sau này có việc cần nhắc trước vài tiếng
-- Dọn `events` đã archive quá cũ — hiện chúng ở lại vĩnh viễn
+- Dọn `events` đã archive quá cũ - hiện chúng ở lại vĩnh viễn
 
 ---
 
 ## 8. Hiển thị
 
-Trên mỗi dòng, thứ to nhất là **đếm ngược**, không phải tên việc — người ta mở
+Trên mỗi dòng, thứ to nhất là **đếm ngược**, không phải tên việc - người ta mở
 tab này để biết "còn bao lâu".
 
 Bản đầu để đếm ngược thành dòng chữ 13px màu xám nằm dưới tên việc: thứ quan
@@ -168,7 +168,7 @@ trọng nhất lại là thứ mờ nhất. Nay nó là khối số 24px bên tr
 lấy lại màu chữ đầy đủ (`ink-soft`, không phải `ink-muted`).
 
 `countdownParts()` tách số và đơn vị cho khối đó. Nó **phải** chọn cùng đơn vị
-với `countdownText()` — danh sách ghi "7 days" trong khi push ghi "Next week"
+với `countdownText()` - danh sách ghi "7 days" trong khi push ghi "Next week"
 là bắt người dùng dừng lại đối chiếu. Có test buộc điều đó trên 800 giá trị.
 
 Màu chỉ dùng để báo **gấp**: đỏ ở ngày 0, hổ phách ở 1–3 ngày, còn lại để trung

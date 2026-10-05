@@ -1,6 +1,6 @@
-# STAGE 8 — Task checklist tuần + Bedtime
+# STAGE 8 - Task checklist tuần + Bedtime
 
-> **2026-09-26: phần task tuần đã gỡ**, thay bằng Routine — xem
+> **2026-09-26: phần task tuần đã gỡ**, thay bằng Routine - xem
 > `STAGE-10-ROUTINE.md`. Phần Bedtime vẫn dùng.
 
 > Hai tính năng mới, làm chung một lượt vì cùng đụng vào màn Now và card TREND.
@@ -12,9 +12,9 @@
 
 ## 0. Vì sao làm
 
-App hiện đo **giờ theo category**. "Learn 3h" quá thô — nó không phân biệt được
+App hiện đo **giờ theo category**. "Learn 3h" quá thô - nó không phân biệt được
 shadowing hay đọc blog tech. Một task có tên và thời lượng biến mục tiêu mơ hồ thành
-cam kết cụ thể, và tạo **ý định trước khi ngày bắt đầu** — thứ app hiện chỉ có ở mức
+cam kết cụ thể, và tạo **ý định trước khi ngày bắt đầu** - thứ app hiện chỉ có ở mức
 preset tuần.
 
 Bedtime là phiên bản nhẹ của Sleep đã gỡ: ghi **một mốc**, không phải một khoảng.
@@ -48,25 +48,25 @@ Agent **không** đổi các quyết định này.
 ## 2. Data model
 
 ### Pool
-`users/{uid}/taskPool/{taskId}` — title, durationMin, category, order, archivedAt
+`users/{uid}/taskPool/{taskId}` - title, durationMin, category, order, archivedAt
 
 Xoá task = set `archivedAt`, **không** hard-delete. Tuần cũ vẫn phải hiện được nó.
 
 ### Kế hoạch tuần
-`users/{uid}/weekPlans/{week}` — một doc cho cả tuần (35 ô là cùng, rất nhẹ)
+`users/{uid}/weekPlans/{week}` - một doc cho cả tuần (35 ô là cùng, rất nhẹ)
 
 Mỗi ô đã bật lưu **bản chụp** tại thời điểm gán: `taskId`, `dow`, `title`,
 `durationMin`, `category`.
 
 Chụp lại là cách duy nhất giữ được quyết định 14. Nếu chỉ lưu `taskId` rồi đọc
 thời lượng từ pool lúc hiển thị, thì đổi Running 45' → 30' sẽ khiến một tuần từng
-"chưa xong" tự nhiên thành "đã xong" — lịch sử bị viết lại.
+"chưa xong" tự nhiên thành "đã xong" - lịch sử bị viết lại.
 
 ### Activity
 Thêm `taskId: string | null`. Session không từ checklist thì `null`.
 
 ### Bedtime
-`users/{uid}/dayLogs/{logicalDate}` — `bedtimeAt` (epoch ms)
+`users/{uid}/dayLogs/{logicalDate}` - `bedtimeAt` (epoch ms)
 
 Một mốc, không phải activity. **Không** vào collection `activities`.
 
@@ -84,14 +84,14 @@ Hàng = task trong pool, cột = 7 ngày. Nhãn hàng mang title + thời lượ
 
 Dưới cùng một dòng đếm số task đã lên kế hoạch mỗi ngày.
 
-Cả tuần phải nằm gọn **một màn hình** ở 375px — đây là lý do chọn bố cục này thay vì
+Cả tuần phải nằm gọn **một màn hình** ở 375px - đây là lý do chọn bố cục này thay vì
 thẻ trong cột ngày.
 
 ### Tương tác
 - **Mọi nơi**: chạm ô để bật/tắt
 - **Desktop (≥ md)**: thêm kéo-để-**tô** (nhấn rồi rê ngang bật hàng loạt), chạm nhãn
   hàng để bật/tắt cả 7 ngày, chạm tên thứ để xoá sạch ngày đó
-- **Mobile**: **tắt** kéo-để-tô — nó giành cử chỉ với cuộn trang, đúng vấn đề đã gặp
+- **Mobile**: **tắt** kéo-để-tô - nó giành cử chỉ với cuộn trang, đúng vấn đề đã gặp
   với lưới nút ở Now
 
 Không làm kéo-để-di-chuyển ở bất kỳ đâu. Ô chỉ là bật/tắt, kéo không mang thêm
@@ -149,7 +149,7 @@ Hết ngày chưa đủ → để nguyên, không dồn (quyết định 8).
 
 ### Đường lui cho voice
 Quyết định 5 nói chỉ session từ checklist mới tính. Nhưng người dùng dùng voice rất
-nhiều — sáng sớm quen miệng nói "start shadowing" là task hôm đó không được tick dù
+nhiều - sáng sớm quen miệng nói "start shadowing" là task hôm đó không được tick dù
 đã làm.
 
 Nên: trong `RecordSheet` ở History, thêm mục chọn task để gắn một session vào task.
@@ -182,18 +182,18 @@ chênh nhau **135 phút**, không phải 22 tiếng.
 ## 6. Trend
 
 ### Thêm hai lựa chọn vào selector của card TREND
-- **Bedtime** — trục Y là giờ trong ngày (thang liên tục), mỗi tuần một điểm là
+- **Bedtime** - trục Y là giờ trong ngày (thang liên tục), mỗi tuần một điểm là
   trung vị, kèm dải min–max để thấy độ dao động
-- **Task completion** — tỉ lệ hoàn thành theo từng task qua các tuần
+- **Task completion** - tỉ lệ hoàn thành theo từng task qua các tuần
   (`Running: 8/12 ngày đã lên kế hoạch`)
 
-Đây là chỗ lộ ra task nào bạn luôn bỏ — mà task luôn bỏ thường là task đặt sai, không
+Đây là chỗ lộ ra task nào bạn luôn bỏ - mà task luôn bỏ thường là task đặt sai, không
 phải người lười.
 
 ### BUG cần sửa: tuần không có dữ liệu đang bị coi là 0
 
 Ảnh chụp hiện `W31 0.0h → W35 7.3h · up +7.3h`. Sai: W31 không phải "học 0 giờ", mà
-là **chưa có dữ liệu** — lúc đó app chưa dùng.
+là **chưa có dữ liệu** - lúc đó app chưa dùng.
 
 Sửa:
 - Tuần không có activity nào → cột **để trống**, không vẽ cột 0
@@ -271,7 +271,7 @@ nhầm được.
 | 18 | TREND chọn Learn | Không còn cột 0 cho tuần chưa có dữ liệu |
 | 19 | Gắn session voice vào task ở History | Task được tính |
 
-Mục 6 và 8 quan trọng nhất — chúng bảo vệ hai thứ vừa mất công làm xong: cuộn không
+Mục 6 và 8 quan trọng nhất - chúng bảo vệ hai thứ vừa mất công làm xong: cuộn không
 bật ô, và màn Now không phải cuộn.
 
 ---

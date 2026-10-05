@@ -48,7 +48,7 @@ Bảng cụ thể:
 | cogi | `kyphan38-cogi-app` | `(default)` | phải tạo mới + chuyển dữ liệu |
 | logi | `kyphan38-logi-app` | `(default)` | phải tạo mới + chuyển dữ liệu |
 | noda | `kyphan38-noda-app` | `(default)` | phải tạo mới + chuyển dữ liệu + **chuyển Storage** |
-| mesi | `kyphan38-mesi-app` | `(default)` | **đã đúng rồi — không phải làm gì** |
+| mesi | `kyphan38-mesi-app` | `(default)` | **đã đúng rồi - không phải làm gì** |
 
 ### Vì sao chọn hậu tố `-app`?
 
@@ -81,10 +81,10 @@ làm song song rất dễ nhầm UID.
 
 Đề xuất thứ tự (dễ → khó):
 
-1. **logi** — không có Storage, function chỉ là scheduled/callable. Làm mẫu.
-2. **cogi** — không có Storage (đã xác nhận), nhiều collection hơn.
-3. **noda** — có Storage + download URL lưu trong Firestore. Khó nhất, để cuối.
-4. **mesi** — không làm gì.
+1. **logi** - không có Storage, function chỉ là scheduled/callable. Làm mẫu.
+2. **cogi** - không có Storage (đã xác nhận), nhiều collection hơn.
+3. **noda** - có Storage + download URL lưu trong Firestore. Khó nhất, để cuối.
+4. **mesi** - không làm gì.
 
 ---
 
