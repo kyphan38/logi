@@ -5,7 +5,7 @@
 // bằng zlib còn nhẹ hơn kéo về một dependency chỉ để chạy một lần.
 //
 // Hình phải khớp `public/favicon.svg` (bộ icon dùng chung cho mọi app trong
-// ws/app): nền accent đặc, 4 thanh sóng âm màu trắng vẽ trên lưới 24x24.
+// ws/app): nền sáng, 4 thanh sóng âm màu đen vẽ trên lưới 24x24.
 // PNG cố tình vẽ tràn viền (không bo góc) vì Android/iOS tự cắt theo mặt nạ
 // của hệ điều hành - bo sẵn sẽ lòi ra viền trắng.
 //
@@ -14,8 +14,8 @@
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-const BG = [0x17, 0x25, 0x54]; // accent của logi (navy)
-const FG = [0xff, 0xff, 0xff];
+const BG = [0xf4, 0xf4, 0xf1]; // nền sáng chung của bộ icon
+const FG = [0x14, 0x14, 0x14];
 
 // Toạ độ trên lưới 24x24, giống hệt các <path> trong favicon.svg.
 const STROKE = 2.4;
