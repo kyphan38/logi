@@ -16,11 +16,11 @@ import {
   disablePush,
   enablePush,
   isIOS,
-  isStandalone,
   pushState,
   PushError,
   type PushState,
 } from '@/lib/push';
+import { isStandalone } from '@/lib/standalone';
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();

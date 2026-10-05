@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginView() {
-  const { user, loading, signingIn, error, signIn } = useAuth();
+  const { user, loading, signingIn, sessionReady, error, signIn } = useAuth();
   const router = useRouter();
 
-  // Đã đăng nhập rồi mà vẫn mở /login thì đi thẳng vào app.
+  // Đã đăng nhập rồi mà vẫn mở /login thì đi thẳng vào app. Chờ cookie server
+  // xong mới đi: đi sớm hơn thì layout (main) chưa thấy session và đá ngược
+  // về đây.
   useEffect(() => {
-    if (!loading && user) router.replace('/now');
-  }, [loading, user, router]);
+    if (!loading && user && sessionReady) router.replace('/now');
+  }, [loading, user, sessionReady, router]);
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-12">

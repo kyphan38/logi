@@ -21,6 +21,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
+import { isStandalone } from '@/lib/standalone';
 
 const NOT_AUTHORIZED = 'This account is not authorized.';
 const UNAUTHORIZED_DOMAIN =
@@ -33,6 +34,8 @@ type AuthState = {
   loading: boolean;
   /** true khi người dùng vừa bấm nút đăng nhập. */
   signingIn: boolean;
+  /** true khi server đã có session cookie cho user hiện tại. */
+  sessionReady: boolean;
   error: string | null;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -53,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
   // Tránh gọi POST /api/auth/session nhiều lần cho cùng một user.
   const syncedUid = useRef<string | null>(null);
 
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (res.status === 403) {
         syncedUid.current = null;
+        setSessionReady(false);
         await firebaseSignOut(auth);
         setError(NOT_AUTHORIZED);
         return false;
@@ -86,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       syncedUid.current = current.uid;
+      setSessionReady(true);
       setError(null);
       return true;
     },
@@ -117,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!next) {
         syncedUid.current = null;
+        setSessionReady(false);
         return;
       }
       if (syncedUid.current === next.uid) return;
@@ -128,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const body = await res.json();
         if (body?.authenticated === true) {
           syncedUid.current = next.uid;
+          setSessionReady(true);
           return;
         }
       } catch {
@@ -142,6 +150,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async () => {
     setError(null);
     setSigningIn(true);
+
+    // App Add to Home Screen trên iOS: popup mở ra một trang riêng, đăng nhập
+    // xong không báo kết quả về được, nút cứ "Signing in…" mãi. Đi thẳng
+    // redirect (chạy được nhờ authDomain cùng domain, xem firebase-client.ts).
+    if (isStandalone()) {
+      try {
+        await signInWithRedirect(auth, newProvider());
+        return; // trang sẽ điều hướng đi, giữ signingIn = true
+      } catch {
+        setError(GENERIC);
+        setSigningIn(false);
+        return;
+      }
+    }
+
     try {
       const result = await signInWithPopup(auth, newProvider());
       const ok = await exchangeToken(result.user);
@@ -174,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     setError(null);
     syncedUid.current = null;
+    setSessionReady(false);
     try {
       await firebaseSignOut(auth);
     } finally {
@@ -188,8 +212,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   const value = useMemo<AuthState>(
-    () => ({ user, loading, signingIn, error, signIn, signOut }),
-    [user, loading, signingIn, error, signIn, signOut],
+    () => ({ user, loading, signingIn, sessionReady, error, signIn, signOut }),
+    [user, loading, signingIn, sessionReady, error, signIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

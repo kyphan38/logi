@@ -14,22 +14,11 @@ import { doc, setDoc, deleteField } from 'firebase/firestore';
 import { getMessaging, getToken, isSupported } from 'firebase/messaging';
 
 import { app, db } from '@/lib/firebase-client';
+import { isStandalone } from '@/lib/standalone';
 
 const SW_URL = '/sw.js';
 
 export type PushState = 'unsupported' | 'default' | 'granted' | 'denied';
-
-/**
- * iOS chỉ cho phép push khi app đã được Add to Home Screen và đang chạy
- * standalone. Mở trong tab Safari thì `Notification` có tồn tại nhưng
- * `requestPermission()` sẽ luôn trả về 'denied' - hỏi lúc đó chỉ làm người
- * dùng mất quyền vĩnh viễn, nên phải chặn từ trước.
- */
-export function isStandalone(): boolean {
-  if (typeof window === 'undefined') return false;
-  const iosStandalone = (window.navigator as { standalone?: boolean }).standalone === true;
-  return iosStandalone || window.matchMedia('(display-mode: standalone)').matches;
-}
 
 export function isIOS(): boolean {
   if (typeof navigator === 'undefined') return false;
