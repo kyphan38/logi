@@ -1,26 +1,27 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Chọn ngày trên màn History
+// logi - Day picker on the History screen
 //
-// Bản cũ là dải 7 ngày CUỘN NGANG (hôm nay ở cuối). Hai vấn đề:
-//   1. 7 ô + nút lịch rộng hơn màn 375px → trang bị kéo ngang, đung đưa
-//   2. "7 ngày gần nhất" vắt qua hai tuần, nên không nhìn ra ranh giới tuần
+// The old version was a SIDE-SCROLLING strip of 7 days (today at the end).
+// Two problems:
+//   1. 7 cells + a calendar button were wider than 375px → the page swayed sideways
+//   2. "Last 7 days" spans two weeks, so week boundaries were invisible
 //
-// Bản này là lưới CỐ ĐỊNH 7 cột: đúng tuần (2 → CN) chứa ngày đang chọn.
-// Không có `overflow-x` ở đâu cả → hết cuộn ngang. Đổi tuần bằng hai nút mũi
-// tên, không bằng vuốt (vuốt là thứ đã gây ra lỗi).
+// This one is a FIXED 7-column grid: the exact week (Mon → Sun) holding the
+// selected day. No `overflow-x` anywhere → no side scroll. Weeks change with
+// two arrow buttons, not swipes (swipes caused the bug).
 // ---------------------------------------------------------------------------
 import { addDays } from '@/lib/timeline';
 import { CATEGORY_COLOR, type Category } from '@/types/logi';
 
-/** Một đoạn của thanh mini: category + phần trăm giờ đã log của ngày đó. */
+/** One segment of the mini bar: category + share of that day's logged hours. */
 export interface DayBar {
   c: Category;
   pct: number;
 }
 
-/** Chữ cái đầu của thứ, bắt đầu từ thứ Hai. */
+/** First letter of each weekday, starting Monday. */
 const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function toDate(date: string): Date {
@@ -28,13 +29,13 @@ function toDate(date: string): Date {
   return new Date(y, m - 1, d);
 }
 
-/** Thứ Hai của tuần chứa `date`. getDay(): 0 = CN, nên CN lùi 6 ngày. */
+/** Monday of the week holding `date`. getDay(): 0 = Sun, so Sunday steps back 6 days. */
 function mondayOf(date: string): string {
   const shift = (toDate(date).getDay() + 6) % 7;
   return addDays(date, -shift);
 }
 
-/** "Aug 24 – 30", vắt tháng thì "Aug 31 – Sep 6". */
+/** "Aug 24 – 30", across months "Aug 31 – Sep 6". */
 function weekLabel(monday: string, sunday: string): string {
   const a = toDate(monday);
   const b = toDate(sunday);
@@ -50,10 +51,10 @@ export default function DateStrip({
   bars,
   onSelect,
 }: {
-  /** Ngày logic hôm nay. Ngày sau mốc này không bấm được. */
+  /** Today's logical day. Days after it cannot be tapped. */
   today: string;
   selected: string;
-  /** date → tỉ lệ category. Thiếu key = ngày chưa log gì. */
+  /** date → category shares. Missing key = nothing logged that day. */
   bars: Record<string, DayBar[]>;
   onSelect: (date: string) => void;
 }) {
@@ -61,11 +62,11 @@ export default function DateStrip({
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   const sunday = days[6];
 
-  // Tuần này là tuần cuối cùng - không có gì để xem ở phía trước.
+  // This week is the last one - nothing ahead to see.
   const atCurrentWeek = monday >= mondayOf(today);
 
-  // Lùi tuần thì đứng ở thứ Hai. Tiến tuần mà vượt hôm nay thì dừng ở hôm nay,
-  // để không bao giờ chọn phải một ngày chưa xảy ra.
+  // Going back lands on Monday. Going forward past today stops at today, so a
+  // day that has not happened is never selected.
   const goWeek = (n: number) => {
     const next = addDays(monday, n * 7);
     onSelect(next > today ? today : next);
@@ -96,7 +97,7 @@ export default function DateStrip({
         </label>
       </div>
 
-      {/* 7 cột chia đều bề rộng - không bao giờ tràn ra ngoài màn hình. */}
+      {/* 7 equal columns - never wider than the screen. */}
       <div className="grid grid-cols-7 gap-1">
         {days.map((d, i) => {
           const active = d === selected;
@@ -119,7 +120,7 @@ export default function DateStrip({
             >
               <span className={active ? '' : 'text-ink-muted'}>{DOW[i]}</span>
               <span className="text-sm font-semibold tabular-nums">{toDate(d).getDate()}</span>
-              {/* Nhìn một cái là thấy ngày nào bị Work nuốt hết. */}
+              {/* One glance shows which days Work swallowed. */}
               <span
                 aria-hidden="true"
                 className="flex w-6 overflow-hidden rounded-full"

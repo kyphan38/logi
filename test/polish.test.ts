@@ -1,4 +1,4 @@
-// Stage 4.6 - phần hình thức nào tách được ra hàm thuần thì test ở đây.
+// Tests for the visual parts that can be pulled out into pure functions.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -18,31 +18,31 @@ test('gauge: fill = actual / target', () => {
   assert.equal(g.dim, false);
 });
 
-test('gauge: vượt target → thanh đầy + vạch hổ phách, KHÔNG tràn', () => {
+test('gauge: over target → full bar + amber mark, does NOT overflow', () => {
   const g = gaugeShape(9, 3);
-  assert.equal(g.fill, 1, 'fill phải bị chặn ở 1');
+  assert.equal(g.fill, 1, 'fill must be capped at 1');
   assert.equal(g.over, true);
 });
 
-test('gauge: đúng bằng target thì chưa tính là vượt', () => {
+test('gauge: exactly at target is not over yet', () => {
   const g = gaugeShape(3, 3);
   assert.equal(g.fill, 1);
   assert.equal(g.over, false);
 });
 
-test('gauge: target 0 (Fitness Chủ nhật) → không vẽ thanh', () => {
+test('gauge: target 0 (Sunday Fitness) → no bar', () => {
   const g = gaugeShape(1.5, 0);
   assert.equal(g.noTarget, true);
   assert.equal(g.fill, 0);
-  assert.equal(g.over, false, 'không có target thì không có gì để vượt');
-  assert.equal(g.dim, false, 'có log thì vẫn phải đọc được');
+  assert.equal(g.over, false, 'no target, nothing to exceed');
+  assert.equal(g.dim, false, 'with logs it must stay readable');
 });
 
-test('gauge: không target, không log → làm mờ cả ô', () => {
+test('gauge: no target, no logs → dim the whole cell', () => {
   assert.equal(gaugeShape(0, 0).dim, true);
 });
 
-test('gauge: fill không bao giờ âm hay NaN', () => {
+test('gauge: fill is never negative or NaN', () => {
   for (const [a, t] of [
     [0, 3],
     [0, 0],
@@ -50,65 +50,65 @@ test('gauge: fill không bao giờ âm hay NaN', () => {
     [-1, 3],
   ] as const) {
     const g = gaugeShape(a, t);
-    assert.ok(Number.isFinite(g.fill), `NaN với (${a}, ${t})`);
-    assert.ok(g.fill >= 0 && g.fill <= 1, `ngoài khoảng với (${a}, ${t})`);
+    assert.ok(Number.isFinite(g.fill), `NaN for (${a}, ${t})`);
+    assert.ok(g.fill >= 0 && g.fill <= 1, `out of range for (${a}, ${t})`);
   }
 });
 
-// --- Chữ tiếng Anh (Task 6) -------------------------------------------
+// --- English copy -------------------------------------------------------
 
-test('mọi preset đều có hint tiếng Anh', () => {
+test('every preset has an English hint', () => {
   for (const id of Object.keys(PRESETS) as (keyof typeof PRESETS)[]) {
     const hint = PRESET_HINT[id];
-    assert.ok(hint, `thiếu hint cho ${id}`);
-    // Dấu thanh tiếng Việt nằm ngoài Latin-1 cơ bản.
-    assert.doesNotMatch(hint, /[À-ỹ]/, `${id} còn tiếng Việt: ${hint}`);
+    assert.ok(hint, `missing hint for ${id}`);
+    // Vietnamese tone marks sit outside basic Latin-1.
+    assert.doesNotMatch(hint, /[À-ỹ]/, `${id} still has Vietnamese: ${hint}`);
   }
 });
 
-test('budgetMessages: vượt ngân sách nói rõ thừa bao nhiêu', () => {
+test('budgetMessages: over budget says by how much', () => {
   const over = { ...PRESETS.normal.weekly, work: PRESETS.normal.weekly.work + 3 };
   const msgs = budgetMessages(over);
   assert.equal(msgs[0], 'Over by 3.0h - reduce another category');
 });
 
-test('budgetMessages: còn thừa giờ chưa phân bổ', () => {
+test('budgetMessages: unallocated hours left', () => {
   const under = { ...PRESETS.normal.weekly, work: PRESETS.normal.weekly.work - 3 };
   assert.equal(budgetMessages(under)[0], '3.0h unallocated');
 });
 
-test('budgetMessages: chạm sàn thì nói tên category', () => {
+test('budgetMessages: hitting the floor names the category', () => {
   const floor = HARD_FLOOR.fitness ?? 0;
   const bad = { ...PRESETS.normal.weekly, fitness: floor - 1, work: PRESETS.normal.weekly.work + 1 };
   const msgs = budgetMessages(bad);
   assert.ok(
     msgs.some((m) => m.includes('Fitness') && m.includes('below')),
-    `không nhắc Fitness: ${msgs.join(' | ')}`,
+    `Fitness not mentioned: ${msgs.join(' | ')}`,
   );
 });
 
-test('budgetMessages im lặng đúng lúc validateTargets nói ok', () => {
-  // Câu chữ ở copy.ts, nhưng LUẬT vẫn phải là của balance.ts.
+test('budgetMessages is silent exactly when validateTargets says ok', () => {
+  // The wording lives in copy.ts, but the RULES still belong to balance.ts.
   for (const id of Object.keys(PRESETS) as (keyof typeof PRESETS)[]) {
     const w = PRESETS[id].weekly;
     assert.equal(
       budgetMessages(w).length === 0,
       validateTargets(w).ok,
-      `lệch nhau ở preset ${id}`,
+      `mismatch on preset ${id}`,
     );
   }
 });
 
-test('tổng preset vẫn đúng ngân sách - copy.ts không đụng vào số', () => {
+test('preset totals still match the budget - copy.ts does not touch numbers', () => {
   for (const id of Object.keys(PRESETS) as (keyof typeof PRESETS)[]) {
     const total = CATEGORIES.reduce((a, c) => a + PRESETS[id].weekly[c], 0);
-    assert.ok(Math.abs(total - TOTAL_BUDGET) < 0.11, `${id} lệch: ${total}`);
+    assert.ok(Math.abs(total - TOTAL_BUDGET) < 0.11, `${id} off: ${total}`);
   }
 });
 
-// --- Token màu (Task 1) -----------------------------------------------
+// --- Color tokens -------------------------------------------------------
 
-test('tint/ink trả về CSS var, không phải hex - để dark mode tự đổi', () => {
+test('tint/ink return CSS vars, not hex - so dark mode switches by itself', () => {
   for (const c of CATEGORIES) {
     assert.match(catTint(c), /^var\(--cat-[a-z]+-tint\)$/);
     assert.match(catInk(c), /^var\(--cat-[a-z]+-ink\)$/);

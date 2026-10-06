@@ -1,13 +1,13 @@
 'use client';
 // ===========================================================================
-// logi - Timeline co giãn (Stage 4.5 Task 2) + block theo token (4.6 Task 5).
+// logi - Elastic timeline (Stage 4.5 Task 2) + token-based blocks (4.6 Task 5).
 //
-// Bố cục là dòng chảy, KHÔNG `position: absolute` chồng nhau - block nào cũng
-// bám mép trái. Khoảng trống dài gộp thành một hàng "untracked".
+// The layout is a flow, NOT overlapping `position: absolute` - every block
+// hugs the left edge. Long gaps merge into one "untracked" row.
 //
-// Hình thức: nền `tint`, viền TRÁI 3px màu gốc, không viền bao quanh.
-// KHÔNG hiện dòng Label ở đây - label vẫn lưu trong DB và vẫn sửa được trong
-// RecordSheet, chỉ là timeline không phải chỗ để đọc nó.
+// Look: `tint` fill, a 3px LEFT border in the base color, no surrounding border.
+// The Label line is NOT shown here - labels are still stored and still
+// editable in RecordSheet, the timeline just is not the place to read them.
 // ===========================================================================
 import { useMemo } from 'react';
 import {
@@ -22,10 +22,10 @@ import {
 import { catInk, catTint } from '@/lib/category-style';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
-/** Cột giờ bên trái. */
+/** The hour column on the left. */
 const LABEL_W = 'w-[42px]';
 
-/** Dưới một phút thì coi như bấm nhầm - hiện nhạt đi, không tô đậm. */
+/** Under a minute counts as a mistap - shown faint, not bold. */
 const ZERO_MS = 60_000;
 
 const hhmm = (ts: number) =>
@@ -107,7 +107,7 @@ function Block({
   const c = s.activity.category;
   const abandoned = s.activity.status === 'abandoned';
   const running = s.activity.endAt === null && s.end >= now - 60_000;
-  // Record dưới một phút: gần như luôn là bấm nhầm start-stop.
+  // A sub-minute record: almost always a start-stop mistap.
   const zero = s.activity.endAt !== null && s.end - s.start < ZERO_MS;
 
   return (
@@ -119,7 +119,7 @@ function Block({
         'px-2 py-1 text-left transition active:scale-[0.99]',
       ].join(' ')}
       style={{
-        // Viền TRÁI 3px màu gốc - đủ để nhận ra category, không cần viền bao quanh.
+        // A 3px LEFT border in the base color - enough to tell the category, no surrounding border.
         borderLeft: `3px solid ${CATEGORY_COLOR[c]}`,
         backgroundColor: catTint(c),
         color: catInk(c),
@@ -137,7 +137,7 @@ function Block({
         className={`block truncate text-[11px] tabular-nums ${zero ? 'text-ink-muted' : 'opacity-80'}`}
       >
         {zero ? '0m' : formatClockRange(s.start, s.end)}
-        {/* Ngủ 22:00 → 04:30: một block duy nhất, chỉ ghi chú là qua ngày. */}
+        {/* Sleep 22:00 → 04:30: one single block, only noted as crossing days. */}
         {!zero && s.crossesMidnight ? (
           <span className="text-ink-muted"> → next day</span>
         ) : null}
@@ -148,7 +148,7 @@ function Block({
   );
 }
 
-/** Ngày hôm nay: mốc "bây giờ" nằm cuối danh sách, không phải một đường kẻ đè lên. */
+/** Today: the "now" mark sits at the end of the list, not a line drawn over it. */
 function DayEnd({ win, now }: { win: DayWindow; now: number }) {
   if (now <= win.start || now >= win.end) return null;
   return (

@@ -3,28 +3,28 @@ import assert from 'node:assert/strict';
 import { dayWindow, addDays, layoutDay, dayGaps, toPx, HOUR_PX } from '@/lib/timeline';
 import { act, at, H } from './_helpers.ts';
 
-test('dayWindow chạy từ 04:00 tới 04:00 hôm sau', () => {
+test('dayWindow runs from 04:00 to 04:00 next day', () => {
   const w = dayWindow('2026-08-26');
   assert.equal(w.start, at('2026-08-26', '04:00'));
   assert.equal(w.end, at('2026-08-27', '04:00'));
   assert.equal(w.end - w.start, 24 * H);
 });
 
-test('addDays vượt qua đầu tháng và đầu năm', () => {
+test('addDays crosses month and year starts', () => {
   assert.equal(addDays('2026-08-31', 1), '2026-09-01');
   assert.equal(addDays('2026-01-01', -1), '2025-12-31');
   assert.equal(addDays('2026-08-26', -30), '2026-07-27');
 });
 
-test('toPx: 04:00 là 0, mỗi giờ là HOUR_PX', () => {
+test('toPx: 04:00 is 0, each hour is HOUR_PX', () => {
   const w = dayWindow('2026-08-26');
   assert.equal(toPx(w.start, w), 0);
   assert.equal(toPx(w.start + H, w), HOUR_PX);
 });
 
-// --- Lane (mục 13: hai record chồng nhau) ----------------------------
+// --- Lanes (section 13: two overlapping records) ----------------------------
 
-test('layoutDay: hai block chồng nhau nằm ở hai lane', () => {
+test('layoutDay: two overlapping blocks go in two lanes', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '23:00');
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
@@ -34,7 +34,7 @@ test('layoutDay: hai block chồng nhau nằm ở hai lane', () => {
   assert.deepEqual(l.segments.map((s) => s.lane), [0, 1]);
 });
 
-test('layoutDay: block cách xa nhau dùng chung lane 0', () => {
+test('layoutDay: blocks far apart share lane 0', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '23:00');
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '10:00') });
@@ -44,16 +44,16 @@ test('layoutDay: block cách xa nhau dùng chung lane 0', () => {
   assert.deepEqual(l.segments.map((s) => s.lane), [0, 0]);
 });
 
-test('layoutDay: hai block 5 phút liền nhau không đè lên nhau', () => {
+test('layoutDay: two back-to-back 5-minute blocks do not overlap', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '23:00');
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '09:05') });
   const b = act({ id: 'b', startAt: at('2026-08-26', '09:05'), endAt: at('2026-08-26', '09:10') });
   const l = layoutDay([a, b], w, now);
-  assert.equal(l.laneCount, 2, 'block quá ngắn nên phải tách lane cho dễ bấm');
+  assert.equal(l.laneCount, 2, 'blocks too short, so split lanes for easy tapping');
 });
 
-test('layoutDay: session tràn qua 04:00 KHÔNG bị cắt (một ca đêm = một hàng)', () => {
+test('layoutDay: session crossing 04:00 is NOT cut (one night shift = one row)', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-27', '10:00');
   const night = act({
@@ -62,11 +62,11 @@ test('layoutDay: session tràn qua 04:00 KHÔNG bị cắt (một ca đêm = m�
     endAt: at('2026-08-27', '06:00'),
   });
   const [s] = layoutDay([night], w, now).segments;
-  assert.equal(s.end, at('2026-08-27', '06:00'), 'giữ nguyên giờ kết thúc thật');
+  assert.equal(s.end, at('2026-08-27', '06:00'), 'keeps the real end time');
   assert.equal(s.crossesMidnight, true);
 });
 
-test('layoutDay: session đang chạy kết thúc ở now', () => {
+test('layoutDay: a running session ends at now', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '15:30');
   const a = act({ startAt: at('2026-08-26', '14:00'), endAt: null });
@@ -75,47 +75,47 @@ test('layoutDay: session đang chạy kết thúc ở now', () => {
   assert.equal(s.crossesMidnight, false);
 });
 
-test('layoutDay: bỏ record nằm ngoài cửa sổ ngày', () => {
+test('layoutDay: drops records outside the day window', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '23:00');
   const a = act({ startAt: at('2026-08-25', '09:00'), endAt: at('2026-08-25', '10:00') });
   assert.equal(layoutDay([a], w, now).segments.length, 0);
 });
 
-// --- Khoảng trống trong ngày (AMENDMENT-remove-sleep mục 6) -----------
+// --- Gaps in the day (AMENDMENT-remove-sleep section 6) -----------
 
-test('dayGaps gộp phần chồng nhau khi tính trackedH', () => {
+test('dayGaps merges overlaps when computing trackedH', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '12:00');
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
   const b = act({ id: 'b', startAt: at('2026-08-26', '10:00'), endAt: at('2026-08-26', '12:00') });
   const { segments } = layoutDay([a, b], w, now);
   const c = dayGaps(segments, w, now);
-  assert.equal(c.trackedH, 3, '09:00–12:00 = 3h, không phải 4h');
-  assert.equal(c.gapH, 0, '04:00–09:00 nằm trước record đầu tiên → không tính');
+  assert.equal(c.trackedH, 3, '09:00–12:00 = 3h, not 4h');
+  assert.equal(c.gapH, 0, '04:00–09:00 is before the first record → not counted');
 });
 
-test('dayGaps: phần trước record đầu và sau record cuối không thành gap', () => {
+test('dayGaps: time before the first and after the last record is not a gap', () => {
   const w = dayWindow('2026-08-26');
-  const now = at('2026-08-28', '12:00'); // đang xem ngày cũ
+  const now = at('2026-08-28', '12:00'); // viewing a past day
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
   const c = dayGaps(layoutDay([a], w, now).segments, w, now);
   assert.equal(c.gapH, 0);
-  assert.equal(c.gaps.length, 0, 'không có dòng "17h untracked" ở cuối');
+  assert.equal(c.gaps.length, 0, 'no "17h untracked" row at the end');
   assert.equal(c.from, at('2026-08-26', '09:00'));
   assert.equal(c.to, at('2026-08-26', '11:00'));
 });
 
-test('dayGaps: hôm nay thì mép phải kéo tới now → khoảng vừa trôi qua là gap', () => {
+test('dayGaps: today the right edge is now → the time just passed is a gap', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '12:00');
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
   const c = dayGaps(layoutDay([a], w, now).segments, w, now);
-  assert.equal(c.gapH, 1, '11:00 → 12:00 đúng là chưa log');
+  assert.equal(c.gapH, 1, '11:00 → 12:00 really is not logged');
   assert.equal(c.gaps.length, 1);
 });
 
-test('dayGaps: khoảng GIỮA hai record thì vẫn tính', () => {
+test('dayGaps: a gap BETWEEN two records still counts', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '18:00');
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
@@ -126,7 +126,7 @@ test('dayGaps: khoảng GIỮA hai record thì vẫn tính', () => {
   assert.equal(c.gaps.length, 1);
 });
 
-test('dayGaps: ngày trống hoàn toàn → không có mốc nào', () => {
+test('dayGaps: a fully empty day → no marks', () => {
   const w = dayWindow('2026-08-26');
   const c = dayGaps([], w, at('2026-08-26', '05:00'));
   assert.equal(c.trackedH, 0);
@@ -135,17 +135,17 @@ test('dayGaps: ngày trống hoàn toàn → không có mốc nào', () => {
   assert.equal(c.to, null);
 });
 
-test('dayGaps chỉ báo khoảng trống từ 30 phút trở lên', () => {
+test('dayGaps only reports gaps of 30 minutes or more', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '12:00');
   const a = act({ startAt: at('2026-08-26', '04:00'), endAt: at('2026-08-26', '09:00') });
   const b = act({ id: 'b', startAt: at('2026-08-26', '09:20'), endAt: at('2026-08-26', '12:00') });
   const { segments } = layoutDay([a, b], w, now);
-  assert.equal(dayGaps(segments, w, now).gaps.length, 0, 'khoảng 20 phút bị bỏ qua');
+  assert.equal(dayGaps(segments, w, now).gaps.length, 0, 'a 20 minute gap is ignored');
 });
 
-// --- A2 (đã sửa bởi AMENDMENT sleep-boundary) --------------------------
-test('layoutDay: record bình thường trong ngày → crossesMidnight = false', () => {
+// --- A2 (changed by AMENDMENT sleep-boundary) ---------------------------
+test('layoutDay: a normal record within the day → crossesMidnight = false', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '12:00');
   const a = act({ startAt: at('2026-08-26', '09:00'), endAt: at('2026-08-26', '11:00') });
@@ -153,7 +153,7 @@ test('layoutDay: record bình thường trong ngày → crossesMidnight = false'
   assert.equal(s.crossesMidnight, false);
 });
 
-test('layoutDay: session hôm trước kết thúc trước 04:00 thì không vẽ', () => {
+test('layoutDay: a session from the day before that ends before 04:00 is not drawn', () => {
   const w = dayWindow('2026-08-26');
   const now = at('2026-08-26', '12:00');
   const a = act({

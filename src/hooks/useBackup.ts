@@ -3,12 +3,12 @@
 // ------------------------------------------------------------
 // logi - Backup (Stage 6 Task 3)
 //
-// Firestore free tier KHÔNG có backup tự động. Sau một năm ghi chép, dữ liệu
-// này không tạo lại được. Hook ở đây lo hai việc: lấy toàn bộ dữ liệu để
-// export, và nhắc export khi đã lâu không làm.
+// Firestore's free tier has NO automatic backup. After a year of logging, this
+// data cannot be recreated. This hook does two things: fetch all data for
+// export, and remind to export when it has been a while.
 //
-// Tất cả đều là đọc MỘT LẦN, không listener: đây là việc thỉnh thoảng mới
-// làm, không cần theo dõi realtime và không đáng thêm quota.
+// Everything is a ONE-TIME read, no listener: this is an occasional task, no
+// need for realtime and not worth the quota.
 // ------------------------------------------------------------
 
 import { useCallback, useEffect, useState } from 'react';
@@ -28,10 +28,10 @@ export interface AllTimeExport {
 }
 
 /**
- * Toàn bộ dữ liệu trong một lần bấm.
+ * All data in one tap.
  *
- * Kèm cả target và sổ nợ để file tự đủ nghĩa: mở file ra là dựng lại được
- * "đã định làm bao nhiêu" và "đang nợ bao nhiêu", không cần app.
+ * Includes targets and the debt ledger so the file stands alone: open it and
+ * you can rebuild "how much was planned" and "how much is owed", no app needed.
  */
 export async function fetchAllTime(uid: string): Promise<AllTimeExport> {
   const [activities, targets, debt] = await Promise.all([
@@ -57,10 +57,10 @@ export async function fetchAllTime(uid: string): Promise<AllTimeExport> {
 const QUIET: ExportNudge = { show: false, text: '', daysAgo: null };
 
 /**
- * Dòng nhắc export ở màn Analytics.
+ * The export reminder line on Analytics.
  *
- * Đọc 2 doc mỗi lần mở màn: `meta/backup` và record cũ nhất. Rẻ, và chỉ chạy
- * khi đã đăng nhập xong.
+ * Reads 2 docs per screen open: `meta/backup` and the oldest record. Cheap,
+ * and only runs once signed in.
  */
 export function useExportNudge(now: number): { nudge: ExportNudge; markDone: () => void } {
   const { user } = useAuth();
@@ -70,7 +70,7 @@ export function useExportNudge(now: number): { nudge: ExportNudge; markDone: () 
   const [firstRecord, setFirstRecord] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
-  // Đổi user thì quên hết ngay trong lúc render, đừng nhắc nhầm người.
+  // User changed → forget everything during render, never remind the wrong person.
   const [prevUid, setPrevUid] = useState(uid);
   if (prevUid !== uid) {
     setPrevUid(uid);
@@ -87,7 +87,7 @@ export function useExportNudge(now: number): { nudge: ExportNudge; markDone: () 
         setFirstRecord(first);
         setReady(true);
       })
-      // Nhắc là việc phụ. Lỗi đọc thì im lặng, không chen vào màn Analytics.
+      // The reminder is secondary. On a read error stay quiet, do not intrude on Analytics.
       .catch(() => {});
     return () => {
       alive = false;

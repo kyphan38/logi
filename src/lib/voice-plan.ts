@@ -1,7 +1,7 @@
 // ============================================================
-// logi - Từ ParsedCommand quyết định làm gì (chưa ghi gì cả).
-// Tách riêng khỏi voice-command.ts vì file này KHÔNG import firebase,
-// nhờ vậy `node --test` chạy thẳng được.
+// logi - Decides what to do from a ParsedCommand (writes nothing yet).
+// Separate from voice-command.ts because this file does NOT import firebase,
+// so `node --test` runs it directly.
 // ============================================================
 
 import { AUTO_COMMIT_THRESHOLD } from '@/lib/gemini-parse';
@@ -11,26 +11,26 @@ import type { Activity } from '@/types/logi';
 export type MissingField = 'category' | 'startAt' | 'endAt' | 'bedtimeAt' | 'target';
 
 export type VoicePlan =
-  /** Đủ tin và đủ field → ghi luôn, kèm toast Undo. */
+  /** Confident and complete → save at once, with an Undo toast. */
   | { kind: 'commit'; cmd: ParsedCommand }
-  /** Chưa chắc hoặc thiếu field → bắt bấm Confirm. */
+  /** Unsure or missing fields → require a Confirm tap. */
   | { kind: 'confirm'; cmd: ParsedCommand; missing: MissingField[] }
-  /** Máy hỏi lại (Task 5). Chỉ được phép xảy ra một lần. */
+  /** The parser asks back (Task 5). May only happen once. */
   | { kind: 'clarify'; cmd: ParsedCommand }
-  /** Không hiểu gì → mở sheet nhập tay. Luôn phải có đường lui. */
+  /** Nothing understood → open the manual sheet. There must always be a way out. */
   | { kind: 'manual'; cmd: ParsedCommand }
-  /** Câu nói về giấc ngủ. App không đo nữa - phải BÁO RÕ, không im lặng bỏ qua. */
+  /** A sentence about sleep. The app no longer tracks it - SAY SO, never skip silently. */
   | { kind: 'retired'; cmd: ParsedCommand; message: string };
 
-/** Câu trả lời duy nhất cho một câu nói về giấc ngủ. */
+/** The only reply to a sentence about sleep. */
 export const SLEEP_RETIRED_MESSAGE = 'Sleep is no longer tracked.';
 
-/** Model bó tay với một câu về GIỜ ĐI NGỦ: không mở sheet activity (ghi vào đó
- *  là tạo session nhầm), chỉ đường tới nút bedtime ở Now. */
+/** The model gave up on a BEDTIME sentence: do not open the activity sheet (saving
+ *  there makes a wrong session), just point to the bedtime button on Now. */
 export const BEDTIME_FALLBACK_MESSAGE = 'Tap the bedtime button in Now to log it.';
 
-/** "bedtime", "went to bed", "going to bed" - mốc đi ngủ, KHÁC với "slept",
- *  "nap", "woke up" (những thứ đó vẫn là retired). */
+/** "bedtime", "went to bed", "going to bed" - a bedtime mark, DIFFERENT from
+ *  "slept", "nap", "woke up" (those are still retired). */
 const BEDTIME_WORDS = /\b(bedtime|went to bed|go to bed|going to bed|off to bed)\b/i;
 
 export function mentionsBedtime(transcript: string): boolean {
@@ -38,9 +38,9 @@ export function mentionsBedtime(transcript: string): boolean {
 }
 
 /**
- * Chỉ soi `transcript`, và CHỈ khi model đã bó tay (`intent === 'unknown'`).
- * Soi mọi câu thì "I stopped work and went to sleep" cũng bị nuốt mất, trong
- * khi đó là một lệnh stop hoàn toàn hợp lệ.
+ * Only checks `transcript`, and ONLY when the model gave up (`intent === 'unknown'`).
+ * Checking every sentence would swallow "I stopped work and went to sleep",
+ * which is a perfectly valid stop command.
  */
 const SLEEP_WORDS =
   /\b(sleep|sleeping|slept|asleep|nap|napping|napped|bedtime|went to bed|go to bed|woke up|wake up|snooze)\b/i;
@@ -49,11 +49,11 @@ export function mentionsSleep(transcript: string): boolean {
   return SLEEP_WORDS.test(transcript);
 }
 
-/** Field bắt buộc theo từng loại câu. */
+/** Required fields per sentence type. */
 function requiredOf(cmd: ParsedCommand): MissingField[] {
   switch (cmd.intent) {
     case 'start':
-      return ['category']; // không nói giờ thì mặc định là bây giờ
+      return ['category']; // no time given means now
     case 'schedule':
       return ['category', 'startAt'];
     case 'log_past':
@@ -79,18 +79,18 @@ function missingOf(cmd: ParsedCommand): MissingField[] {
 }
 
 export interface PlanContext {
-  /** Session đang chạy, để đoán target cho "stop" / "edit". */
+  /** Running sessions, to guess the target for "stop" / "edit". */
   active: Pick<Activity, 'id'>[];
-  /** Record vừa ghi xong (còn hạn) - "no, that was learning" sửa cái này. */
+  /** The record just written (still fresh) - "no, that was learning" edits it. */
   lastCreatedId?: string | null;
-  /** Đã hỏi lại một lần rồi. Hỏi vòng hai là người dùng bỏ dùng voice. */
+  /** Already asked back once. A second round makes users stop using voice. */
   asked?: boolean;
 }
 
 export function planVoice(cmd: ParsedCommand, ctx: PlanContext): VoicePlan {
   if (cmd.intent === 'unknown') {
-    // Câu về giờ đi ngủ mà model không parse được: vẫn KHÔNG mở sheet
-    // activity. Sheet đó mà ghi là thành một session leisure nhầm.
+    // A bedtime sentence the model could not parse: still do NOT open the
+    // activity sheet. Saving there would make a wrong leisure session.
     if (mentionsBedtime(cmd.transcript)) {
       return { kind: 'retired', cmd, message: BEDTIME_FALLBACK_MESSAGE };
     }
@@ -99,18 +99,18 @@ export function planVoice(cmd: ParsedCommand, ctx: PlanContext): VoicePlan {
       : { kind: 'manual', cmd };
   }
   if (cmd.intent === 'clarify') {
-    // Hỏi lần hai thì thôi, mở sheet nhập tay cho nhanh.
+    // A second question is too many; open the manual sheet instead.
     return ctx.asked ? { kind: 'manual', cmd } : { kind: 'clarify', cmd };
   }
 
   let next = cmd;
 
-  // Vừa ghi xong rồi nói tiếp "no, that was learning" → sửa record đó.
+  // Just saved, then "no, that was learning" → edit that record.
   if (next.intent === 'edit' && next.targetActivityId === null && ctx.lastCreatedId) {
     next = { ...next, targetActivityId: ctx.lastCreatedId };
   }
 
-  // "Done" mà chỉ có đúng một session đang chạy → khỏi hỏi, chắc chắn là cái đó.
+  // "Done" with exactly one running session → no question, it must be that one.
   if (
     (next.intent === 'stop' || next.intent === 'edit') &&
     next.targetActivityId === null &&
@@ -122,15 +122,15 @@ export function planVoice(cmd: ParsedCommand, ctx: PlanContext): VoicePlan {
   const missing = missingOf(next);
   if (missing.length > 0) return { kind: 'confirm', cmd: next, missing };
 
-  // Ghi vào QUÁ KHỨ thì luôn phải bấm Confirm, dù model có chắc tới đâu.
+  // Logging into the PAST always needs Confirm, however sure the model is.
   //
-  // "I read for two hours last night" nói ĐỘ DÀI chứ không nói GIỜ. Model vẫn
-  // phải trả về startAt/endAt nên nó đoán - và đoán xong thì commit im lặng,
-  // lịch sử có một record giờ giả mà người dùng không hề biết. Câu nói rõ giờ
-  // ("from 8 AM to 11 AM") cũng đi qua đây, nhưng chỉ tốn một cú chạm: card đã
-  // điền sẵn, sửa được trước khi lưu.
+  // "I read for two hours last night" gives a DURATION, not TIMES. The model
+  // must still return startAt/endAt, so it guesses - and then commits silently,
+  // leaving a record with fake times the user never knew about. Sentences with
+  // clear times ("from 8 AM to 11 AM") pass here too, but cost only one tap:
+  // the card is prefilled and editable before saving.
   //
-  // start/stop/edit KHÔNG bị chặn - chúng sửa hiện tại, sai thì thấy ngay.
+  // start/stop/edit are NOT blocked - they change the present, mistakes show at once.
   if (next.intent === 'log_past') return { kind: 'confirm', cmd: next, missing: [] };
 
   if (next.confidence >= AUTO_COMMIT_THRESHOLD) return { kind: 'commit', cmd: next };

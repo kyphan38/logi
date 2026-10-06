@@ -6,14 +6,14 @@ import * as fn from '../functions/src/time.ts';
 import { at } from './_helpers.ts';
 
 // ---------------------------------------------------------------------------
-// Cloud Function chạy tách khỏi app nên phải chép lại quy ước ngày logic.
-// Hai bản chép nào rồi cũng trôi khỏi nhau - trừ khi có test giữ chúng lại.
+// The Cloud Function runs apart from the app, so it copies the logical-day
+// rules. Any two copies drift apart - unless a test holds them together.
 //
-// Lệch một ngày ở đây nghĩa là push nhắc sai ngày, hoặc "tuần này" trong thông
-// báo không phải tuần đang hiện trong app.
+// A one-day mismatch means a push on the wrong day, or "this week" in a
+// notification not matching the week shown in the app.
 // ---------------------------------------------------------------------------
 
-/** Quét từng giờ trong nhiều ngày, gồm cả mốc 04:00 và giao thừa. */
+/** Every hour over many days, including the 04:00 mark and New Year's Eve. */
 function everyHour(from: string, days: number): number[] {
   const out: number[] = [];
   const start = at(from, '00:00');
@@ -22,39 +22,39 @@ function everyHour(from: string, days: number): number[] {
 }
 
 const SPANS = [
-  ...everyHour('2026-08-24', 14), // tuần thường
-  ...everyHour('2026-12-28', 10), // qua năm: 2026-W53 → 2027-W01
+  ...everyHour('2026-08-24', 14), // a normal week
+  ...everyHour('2026-12-28', 10), // across years: 2026-W53 → 2027-W01
   ...everyHour('2027-01-01', 7),
 ];
 
-test('logicalDate của function khớp app từng giờ một', () => {
+test('function logicalDate matches the app hour by hour', () => {
   for (const ts of SPANS) {
-    assert.equal(fn.logicalDate(ts), logicalDate(ts), `lệch tại ${new Date(ts).toISOString()}`);
+    assert.equal(fn.logicalDate(ts), logicalDate(ts), `differs at ${new Date(ts).toISOString()}`);
   }
 });
 
-test('logicalWeek khớp app, kể cả tuần vắt qua năm', () => {
+test('logicalWeek matches the app, including weeks across years', () => {
   for (const ts of SPANS) {
-    assert.equal(fn.logicalWeek(ts), logicalWeek(ts), `lệch tại ${new Date(ts).toISOString()}`);
+    assert.equal(fn.logicalWeek(ts), logicalWeek(ts), `differs at ${new Date(ts).toISOString()}`);
   }
 });
 
-test('logicalWeekday khớp app - Chủ nhật phải là 0 ở cả hai nơi', () => {
+test('logicalWeekday matches the app - Sunday is 0 in both', () => {
   for (const ts of SPANS) {
     assert.equal(fn.logicalWeekday(ts), logicalWeekday(ts));
   }
 });
 
-test('markAt trả đúng mốc giờ địa phương', () => {
+test('markAt returns the right local time', () => {
   assert.equal(fn.markAt('2026-08-26', 6, 15), at('2026-08-26', '06:15'));
   assert.equal(fn.markAt('2026-08-26', 20, 45), at('2026-08-26', '20:45'));
 });
 
-test('dayStart là 04:00, không phải nửa đêm', () => {
+test('dayStart is 04:00, not midnight', () => {
   assert.equal(fn.dayStart('2026-08-26'), at('2026-08-26', '04:00'));
 });
 
-test('03:59 vẫn thuộc ngày hôm trước ở cả hai bản', () => {
+test('03:59 still belongs to the previous day in both copies', () => {
   const ts = at('2026-08-26', '03:59');
   assert.equal(fn.logicalDate(ts), '2026-08-25');
   assert.equal(fn.logicalDate(ts), logicalDate(ts));

@@ -2,8 +2,8 @@ rules_version = '2';
 
 // ============================================================
 // logi - Firestore Security Rules
-// App cá nhân một người dùng: allowlist theo UID + ownership theo path.
-// Giữ nguyên pattern users/{uid}/... của COGI/MESI.
+// Single-user personal app: UID allowlist + path ownership.
+// Same users/{uid}/... pattern as COGI/MESI.
 // ============================================================
 
 service cloud.firestore {
@@ -14,7 +14,7 @@ service cloud.firestore {
     }
 
     function validCategory(c) {
-      // 'sleep' đã ngưng dùng (AMENDMENT-remove-sleep). Rules chặn ghi mới.
+      // 'sleep' is retired (AMENDMENT-remove-sleep). Rules block new writes.
       return c in ['learn', 'work', 'fitness', 'leisure'];
     }
 
@@ -24,18 +24,18 @@ service cloud.firestore {
         && d.status in ['scheduled', 'active', 'done', 'abandoned']
         && d.startAt is number
         && (d.endAt == null || (d.endAt is number && d.endAt > d.startAt))
-        // Chặn record vô lý ngay ở tầng DB, không tin client
+        // Block nonsense records at the DB layer, do not trust the client
         && (d.endAt == null || d.endAt - d.startAt <= 15 * 60 * 60 * 1000)
         && d.logicalDate is string
         && d.logicalWeek is string
-        // Stage 8 (đã gỡ): record cũ còn `taskId`. App không ghi field này
-        // nữa, nhưng update record cũ vẫn phải qua được.
+        // Old records may still have `taskId`. The app no longer writes it,
+        // but updates to old records must still pass.
         && (!d.keys().hasAny(['taskId']) || d.taskId == null || d.taskId is string);
     }
 
-    // Stage 10 - nhóm routine. Mục nằm trong mảng `items`; rules không lặp
-    // được trên list, nên chỉ kiểm hình dạng mục đầu - cả mảng do một hàm
-    // duy nhất (`saveItems`) sinh ra.
+    // Routine groups. Items live in the `items` array; rules cannot loop over
+    // a list, so only the first item's shape is checked. The whole array is
+    // built by one function (`saveItems`).
     function validRoutineItem(i) {
       return i.keys().hasAll(['id', 'text', 'days'])
         && i.id is string
@@ -61,10 +61,10 @@ service cloud.firestore {
     function validEvent(d) {
       return d.keys().hasAll(['title', 'date', 'archivedAt'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 60
-        // "2026-10-15". Rules không có regex ngày, nên kiểm độ dài + hai gạch.
+        // "2026-10-15". Rules have no date regex, so check length + two dashes.
         && d.date is string && d.date.size() == 10
         && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
-        // Giờ là tuỳ chọn. "11:30" - 24 tiếng, luôn 5 ký tự.
+        // Time is optional. "11:30" - 24h, always 5 characters.
         && (!d.keys().hasAny(['time']) || d.time == null
             || (d.time is string && d.time.matches('([01][0-9]|2[0-3]):[0-5][0-9]')))
         && (!d.keys().hasAny(['note']) || d.note == null
@@ -90,15 +90,15 @@ service cloud.firestore {
       // weekTargets/{week} - VD "2026-W35"
       match /weekTargets/{week} {
         allow read: if isOwner(uid);
-        // Tuần đã đóng sổ (21:00 CN) thì không sửa được nữa
+        // A closed week (Sunday 21:00) can no longer be edited
         allow create: if isOwner(uid);
         allow update: if isOwner(uid)
           && (resource.data.lockedAt == null);
         allow delete: if false;
       }
 
-      // taskPool / weekPlans - task tuần Stage 8, đã gỡ khỏi app. Dữ liệu cũ
-      // giữ nguyên để còn đọc được, nhưng không ai ghi vào nữa.
+      // taskPool / weekPlans - weekly tasks, removed from the app. Old data
+      // stays readable, but nothing writes to it anymore.
       match /taskPool/{taskId} {
         allow read: if isOwner(uid);
         allow write: if false;
@@ -108,33 +108,33 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // routines/{groupId} - Stage 10, template routine lặp lại theo thứ.
-      // Xoá = set archivedAt, giống events.
+      // routines/{groupId} - routine templates repeating by weekday.
+      // Delete = set archivedAt, like events.
       match /routines/{groupId} {
         allow read: if isOwner(uid);
         allow create, update: if isOwner(uid) && validRoutine(request.resource.data);
         allow delete: if false;
       }
 
-      // routineChecks/{logicalDate} - VD "2026-09-26". Tick của một ngày.
-      // Ngày mới = doc mới, nên "reset" không cần xoá gì.
+      // routineChecks/{logicalDate} - e.g. "2026-09-26". Ticks for one day.
+      // A new day = a new doc, so "reset" needs no delete.
       match /routineChecks/{date} {
         allow read: if isOwner(uid);
         allow create, update: if isOwner(uid) && validRoutineCheck(request.resource.data);
         allow delete: if false;
       }
 
-      // dayLogs/{logicalDate} - VD "2026-08-26". Mốc bedtime sống ở đây,
-      // KHÔNG phải trong activities.
+      // dayLogs/{logicalDate} - e.g. "2026-08-26". The bedtime mark lives here,
+      // NOT in activities.
       match /dayLogs/{date} {
         allow read: if isOwner(uid);
         allow create, update: if isOwner(uid) && validDayLog(request.resource.data);
         allow delete: if false;
       }
 
-      // events/{eventId} - Stage 9, sự kiện sắp tới của tab Reminder.
-      // Xoá = set archivedAt: doc phải ở lại để `notified` không bị reset,
-      // nếu không thì khôi phục một việc sẽ bắn lại mọi mốc đã gửi.
+      // events/{eventId} - upcoming events of the Reminder tab.
+      // Delete = set archivedAt: the doc must stay so `notified` is not reset,
+      // otherwise restoring an item would resend every offset already sent.
       match /events/{eventId} {
         allow read: if isOwner(uid);
         allow create, update: if isOwner(uid) && validEvent(request.resource.data);
@@ -147,13 +147,13 @@ service cloud.firestore {
         allow read, write: if isOwner(uid);
       }
 
-      // insights/{from_to} - nhận xét AI đã sinh, cache theo digestHash
+      // insights/{from_to} - generated AI insights, cached by digestHash
       match /insights/{insightId} {
         allow read, write: if isOwner(uid);
       }
     }
 
-    // Mọi thứ còn lại: cấm
+    // Everything else: denied
     match /{document=**} {
       allow read, write: if false;
     }

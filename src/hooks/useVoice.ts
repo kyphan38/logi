@@ -1,8 +1,8 @@
 'use client';
 
 // ============================================================
-// logi - Nối nút mic với /api/parse rồi ghi qua activities.ts.
-// Giữ toàn bộ luồng ở một chỗ để trang Now không phình ra.
+// logi - Connects the mic button to /api/parse, then writes via activities.ts.
+// Keeps the whole flow in one place so the Now page does not bloat.
 // ============================================================
 
 import { useCallback, useRef, useState } from 'react';
@@ -19,7 +19,7 @@ export interface VoicePending {
   requestId: string;
 }
 
-/** Máy hỏi lại đúng một câu (Task 5). */
+/** The parser asks back exactly one question (Task 5). */
 export interface VoiceClarify {
   question: string;
   options: string[];
@@ -29,10 +29,10 @@ export interface VoiceClarify {
 
 type Push = (message: string, action?: { label: string; run: () => void }) => void;
 
-/** Sau ngần này thì coi như mạng chết, cho người dùng bấm lại. */
+/** After this long, assume the network is dead and let the user retry. */
 const WRITE_TIMEOUT_MS = 8_000;
 
-/** Nói tiếp trong 5 phút thì hiểu là đang sửa record vừa ghi. Lâu hơn thì thôi. */
+/** Speaking again within 5 minutes means editing the record just made. Later, it does not. */
 const LAST_CREATED_TTL_MS = 5 * 60_000;
 
 function msg(e: unknown): string {
@@ -46,7 +46,7 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
   const [pending, setPending] = useState<VoicePending | null>(null);
   const [clarify, setClarify] = useState<VoiceClarify | null>(null);
 
-  // Record vừa ghi xong, để "no, that was learning" biết sửa cái nào.
+  // The record just written, so "no, that was learning" knows what to fix.
   const lastCreated = useRef<{ id: string; at: number } | null>(null);
   const lastCreatedId = useCallback((): string | null => {
     const last = lastCreated.current;
@@ -54,9 +54,9 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
     return Date.now() - last.at < LAST_CREATED_TTL_MS ? last.id : null;
   }, []);
 
-  // Cùng một requestId chỉ được ghi một lần. Bấm Confirm hai lần, hay
-  // MicButton bắn onResult lại sau khi mạng chập chờn, đều không tạo bản trùng.
-  // Ghi hỏng thì `once` tự nhả id ra, người dùng thử lại được đúng câu đó.
+  // One requestId writes only once. Tapping Confirm twice, or MicButton firing
+  // onResult again after a flaky network, never makes a duplicate.
+  // If the write fails, `once` releases the id, so the same sentence can be retried.
   const once = useRef(createOnce());
   const commit = useCallback(
     async (cmd: ParsedCommand, requestId: string) => {
@@ -65,16 +65,16 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
       setSaving(true);
       try {
         await once.current.run(requestId, async () => {
-          // Cố tình KHÔNG dùng capWait ở đây. capWait bỏ promise thật, nên mất
-          // hàm undo. Luồng giọng nói vừa gọi server xong nên chắc chắn có mạng.
+          // Deliberately NO capWait here. capWait drops the real promise, losing
+          // the undo function. The voice flow just called the server, so the network is up.
           const done = await Promise.race([
             applyVoice(uid, cmd),
             new Promise<never>((_, rej) =>
               setTimeout(() => rej(new Error('Saving took too long.')), WRITE_TIMEOUT_MS)
             ),
           ]);
-          // Bedtime không có activity (`activityId` rỗng) nên không sửa tiếp
-          // bằng voice được - giữ lastCreated cũ thay vì trỏ vào chỗ trống.
+          // Bedtime has no activity (`activityId` is empty), so it cannot be
+          // edited by voice next - keep the old lastCreated instead of pointing at nothing.
           if (done.activityId) lastCreated.current = { id: done.activityId, at: Date.now() };
           else lastCreated.current = null;
           setPending(null);
@@ -82,7 +82,7 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
           push(done.message, {
             label: 'Undo',
             run: () => {
-              // Sửa xong lại Undo thì record cũ vẫn còn đó, đừng trỏ vào bản đã bỏ.
+              // After an edit is undone the old record is still there; do not point at the dropped one.
               lastCreated.current = null;
               void done.undo().catch((e) => push(`Could not undo. ${msg(e)}`));
             },
@@ -97,7 +97,7 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
     [uid, push]
   );
 
-  /** Người dùng sửa trong thẻ rồi bấm Confirm. */
+  /** The user edited the card and tapped Confirm. */
   const confirmPending = useCallback(
     (edited: ParsedCommand) => {
       if (!pending) return;
@@ -110,8 +110,8 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
   const cancelClarify = useCallback(() => setClarify(null), []);
 
   /**
-   * Quyết định xong thì làm. `asked` = đã hỏi lại một lần rồi, lần này bí thì
-   * mở sheet nhập tay chứ không hỏi vòng hai.
+   * Act once decided. `asked` = already asked back once; if still stuck, open
+   * the manual sheet instead of a second question.
    */
   const runPlan = useCallback(
     async (cmd: ParsedCommand, requestId: string, asked: boolean, onManual: () => void) => {
@@ -122,13 +122,13 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
       });
 
       if (plan.kind === 'commit') {
-        // `plan.cmd`, không phải `cmd`: planVoice có thể đã điền targetActivityId.
+        // `plan.cmd`, not `cmd`: planVoice may have filled in targetActivityId.
         setClarify(null);
         await commit(plan.cmd, requestId);
       } else if (plan.kind === 'confirm') {
         setClarify(null);
-        // Card tự tính lại field nào còn thiếu theo giá trị đang gõ,
-        // nên `plan.missing` chỉ dùng để quyết định có hỏi hay không.
+        // The card recomputes missing fields from what is typed,
+        // so `plan.missing` only decides whether to ask.
         setPending({ cmd: plan.cmd, requestId });
       } else if (plan.kind === 'clarify') {
         setClarify({
@@ -138,8 +138,8 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
           requestId,
         });
       } else if (plan.kind === 'retired') {
-        // Nói về giấc ngủ. Phải nói thẳng là app không đo nữa - im lặng mở
-        // sheet nhập tay sẽ khiến người dùng tưởng máy nghe nhầm và nói lại.
+        // Talking about sleep. Say plainly the app no longer tracks it - silently
+        // opening the manual sheet makes the user think it misheard and repeat.
         setClarify(null);
         push(plan.message);
       } else {
@@ -175,8 +175,8 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
           | null;
 
         if (!res.ok || !body) {
-          // Server chối (hết lượt, quá dài, key hỏng) - đừng bỏ người dùng
-          // giữa chừng, mở luôn sheet để ghi tay.
+          // The server refused (quota, too long, broken key) - do not abandon the
+          // user midway, open the sheet to log by hand.
           push(body?.error ?? 'Voice failed. Fill it in instead.');
           onManual();
           return;
@@ -184,7 +184,7 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
 
         await runPlan(body, requestId, false, onManual);
       } catch (e) {
-        // Mất mạng: fetch ném ngay. Vẫn phải ghi được bằng tay.
+        // Offline: fetch throws at once. Manual logging must still work.
         push(`Voice failed. ${msg(e)}`);
         onManual();
       } finally {
@@ -195,9 +195,9 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
   );
 
   /**
-   * Bấm một nút trong câu hỏi. Gửi lựa chọn về cho parser đọc lại cùng câu gốc -
-   * chỉ nó mới biết "10:00 PM" là intent gì. Giữ nguyên requestId để một câu nói
-   * vẫn chỉ ghi được một record.
+   * A choice tapped in the question. Send it back to the parser with the
+   * original sentence - only it knows what intent "10:00 PM" is. Keep the
+   * requestId so one sentence still writes only one record.
    */
   const answerClarify = useCallback(
     async (option: string, onManual: () => void) => {

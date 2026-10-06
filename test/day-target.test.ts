@@ -15,19 +15,19 @@ const zero = () =>
 
 // --- dailyTargetFor ---------------------------------------------------------
 
-test('dailyTargetFor: thứ Ba preset Normal → Work 9.5 (8h + 1.5h commute)', () => {
+test('dailyTargetFor: Tuesday on Normal → Work 9.5 (8h + 1.5h commute)', () => {
   const t = dailyTargetFor(TUE, PRESETS.normal.weekly);
-  assert.equal(+t.work.toFixed(2), 9.5, 'không được ra 8.0');
+  assert.equal(+t.work.toFixed(2), 9.5, 'must not be 8.0');
   assert.equal(+t.learn.toFixed(2), 3.0);
 });
 
-test('dailyTargetFor: Chủ nhật → Learn 8.0, Fitness 0', () => {
+test('dailyTargetFor: Sunday → Learn 8.0, Fitness 0', () => {
   const t = dailyTargetFor(SUN, PRESETS.normal.weekly);
   assert.equal(+t.learn.toFixed(2), 8.0);
-  assert.equal(t.fitness, 0, 'CN nghỉ tập');
+  assert.equal(t.fitness, 0, 'Sunday is a rest day');
 });
 
-test('dailyTargetFor: tổng 7 ngày = weekly target, với mọi preset', () => {
+test('dailyTargetFor: the 7-day sum = the weekly target, for every preset', () => {
   for (const id of ['normal', 'crunch', 'deep_learn', 'recovery'] as const) {
     const weekly = PRESETS[id].weekly;
     for (const c of CATEGORIES) {
@@ -35,23 +35,23 @@ test('dailyTargetFor: tổng 7 ngày = weekly target, với mọi preset', () =>
       for (let dow = 0; dow < 7; dow++) sum += dailyTargetFor(dow, weekly)[c];
       assert.ok(
         Math.abs(sum - weekly[c]) < 0.001,
-        `${id}/${c}: 7 ngày = ${sum.toFixed(2)} nhưng weekly = ${weekly[c]}`
+        `${id}/${c}: 7 days = ${sum.toFixed(2)} but weekly = ${weekly[c]}`
       );
     }
   }
 });
 
-test('dailyTargetFor: Crunch scale đúng tỉ lệ, giữ hình dạng tuần', () => {
+test('dailyTargetFor: Crunch scales correctly, keeping the week shape', () => {
   const weekly = PRESETS.crunch.weekly;
   const scale = weekly.work / BASELINE_WEEKLY.work;
   const normalTue = dailyTargetFor(TUE, PRESETS.normal.weekly);
   const crunchTue = dailyTargetFor(TUE, weekly);
   assert.ok(Math.abs(crunchTue.work - normalTue.work * scale) < 0.001);
-  assert.ok(crunchTue.work > normalTue.work, 'Crunch phải kéo Work lên');
+  assert.ok(crunchTue.work > normalTue.work, 'Crunch must raise Work');
 });
 
-test('dailyTargetFor: khớp với expectedHours() - không được lệch công thức', () => {
-  // Thứ Ba 20:00 → đã qua T2, và T3 mới đi được một phần.
+test('dailyTargetFor: matches expectedHours() - the formula must not drift', () => {
+  // Tuesday 20:00 → Monday has passed, and Tuesday is only partly done.
   const now = at('2026-09-01', '20:00');
   const weekly = PRESETS.normal.weekly;
   const exp = expectedHours(weekly, now);
@@ -64,7 +64,7 @@ test('dailyTargetFor: khớp với expectedHours() - không được lệch côn
       if (dow === todayDow) break;
       sum += dailyTargetFor(dow, weekly)[c];
     }
-    // phần hôm nay đã pro-rate nằm trong `exp`, nên chỉ so phần ngày đã trọn.
+    // Today's pro-rated part is in `exp`, so only compare the full days.
     assert.ok(sum <= exp[c] + 0.001, `${c}: ${sum} > ${exp[c]}`);
     assert.ok(exp[c] - sum <= dailyTargetFor(todayDow, weekly)[c] + 0.001, c);
   }
@@ -72,30 +72,30 @@ test('dailyTargetFor: khớp với expectedHours() - không được lệch côn
 
 // --- daySummary -------------------------------------------------------------
 
-test('daySummary: chưa có weekTarget → rỗng, để UI quay về dòng cũ', () => {
+test('daySummary: no weekTarget → empty, so the UI falls back to the old line', () => {
   assert.deepEqual(daySummary(zero(), null, TUE), []);
 });
 
-test('daySummary: CN không có Fitness và chưa log → không hiện Fitness', () => {
+test('daySummary: Sunday with no Fitness and nothing logged → Fitness hidden', () => {
   const lines = daySummary(zero(), PRESETS.normal.weekly, SUN);
   assert.equal(
     lines.find((l) => l.category === 'fitness'),
     undefined
   );
-  assert.ok(lines.find((l) => l.category === 'learn'), 'CN vẫn phải có Learn');
+  assert.ok(lines.find((l) => l.category === 'learn'), 'Sunday must still have Learn');
 });
 
-test('daySummary: CN không có target Fitness nhưng có log → vẫn hiện', () => {
+test('daySummary: Sunday has no Fitness target but has logs → still shown', () => {
   const actual = { ...zero(), fitness: 1 };
   const line = daySummary(actual, PRESETS.normal.weekly, SUN).find(
     (l) => l.category === 'fitness'
   );
   assert.ok(line);
   assert.equal(line.target, 0);
-  assert.equal(line.low, false, 'target 0 thì không thể "thiếu"');
+  assert.equal(line.low, false, 'a target of 0 cannot be "short"');
 });
 
-test('daySummary: không có doneBefore → mẫu số là standard, không nhảy số', () => {
+test('daySummary: no doneBefore → the denominator is the standard, no jumping', () => {
   const actual = { ...zero(), work: 4 };
   const ls = daySummary(actual, PRESETS.normal.weekly, TUE);
   const w = ls.find((l) => l.category === 'work')!;
@@ -103,17 +103,17 @@ test('daySummary: không có doneBefore → mẫu số là standard, không nh�
   assert.equal(+w.standard.toFixed(2), 9.5);
 });
 
-test('daySummary: có doneBefore → mẫu số là gợi ý bù, standard vẫn giữ nguyên', () => {
+test('daySummary: with doneBefore → the denominator is the catch-up suggestion, the standard stays', () => {
   const weekly = PRESETS.normal.weekly;
-  // Thứ Hai học 10h, standard chỉ 3h → thứ Ba phải nhẹ đi.
+  // Monday had 10h of study, the standard is only 3h → Tuesday must be lighter.
   const before = { ...zero(), learn: 10 };
   const ls = daySummary(zero(), weekly, TUE, before);
   const l = ls.find((c) => c.category === 'learn')!;
-  assert.equal(+l.standard.toFixed(1), 3, 'standard không đổi');
-  assert.ok(l.target < l.standard, `bù rồi thì nhẹ hơn, target=${l.target}`);
+  assert.equal(+l.standard.toFixed(1), 3, 'the standard does not change');
+  assert.ok(l.target < l.standard, `after catching up it is lighter, target=${l.target}`);
 });
 
-test('daySummary: dưới 50% target → low; đạt hoặc vượt → không low', () => {
+test('daySummary: under 50% of target → low; met or over → not low', () => {
   const weekly = PRESETS.normal.weekly;
   const target = dailyTargetFor(TUE, weekly).work; // 9.5
 

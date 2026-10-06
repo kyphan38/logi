@@ -18,32 +18,32 @@ function press(over: Partial<Press> = {}): Press {
   };
 }
 
-test('chạm thật: di chuyển 4px, 200ms → kích hoạt', () => {
+test('real tap: moves 4px, 200ms → fires', () => {
   const p = press({ upX: 103, upY: 202.6, upAt: T + 200 });
   assert.ok(pressDistance(p) < 5);
   assert.equal(isRealTap(p), true);
 });
 
-test('vuốt: di chuyển 25px → không kích hoạt', () => {
+test('swipe: moves 25px → does not fire', () => {
   assert.equal(isRealTap(press({ upY: 225 })), false);
 });
 
-test('vuốt chéo cũng là vuốt: 12px ngang + 12px dọc', () => {
+test('diagonal swipe is still a swipe: 12px across + 12px down', () => {
   assert.equal(isRealTap(press({ upX: 112, upY: 212 })), false);
 });
 
-test('giữ lâu: 700ms → không kích hoạt', () => {
+test('long press: 700ms → does not fire', () => {
   assert.equal(isRealTap(press({ upAt: T + 700 })), false);
 });
 
-test('trong 300ms sau scroll → không kích hoạt', () => {
+test('within 300ms after scroll → does not fire', () => {
   assert.equal(isRealTap(press({ lastScrollAt: T + 20 })), false);
 });
 
-test('quá 300ms sau scroll → kích hoạt lại bình thường', () => {
+test('over 300ms after scroll → fires as normal', () => {
   assert.equal(isRealTap(press({ upAt: T + 400, lastScrollAt: T })), true);
 });
 
-test('chưa cuộn lần nào thì lớp thứ ba không chặn gì', () => {
+test('with no scroll yet the third layer blocks nothing', () => {
   assert.equal(isRealTap(press({ lastScrollAt: null })), true);
 });

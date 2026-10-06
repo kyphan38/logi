@@ -1,13 +1,13 @@
 'use client';
 
 // ============================================================
-// logi - Màn hình Reminder (Stage 9)
+// logi - Reminder screen (Stage 9)
 //
-// Những mốc người dùng TỰ gõ vào: hạn nộp, lịch khám, đám cưới. Khác hẳn nhắc
-// thói quen ở `@/lib/reminders` - cái đó app tự suy ra từ activity.
+// Dates the user types in THEMSELVES: deadlines, checkups, weddings. Very
+// different from the habit nudges in `@/lib/reminders`, which the app infers.
 //
-// Sắp tới ở trên, gần nhất lên đầu. Việc đã qua gấp lại ở dưới cùng: giữ được
-// để xoá, nhưng không chiếm chỗ của thứ còn dùng được.
+// Upcoming on top, nearest first. Past items fold at the bottom: kept so they
+// can be deleted, but not taking space from what is still useful.
 // ============================================================
 
 import { useCallback, useState } from 'react';
@@ -30,7 +30,7 @@ import {
 } from '@/lib/event-store';
 import { MAX_EVENTS, MILESTONES, type EventItem } from '@/types/logi';
 
-/** null = đóng, 'new' = thêm mới, EventItem = đang sửa cái đó. */
+/** null = closed, 'new' = adding, EventItem = editing that one. */
 type Sheet = null | 'new' | EventItem;
 
 export default function RemindersPage() {
@@ -57,7 +57,7 @@ export default function RemindersPage() {
           push('Event updated.');
         } else {
           const id = await createEvent(uid, input, events);
-          // Undo là hard-delete: doc vừa sinh ra, chưa mốc nhắc nào chạm tới nó.
+          // Undo is a hard delete: the doc was just created, no reminder mark has touched it.
           push('Event added.', {
             label: 'Undo',
             run: () => void hardDeleteEvent(uid, id).catch(() => {}),
@@ -176,8 +176,8 @@ function Empty() {
     <div className="rounded-md border border-dashed border-line-strong p-6 text-center">
       <p className="text-sm text-ink-soft">Nothing coming up.</p>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
-        Add a date you must not forget. You get a notification at{' '}
-        {MILESTONES.filter((m) => m > 0).join(', ')} days before, and again on the day.
+        Notifies {MILESTONES.filter((m) => m > 0).join(', ')} days before and on
+        the day.
       </p>
     </div>
   );

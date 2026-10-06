@@ -1,11 +1,11 @@
 // ============================================================
-// logi - Kho insight đã sinh (Stage 7 Task 6)
+// logi - Store of generated insights (Stage 7 Task 6)
 // Path: users/{uid}/insights/{from_to}
 //
-// Vì sao cache: mở lại cùng một tuần mà nhận về nhận xét khác nhau thì người
-// dùng mất tin tưởng vào cả tính năng. Tiền API chỉ là lý do phụ.
+// Why cache: reopening the same week and getting different notes makes the
+// user lose trust in the whole feature. API cost is only a side reason.
 //
-// Id là `from_to` nên mỗi khoảng chỉ có một bản mới nhất, không sinh rác.
+// The id is `from_to`, so each range keeps only its latest copy, no junk.
 // ============================================================
 
 import {
@@ -23,14 +23,14 @@ import {
 import { db } from '@/lib/firebase-client';
 import type { InsightResult } from '@/lib/insight-sanitize';
 
-/** Giữ 20 bản gần nhất, cũ hơn thì xoá dần. */
+/** Keep the latest 20, delete older ones gradually. */
 export const KEEP_INSIGHTS = 20;
 
 export interface StoredInsight {
   id: string;
   from: string;
   to: string;
-  /** Dữ liệu không đổi thì hash không đổi → dùng lại, không gọi API. */
+  /** Unchanged data means an unchanged hash → reuse, no API call. */
   digestHash: string;
   result: InsightResult;
   createdAt: number;
@@ -69,7 +69,7 @@ export async function saveInsight(
   const stored: StoredInsight = { id: insightId(input.from, input.to), ...input, createdAt: now };
   const { id, ...data } = stored;
   await setDoc(doc(col(uid), id), data);
-  // Dọn nền: hỏng thì cũng không ảnh hưởng kết quả người dùng đang xem.
+  // Background cleanup: if it fails, the result the user sees is unaffected.
   void trimInsights(uid).catch(() => {});
   return stored;
 }
@@ -79,7 +79,7 @@ export async function listInsights(uid: string): Promise<StoredInsight[]> {
   return snap.docs.map((d) => toInsight(d.id, d.data()));
 }
 
-/** Xoá phần thừa quá 20 bản. Tối đa ~21 read, chạy sau mỗi lần lưu. */
+/** Deletes copies beyond 20. At most ~21 reads, run after each save. */
 export async function trimInsights(uid: string, keep = KEEP_INSIGHTS): Promise<number> {
   const all = await listInsights(uid);
   const extra = all.slice(keep);
@@ -87,7 +87,7 @@ export async function trimInsights(uid: string, keep = KEEP_INSIGHTS): Promise<n
   return extra.length;
 }
 
-/** Người dùng phải xoá được thứ AI đã viết về mình. */
+/** Users must be able to delete what the AI wrote about them. */
 export async function deleteInsight(uid: string, id: string): Promise<void> {
   await deleteDoc(doc(col(uid), id));
 }

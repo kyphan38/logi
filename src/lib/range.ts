@@ -1,76 +1,76 @@
 // ---------------------------------------------------------------------------
-// logi - Khoảng thời gian cho Analytics (Stage 5 Task 1)
+// logi - Time ranges for Analytics (Stage 5 Task 1)
 //
-// File thuần: không React, không Firestore → test bằng `node --test`.
+// Pure file: no React, no Firestore → tested with `node --test`.
 //
-// Mọi mốc ngày đi qua `logicalDate()` (cắt 04:00). "Today" lúc 02:00 sáng là
-// ngày HÔM TRƯỚC - nếu dùng ngày lịch thô thì mọi số sau nửa đêm đều sai.
+// Every date goes through `logicalDate()` (04:00 cut). "Today" at 02:00 is the
+// PREVIOUS day - with raw calendar dates every number after midnight is wrong.
 // ---------------------------------------------------------------------------
 import { dayProgress, logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
 import { addDays } from '@/lib/timeline';
 import { addWeeks, weekStart } from '@/lib/week';
 
 /**
- * Không còn `today` (AMENDMENT-remove-sleep mục 8.1): Analytics chỉ trả lời câu
- * hỏi cần từ 2 ngày trở lên. Một ngày thì Now và History làm tốt hơn - By day
- * một cột vô nghĩa, When trùng History, Balance trùng mấy nút ở màn Now.
- * Vẫn chọn được một ngày qua `custom`, khi đó chỉ hiện Balance.
+ * `today` is gone (AMENDMENT-remove-sleep section 8.1): Analytics only answers
+ * questions that need 2+ days. For one day, Now and History do better - a
+ * one-column By day is pointless, When duplicates History, Balance duplicates
+ * the buttons on Now. One day can still be picked via `custom`, showing only Balance.
  */
 export type RangeKind = 'this_week' | 'last_week' | 'this_month' | 'custom';
 
 export interface Range {
   /** logicalDate, "2026-08-24". */
   from: string;
-  /** logicalDate, bao gồm cả ngày này. */
+  /** logicalDate, inclusive. */
   to: string;
   kind: RangeKind;
   /**
-   * `to` là hôm nay và ngày chưa kết thúc.
-   * Cờ này quyết định có pro-rate target hay không. Thiếu nó thì "This week"
-   * vào thứ Ba sẽ luôn báo thiếu mọi thứ.
+   * `to` is today and the day is not over.
+   * This flag decides whether the target is pro-rated. Without it, "This week"
+   * on a Tuesday would always report everything short.
    */
   isPartial: boolean;
 }
 
-/** Quá mốc này thì chặn - query nặng mà chart cũng không đọc nổi. */
+/** Blocked beyond this - a heavy query, and an unreadable chart. */
 export const MAX_RANGE_DAYS = 92;
 
 export const RANGE_TOO_LARGE = 'Range too large - max 3 months.';
 
-/** Số tuần tối đa còn dùng được query `logicalWeek in [...]` (Firestore cho 30). */
+/** The most weeks a `logicalWeek in [...]` query can take (Firestore allows 30). */
 export const MAX_WEEKS_IN_QUERY = 4;
 
 // ---------------------------------------------------------------------------
-// Chuyển đổi ngày logic ↔ mốc thời gian
+// Logical day ↔ timestamp conversion
 // ---------------------------------------------------------------------------
 
 /**
- * Mốc 12:00 trưa của một ngày logic.
- * Cố ý dùng giữa ngày, không dùng 00:00: nửa đêm thuộc về ngày logic TRƯỚC đó.
+ * 12:00 noon of a logical day.
+ * Mid-day on purpose, not 00:00: midnight belongs to the PREVIOUS logical day.
  */
 export function noonOf(date: string): number {
   const [y, m, d] = date.split('-').map(Number);
   return new Date(y, m - 1, d, 12, 0, 0, 0).getTime();
 }
 
-/** Ngày logic → tuần ISO của nó. */
+/** Logical day → its ISO week. */
 export function weekOf(date: string): string {
   return logicalWeek(noonOf(date));
 }
 
-/** Ngày logic → thứ trong tuần. 0 = CN … 6 = T7. */
+/** Logical day → weekday. 0 = Sun … 6 = Sat. */
 export function weekdayOf(date: string): number {
   return logicalWeekday(noonOf(date));
 }
 
-/** Số ngày từ `from` tới `to`, tính cả hai đầu. `to` trước `from` → 0. */
+/** Days from `from` to `to`, both ends included. `to` before `from` → 0. */
 export function daysBetween(from: string, to: string): number {
   const ms = noonOf(to) - noonOf(from);
   if (ms < 0) return 0;
   return Math.round(ms / 86_400_000) + 1;
 }
 
-/** Danh sách ngày logic trong khoảng, đã sắp xếp tăng dần. */
+/** Logical days in the range, sorted ascending. */
 export function daysOf(range: { from: string; to: string }): string[] {
   const out: string[] = [];
   const n = daysBetween(range.from, range.to);
@@ -78,11 +78,11 @@ export function daysOf(range: { from: string; to: string }): string[] {
   return out;
 }
 
-/** Các tuần logic mà khoảng chạm tới, không trùng lặp, theo thứ tự. */
+/** Logical weeks the range touches, unique, in order. */
 export function weeksOf(range: { from: string; to: string }): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  // Đi theo tuần chứ không theo ngày: khoảng 92 ngày chỉ tốn ~14 vòng lặp.
+  // Walk by week, not by day: a 92-day range takes only ~14 loops.
   let w = weekOf(range.from);
   const last = weekOf(range.to);
   for (let guard = 0; guard < 100; guard++) {
@@ -97,10 +97,10 @@ export function weeksOf(range: { from: string; to: string }): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Dựng khoảng từ chip
+// Building a range from a chip
 // ---------------------------------------------------------------------------
 
-/** Thứ Hai của tuần logic chứa `date`. */
+/** Monday of the logical week holding `date`. */
 export function mondayOf(date: string): string {
   return logicalDate(weekStart(weekOf(date)));
 }
@@ -110,11 +110,11 @@ function partial(to: string, now: number): boolean {
 }
 
 /**
- * Chip → khoảng cụ thể.
+ * Chip → a concrete range.
  *
- * `this_week` và `this_month` kết thúc ở HÔM NAY, không phải cuối tuần/cuối
- * tháng: ngày tương lai chưa có dữ liệu, mà target thì vẫn cộng đủ → chart sẽ
- * báo thiếu oan mỗi thứ Ba.
+ * `this_week` and `this_month` end TODAY, not at the end of the week/month:
+ * future days have no data while the target still counts in full → the chart
+ * would falsely report shortfalls every Tuesday.
  */
 export function buildRange(kind: Exclude<RangeKind, 'custom'>, now: number = Date.now()): Range {
   const today = logicalDate(now);
@@ -128,7 +128,7 @@ export function buildRange(kind: Exclude<RangeKind, 'custom'>, now: number = Dat
     case 'last_week': {
       const w = addWeeks(weekOf(today), -1);
       const from = logicalDate(weekStart(w));
-      // Tuần trước luôn đã đóng → không bao giờ pro-rate.
+      // Last week is always closed → never pro-rated.
       return { from, to: addDays(from, 6), kind, isPartial: false };
     }
 
@@ -141,15 +141,15 @@ export function buildRange(kind: Exclude<RangeKind, 'custom'>, now: number = Dat
 
 export interface CustomResult {
   range: Range | null;
-  /** Câu lỗi để hiện thẳng lên UI. `null` là hợp lệ. */
+  /** An error message to show directly in the UI. `null` means valid. */
   error: string | null;
 }
 
-/** Khoảng do người dùng chọn. Tự đảo nếu chọn ngược, chặn khi quá dài. */
+/** A user-picked range. Swaps itself if reversed, blocked when too long. */
 export function customRange(from: string, to: string, now: number = Date.now()): CustomResult {
   if (!from || !to) return { range: null, error: 'Pick both dates.' };
 
-  // Chọn ngược thì sửa hộ, không bắt lỗi - người dùng chỉ bấm nhầm thứ tự.
+  // Reversed picks are fixed quietly, not an error - the user just tapped in the wrong order.
   const [a, b] = noonOf(from) <= noonOf(to) ? [from, to] : [to, from];
 
   if (daysBetween(a, b) > MAX_RANGE_DAYS) return { range: null, error: RANGE_TOO_LARGE };
@@ -160,7 +160,7 @@ export function customRange(from: string, to: string, now: number = Date.now()):
   };
 }
 
-/** `Last 7 days` / `Last 30 days` - n ngày tính cả hôm nay. */
+/** `Last 7 days` / `Last 30 days` - n days including today. */
 export function lastNDays(n: number, now: number = Date.now()): Range {
   const today = logicalDate(now);
   return {
@@ -172,7 +172,7 @@ export function lastNDays(n: number, now: number = Date.now()): Range {
 }
 
 // ---------------------------------------------------------------------------
-// Chiến lược query - MỘT query cho cả khoảng
+// Query strategy - ONE query for the whole range
 // ---------------------------------------------------------------------------
 
 export type QueryPlan =
@@ -180,10 +180,10 @@ export type QueryPlan =
   | { mode: 'dates'; from: string; to: string };
 
 /**
- * Khoảng gọn trong 1–4 tuần → `logicalWeek in [...]` (dùng index sẵn có, và
- * trùng với cache của các màn khác). Dài hơn → range trên `logicalDate`.
+ * A range within 1–4 weeks → `logicalWeek in [...]` (uses an existing index,
+ * and shares cache with other screens). Longer → a range on `logicalDate`.
  *
- * Không bao giờ query từng ngày một.
+ * Never one query per day.
  */
 export function queryPlan(range: { from: string; to: string }): QueryPlan {
   const weeks = weeksOf(range);
@@ -191,13 +191,13 @@ export function queryPlan(range: { from: string; to: string }): QueryPlan {
   return { mode: 'dates', from: range.from, to: range.to };
 }
 
-/** Query theo tuần lấy dư ở hai đầu → lọc lại theo ngày logic. */
+/** Week queries over-fetch at both ends → filter again by logical day. */
 export function inRange(logicalDateOf: string, range: { from: string; to: string }): boolean {
   return logicalDateOf >= range.from && logicalDateOf <= range.to;
 }
 
 // ---------------------------------------------------------------------------
-// Nhãn
+// Labels
 // ---------------------------------------------------------------------------
 
 const CHIP_LABEL: Record<RangeKind, string> = {
@@ -215,7 +215,7 @@ function pretty(date: string): string {
   return new Date(noonOf(date)).toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-/** "Aug 24 – Aug 26" · một ngày thì chỉ "Aug 26". */
+/** "Aug 24 – Aug 26" · a single day is just "Aug 26". */
 export function rangeLabel(range: { from: string; to: string }): string {
   return range.from === range.to ? pretty(range.from) : `${pretty(range.from)} – ${pretty(range.to)}`;
 }

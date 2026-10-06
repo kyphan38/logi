@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------
-// logi functions - Ngày logic (Stage 6 Task 2)
+// logi functions - Logical day
 //
-// BẢN SAO của quy ước trong `src/lib/balance.ts`. Function chạy tách khỏi app
-// nên không import chung được. Đổi quy ước ở app thì PHẢI đổi cả ở đây.
+// A COPY of the rules in `src/lib/balance.ts`. Functions run apart from the
+// app, so they cannot share imports. Change the rules in the app, change them here TOO.
 //
-// Việt Nam không có giờ mùa hè, nên offset luôn là +07:00 - dùng số cố định
-// thay vì Intl, đỡ một tầng có thể sai.
+// Vietnam has no daylight saving, so the offset is always +07:00. A fixed
+// number instead of Intl removes one layer that could go wrong.
 // ---------------------------------------------------------------------------
 
 export const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -13,31 +13,31 @@ export const DAY_CUTOFF_HOUR = 4;
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
-/** Ngày logic "2026-08-28". Ngày bắt đầu lúc 04:00, không phải nửa đêm. */
+/** Logical date "2026-08-28". The day starts at 04:00, not midnight. */
 export function logicalDate(now: number): string {
   return new Date(now + TZ_OFFSET_MS - DAY_CUTOFF_HOUR * HOUR).toISOString().slice(0, 10);
 }
 
-/** Mốc epoch của một giờ trong ngày logic. `markAt('2026-08-28', 6, 15)`. */
+/** Epoch time of an hour in a logical day. `markAt('2026-08-28', 6, 15)`. */
 export function markAt(date: string, hour: number, minute = 0): number {
   return Date.parse(`${date}T00:00:00Z`) - TZ_OFFSET_MS + hour * HOUR + minute * 60_000;
 }
 
-/** Đầu ngày logic = 04:00 giờ địa phương. */
+/** Start of the logical day = 04:00 local time. */
 export function dayStart(date: string): number {
   return markAt(date, DAY_CUTOFF_HOUR);
 }
 
-/** 0 = Chủ nhật, giống `logicalWeekday()` của app. */
+/** 0 = Sunday, like the app's `logicalWeekday()`. */
 export function logicalWeekday(now: number): number {
   return new Date(`${logicalDate(now)}T00:00:00Z`).getUTCDay();
 }
 
-/** Tuần ISO "2026-W35" - phải khớp `logicalWeek()` của app từng ký tự. */
+/** ISO week "2026-W35" - must match the app's `logicalWeek()` character for character. */
 export function logicalWeek(now: number): string {
   const d = new Date(`${logicalDate(now)}T00:00:00Z`);
-  // Thứ năm của tuần đó quyết định tuần thuộc về năm nào (quy tắc ISO 8601).
-  const day = (d.getUTCDay() + 6) % 7; // 0 = thứ hai
+  // The Thursday of the week decides which year it belongs to (ISO 8601).
+  const day = (d.getUTCDay() + 6) % 7; // 0 = Monday
   d.setUTCDate(d.getUTCDate() - day + 3);
   const year = d.getUTCFullYear();
   const firstThursday = new Date(Date.UTC(year, 0, 4));

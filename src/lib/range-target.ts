@@ -1,18 +1,18 @@
 // ---------------------------------------------------------------------------
-// logi - Target & giờ thực tế cho MỘT KHOẢNG bất kỳ (Stage 5 Task 2)
+// logi - Target & actual hours for ANY RANGE (Stage 5 Task 2)
 //
-// Đây là phần dễ sai nhất của Stage 5. Ba cái bẫy:
+// The easiest part of Stage 5 to get wrong. Three traps:
 //
-//  1. `weekly × số ngày / 7` là SAI. Target không phân bố đều - thứ Ba Work là
-//     9.5h còn Chủ nhật là 0h. Thứ Hai→thứ Sáu preset Normal cho Work 43h,
-//     chia đều cho ra 30.7h. Lệch 12h, đủ để mọi kết luận thành rác.
-//  2. Mỗi tuần có target riêng. Tuần trước có thể là Crunch, tuần này Normal.
-//     Khoảng vắt hai tuần phải đọc target của TỪNG tuần.
-//  3. Chỉ ngày hôm nay mới bị pro-rate, và chỉ khi `isPartial`. Ngày quá khứ
-//     luôn tính target đầy đủ.
+//  1. `weekly × days / 7` is WRONG. Targets are not even - Tuesday Work is
+//     9.5h while Sunday is 0h. Monday→Friday on the Normal preset gives Work
+//     43h; an even split gives 30.7h. 12h off, enough to make every conclusion junk.
+//  2. Each week has its own target. Last week may be Crunch, this week Normal.
+//     A range spanning two weeks must read EACH week's target.
+//  3. Only today is pro-rated, and only when `isPartial`. Past days always
+//     count the full target.
 //
-// Chất lượng log của một khoảng nằm ở `@/lib/log-quality`, không ở đây.
-// File thuần: không React, không Firestore.
+// A range's log quality lives in `@/lib/log-quality`, not here.
+// Pure file: no React, no Firestore.
 // ---------------------------------------------------------------------------
 import {
   DEV_ABS_THRESHOLD,
@@ -33,10 +33,10 @@ function zero(): Record<Category, number> {
 }
 
 /**
- * Target kỳ vọng của cả khoảng, cộng dồn THEO LỊCH.
+ * Expected target for the whole range, summed BY CALENDAR.
  *
- * @param weekTargets key = logicalWeek ("2026-W35"). Tuần không có trong map
- *   thì rơi về `PRESETS.normal` - chưa đặt target không có nghĩa là target = 0.
+ * @param weekTargets key = logicalWeek ("2026-W35"). A week missing from the map
+ *   falls back to `PRESETS.normal` - no target set does not mean target = 0.
  */
 export function expectedForRange(
   range: Range,
@@ -47,7 +47,7 @@ export function expectedForRange(
   const today = logicalDate(now);
   const frac = dayProgress(now);
 
-  // Nhiều ngày dùng chung một tuần → nhớ lại target đã dựng, khỏi tra map 92 lần.
+  // Many days share one week → remember the built target instead of 92 map lookups.
   const cache = new Map<string, Record<Category, number>>();
 
   for (const d of daysOf(range)) {
@@ -59,7 +59,7 @@ export function expectedForRange(
     }
 
     const daily = dailyTargetFor(weekdayOf(d), weekly);
-    // Ngày quá khứ: luôn đủ. Hôm nay: chỉ cắt khi khoảng đang dở dang.
+    // Past days: always full. Today: only cut when the range is unfinished.
     const scale = range.isPartial && d === today ? frac : 1;
 
     for (const c of CATEGORIES) out[c] += daily[c] * scale;
@@ -69,9 +69,9 @@ export function expectedForRange(
 }
 
 /**
- * Hợp (union) các khoảng đã log, cắt gọn trong cửa sổ khoảng.
- * Dùng union thay vì "tổng trừ overlap" để giờ chồng nhau chỉ đếm một lần,
- * kể cả khi ba session chồng lên nhau cùng lúc.
+ * The union of logged spans, clipped to the range window.
+ * Union instead of "sum minus overlap", so overlapping hours count once,
+ * even when three sessions overlap at the same time.
  */
 function loggedHours(activities: Activity[], range: Range, now: number): number {
   const winStart = dayWindow(range.from).start;
@@ -105,18 +105,19 @@ function loggedHours(activities: Activity[], range: Range, now: number): number 
 }
 
 /**
- * Số giờ đã log theo từng category, gán TRỌN session cho `logicalDate` của
- * `startAt` (AMENDMENT-remove-sleep mục 7).
+ * Hours logged per category, assigning WHOLE sessions to the `logicalDate` of
+ * `startAt` (AMENDMENT-remove-sleep section 7).
  *
- * Bản cũ cắt session ở hai đầu khoảng. Với cột một ngày của By day, session
- * 22:00 → 01:00 bị chia đôi cho hai cột: tổng tuần đúng nhưng từng ngày sai, và
- * không cột nào khớp với Balance. Nay không cắt nữa, nên trục Y có thể vượt 24h
- * ở ngày có session vắt qua nửa đêm - đúng như chú thích đầu `StackedDays`.
+ * The old version cut sessions at the range edges. For By day's one-day
+ * columns, a 22:00 → 01:00 session was split across two columns: the weekly
+ * total was right but each day was wrong, and no column matched Balance. Now
+ * there is no cut, so the Y axis can exceed 24h on a day with a session
+ * crossing midnight - as the note at the top of `StackedDays` says.
  *
- * Chỉ heatmap mới dùng giờ đồng hồ thật.
+ * Only the heatmap uses real clock hours.
  *
- * Trong một category, giờ chồng nhau VẪN cộng hai lần - đó là chuyện của
- * `overlapForRange`, không phải của thanh này.
+ * Within one category, overlapping hours STILL count twice - that is
+ * `overlapForRange`'s job, not this bar's.
  */
 export function actualForRange(
   activities: Activity[],
@@ -137,8 +138,8 @@ export function actualForRange(
 }
 
 /**
- * Giống `Deviation` của balance.ts nhưng bỏ `weeklyTarget` - một khoảng có thể
- * vắt qua nhiều tuần với target khác nhau, nên "target tuần" không có nghĩa.
+ * Like balance.ts's `Deviation` without `weeklyTarget` - a range may span weeks
+ * with different targets, so "weekly target" means nothing.
  */
 export interface RangeDeviation {
   category: Category;
@@ -150,11 +151,11 @@ export interface RangeDeviation {
 }
 
 /**
- * So actual với expected, dùng ĐÚNG deadband kép của balance.ts:
- * chỉ gắn cờ khi lệch > 25% VÀ >= 2h.
+ * Compares actual with expected, using balance.ts's EXACT double deadband:
+ * only flag when off by > 25% AND >= 2h.
  *
- * Không gọi lại `deviations()` được vì hàm đó tự tính expected cho tuần hiện
- * tại; ở đây expected đến từ `expectedForRange`.
+ * Cannot reuse `deviations()`, since it computes expected for the current
+ * week itself; here expected comes from `expectedForRange`.
  */
 export function deviationsForRange(
   actual: Record<Category, number>,
@@ -177,8 +178,8 @@ export function deviationsForRange(
 }
 
 /**
- * Giờ bị đếm hai lần trong khoảng (VD vừa Work vừa Learn).
- * Cũng cắt theo cửa sổ khoảng, để khớp với `loggedHours`.
+ * Hours double-counted in the range (e.g. Work and Learn at once).
+ * Also clipped to the range window, to match `loggedHours`.
  */
 export function overlapForRange(
   activities: Activity[],

@@ -1,6 +1,6 @@
-// Cho phép `import '@/lib/...'` chạy được trong node --test.
-// Next.js/tsconfig hiểu alias "@/*" -> "src/*", Node thì không.
-// Không dùng thư viện ngoài: chỉ là một resolve hook của node:module.
+// Lets `import '@/lib/...'` work under node --test.
+// Next.js/tsconfig understand the "@/*" -> "src/*" alias, Node does not.
+// No outside library: just a node:module resolve hook.
 import { statSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';

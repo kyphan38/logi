@@ -1,11 +1,11 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Lưới an toàn cuối cùng (Stage 6 Task 5)
+// logi - The last safety net (Stage 6 Task 5)
 //
-// Chỉ chạy khi chính root layout hỏng. File này thay cả document, nên phải tự
-// khai báo <html> và <body>, và KHÔNG có global styles - viết bằng style nội
-// tuyến, không dùng token Tailwind ở đây.
+// Only runs when the root layout itself breaks. This file replaces the whole
+// document, so it must declare <html> and <body>, and has NO global styles -
+// use inline styles, no Tailwind tokens here.
 // ---------------------------------------------------------------------------
 
 export default function GlobalError({

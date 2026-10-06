@@ -1,13 +1,13 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Giấc ngủ của TUẦN NÀY (tab Week)
+// logi - THIS WEEK's sleep (Week tab)
 //
-// Cùng hình với card Sleep bên tab Trend nhưng khác câu hỏi: ở đây mỗi cột là
-// MỘT đêm ("tuần này tôi ngủ thế nào"), bên kia mỗi cột là một tuần ("mấy tháng
-// nay tôi ngủ sớm lên chưa"). Hai câu hỏi khác nhau nên không phải trùng lặp.
+// Same shape as the Sleep card on the Trend tab, different question: here each
+// column is ONE night ("how did I sleep this week"), there each is one week
+// ("have I gone to bed earlier lately"). Different questions, so no duplication.
 //
-// Một đêm thì median = min = max, nên râu min-max thu thành đúng cái chấm.
+// For one night median = min = max, so the min-max whisker shrinks to the dot.
 // ---------------------------------------------------------------------------
 import { useMemo } from 'react';
 
@@ -20,12 +20,12 @@ import type { Range } from '@/lib/range';
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /**
- * Trung vị của các trung vị, tính THẲNG trên thang liên tục.
+ * Median of the medians, computed DIRECTLY on the continuous scale.
  *
- * Không quay ngược về timestamp để gọi `bedtimeStats`: `bedtimeStats` nhận
- * epoch ms còn `stats.median` đã là scale (22:00 → 22, 00:15 → 24.25). Nhân
- * scale với 3_600_000 rồi đưa vào là trộn hai đơn vị - không ném lỗi, chỉ ra
- * số vô nghĩa.
+ * Do not convert back to timestamps for `bedtimeStats`: `bedtimeStats` takes
+ * epoch ms while `stats.median` is already a scale value (22:00 → 22, 00:15 →
+ * 24.25). Multiplying the scale by 3_600_000 and passing it in mixes units -
+ * no error, just meaningless numbers.
  */
 function medianScale(pts: BedtimePoint[]): number {
   const s = pts.map((p) => p.stats!.median).sort((a, b) => a - b);
@@ -38,8 +38,8 @@ export default function WeekSleepCard({ range }: { range: Range }) {
 
   const points: BedtimePoint[] = useMemo(() => {
     const out: BedtimePoint[] = [];
-    // Đi theo NGÀY chứ không theo mảng log: đêm không ghi phải để trống chứ
-    // không biến mất, nếu không thì thứ Tư trống sẽ đẩy thứ Năm sang chỗ của nó.
+    // Walk by DAY, not by the log array: an unlogged night must stay empty, not
+    // vanish, or an empty Wednesday would push Thursday into its slot.
     const [y, m, d] = range.from.split('-').map(Number);
     for (let i = 0; i < 7; i++) {
       const dt = new Date(y, m - 1, d + i);
@@ -76,12 +76,9 @@ export default function WeekSleepCard({ range }: { range: Range }) {
   }
 
   return (
-    <Card
-      title="Sleep"
-      footnote="One dot per night, at the time you went to bed. Later night = lower dot. Nights with no bedtime stay empty."
-    >
-      {/* 7 cột thì đủ chỗ ghi giờ ngay cạnh chấm - khỏi phải hover xem tooltip,
-          vốn không có trên điện thoại. */}
+    <Card title="Sleep" footnote="One dot per night. Lower = later.">
+      {/* 7 columns leave room to print the time right by each dot - no hover
+          tooltip needed, which phones do not have anyway. */}
       <BedtimeDots points={points} showValue />
       <p className="text-[13px] tabular-nums text-ink-soft">
         {have.length}/{points.length} nights logged · median{' '}

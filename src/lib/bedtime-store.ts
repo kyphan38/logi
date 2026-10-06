@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------
-// logi - Firestore cho dayLogs (Stage 8)
+// logi - Firestore for dayLogs (Stage 8)
 //
-// `dayLogs/{logicalDate}` giữ những mốc trong ngày KHÔNG phải session. Hiện chỉ
-// có `bedtimeAt`. Doc id là ngày logic, nên ghi lại lần hai trong cùng đêm là
-// ghi đè, không tạo bản ghi mới.
+// `dayLogs/{logicalDate}` holds marks of the day that are NOT sessions. Only
+// `bedtimeAt` for now. The doc id is the logical day, so writing twice in one
+// night overwrites, never creates a second record.
 //
-// Bedtime KHÔNG đi vào `activities`: không target, không nằm trong 89h.
+// Bedtime does NOT go into `activities`: no target, not part of the 89h.
 // ---------------------------------------------------------------------------
 import {
   collection,
@@ -40,11 +40,11 @@ function toLog(date: string, d: DocumentData | undefined): DayLog {
 export const EMPTY_LOG = (date: string): DayLog => ({ date, bedtimeAt: null, updatedAt: 0 });
 
 /**
- * Ghi mốc đi ngủ.
+ * Logs the bedtime mark.
  *
- * Ngày logic được tính TỪ `at`, không phải từ `Date.now()`. Bấm lúc 00:30 thì
- * mốc cắt 04:00 đẩy nó về đêm của ngày hôm trước - đúng chỗ người dùng nghĩ.
- * Sửa lại giờ trong quá khứ cũng đi qua đúng đường này.
+ * The logical day comes FROM `at`, not `Date.now()`. Tapping at 00:30, the
+ * 04:00 cut moves it to the previous day's night - where the user expects it.
+ * Editing a past time goes through this same path.
  */
 export async function setBedtime(uid: string, at: number): Promise<string> {
   const date = logicalDate(at);
@@ -52,7 +52,7 @@ export async function setBedtime(uid: string, at: number): Promise<string> {
   return date;
 }
 
-/** Undo: gỡ mốc, giữ doc lại. */
+/** Undo: remove the mark, keep the doc. */
 export async function clearBedtime(uid: string, date: string): Promise<void> {
   await setDoc(logRef(uid, date), { date, bedtimeAt: null, updatedAt: Date.now() }, { merge: true });
 }
@@ -76,8 +76,8 @@ export function subscribeDayLog(
 }
 
 /**
- * Các ngày trong khoảng [from, to] CÓ doc. Ngày chưa ghi thì vắng mặt - người
- * gọi tự phân biệt "chưa ghi" với "0", đừng điền hộ.
+ * Days in [from, to] that HAVE a doc. Unlogged days are absent - the caller
+ * tells "not logged" from "0" itself; never fill it in for them.
  */
 export async function listDayLogs(uid: string, from: string, to: string): Promise<DayLog[]> {
   const snap = await getDocs(

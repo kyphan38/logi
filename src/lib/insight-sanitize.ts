@@ -1,15 +1,15 @@
 // ---------------------------------------------------------------------------
-// logi - Lọc kết quả model trước khi cho ra màn hình (Stage 7 Task 4 + 8)
+// logi - Filtering model output before it reaches the screen (Stage 7 Task 4 + 8)
 //
-// Đây là lớp bảo vệ chính. Model viết trôi chảy nên một con số bịa sẽ trông
-// y hệt một con số thật; người đọc không có cách nào phát hiện. Vì vậy:
+// This is the main guard. The model writes fluently, so a made-up number looks
+// exactly like a real one; the reader has no way to tell. So:
 //
-//   1. Mọi số trong `body` phải có mặt trong digest (sai số 0.15)
-//   2. Câu nhân quả → bỏ. Một tuần dữ liệu không chứng minh được A gây ra B
-//   3. Từ y tế, từ phán xét, từ về giấc ngủ → bỏ
-//   4. Quá 4 nhận xét → cắt còn 4. Bỏ hết → câu mặc định
+//   1. Every number in `body` must exist in the digest (tolerance 0.15)
+//   2. Causal sentences → dropped. A week of data cannot prove A causes B
+//   3. Medical, judging and sleep words → dropped
+//   4. Over 4 notes → cut to 4. All dropped → a default sentence
 //
-// Thuần: không mạng, không Firestore. Test bằng `node --test`.
+// Pure: no network, no Firestore. Tested with `node --test`.
 // ---------------------------------------------------------------------------
 import type { Digest } from '@/lib/digest';
 import { PRESETS, type PresetId } from '@/types/logi';
@@ -19,7 +19,7 @@ export type Severity = 'info' | 'notable' | 'important';
 export interface Observation {
   title: string;
   body: string;
-  /** Tên chỉ số trong digest - tap vào để xem số gốc. */
+  /** The stat's name in the digest - tap to see the raw number. */
   metric: string;
   severity: Severity;
 }
@@ -28,14 +28,14 @@ export interface InsightResult {
   observations: Observation[];
   suggestion: { text: string; preset: PresetId | null } | null;
   positive: string | null;
-  /** Có giá trị khi không còn nhận xét nào sau khi lọc. */
+  /** Set when no notes remain after filtering. */
   note: string | null;
 }
 
 export const NOTHING_NOTABLE = 'Nothing notable in this period.';
 
 export const MAX_OBSERVATIONS = 4;
-/** Sai số khi đối chiếu số: 0.15 - đủ cho làm tròn, không đủ để bịa. */
+/** Number match tolerance: 0.15 - enough for rounding, not for inventing. */
 export const NUMBER_TOLERANCE = 0.15;
 
 const MAX_TITLE = 80;
@@ -43,10 +43,10 @@ const MAX_BODY = 320;
 const MAX_TEXT = 200;
 
 // ---------------------------------------------------------------------------
-// Từ cấm
+// Banned words
 // ---------------------------------------------------------------------------
 
-/** Nhân quả: chỉ được nói "đi kèm", không được nói "vì". */
+/** Causal: may only say "goes with", never "because". */
 const CAUSAL = [
   'because',
   'caused',
@@ -62,7 +62,7 @@ const CAUSAL = [
   'the reason',
 ];
 
-/** Y tế: app này không chẩn đoán bất cứ thứ gì. */
+/** Medical: this app diagnoses nothing. */
 const MEDICAL = [
   'insomnia',
   'burnout',
@@ -81,7 +81,7 @@ const MEDICAL = [
   'chronic',
 ];
 
-/** Phán xét: nêu số, không dạy đời. */
+/** Judgment: state numbers, do not lecture. */
 const JUDGING = [
   'too much',
   'too little',
@@ -103,11 +103,11 @@ const JUDGING = [
 ];
 
 /**
- * Giấc ngủ: app KHÔNG đo (AMENDMENT-remove-sleep mục 10).
+ * Sleep: the app does NOT track it (AMENDMENT-remove-sleep section 10).
  *
- * `dayShape` cho model biết giờ log cuối cùng trong ngày. Từ đó suy ra giờ đi
- * ngủ là chuyện rất dễ làm và luôn sai - người dùng có thể đọc sách hai tiếng
- * sau khi tắt app. Prompt đã cấm, đây là chốt chặn thứ hai.
+ * `dayShape` tells the model the last logged time of the day. Inferring
+ * bedtime from it is very easy and always wrong - the user may read for two
+ * hours after closing the app. The prompt forbids it; this is the second guard.
  */
 const SLEEP_TALK = [
   'sleep',
@@ -137,13 +137,13 @@ const BANNED = [...CAUSAL, ...MEDICAL, ...JUDGING, ...SLEEP_TALK];
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const BANNED_RE = new RegExp(`\\b(${BANNED.map(escape).join('|')})\\b`, 'i');
 
-/** Câu có từ cấm → bỏ cả câu, không cố sửa. Sửa văn của model là bịa tiếp. */
+/** A sentence with a banned word → drop the whole sentence, never patch it. Editing the model's text is more inventing. */
 export function hasBannedWord(text: string): boolean {
   return BANNED_RE.test(text);
 }
 
 // ---------------------------------------------------------------------------
-// Đối chiếu số với digest
+// Checking numbers against the digest
 // ---------------------------------------------------------------------------
 
 interface Allowed {
@@ -152,10 +152,10 @@ interface Allowed {
 }
 
 /**
- * Giờ đến từ ĐỊNH NGHĨA chứ không phải từ dữ liệu: lịch sinh hoạt trong system
- * prompt (04:30 dậy, 20:30 học) và các mốc mà chính chỉ số mang tên
- * (`daysWithActivityAfter23`, `after22Hours`). Không cho phép thì model nói
- * đúng "four days with activity after 23:00" vẫn bị bỏ oan.
+ * Times that come from DEFINITIONS, not data: the daily schedule in the system
+ * prompt (04:30 wake, 20:30 study) and the marks a stat is named after
+ * (`daysWithActivityAfter23`, `after22Hours`). Without them, a correct "four
+ * days with activity after 23:00" would be wrongly dropped.
  */
 export const ANCHOR_TIMES = [
   '04:00',
@@ -183,7 +183,7 @@ function collect(v: unknown, out: Allowed): void {
     const m = /^(\d{1,2}):(\d{2})$/.exec(v);
     if (m) {
       out.times.add(`${m[1].padStart(2, '0')}:${m[2]}`);
-      // "23:40" cũng cho phép viết thành 23 giờ 40 phút nếu model tách ra.
+      // "23:40" may also be written as 23 hours 40 minutes if the model splits it.
       out.numbers.push(Number(m[1]), Number(m[2]));
     }
     return;
@@ -208,14 +208,14 @@ function known(n: number, allowed: Allowed): boolean {
 }
 
 /**
- * Mọi con số trong câu phải truy được về digest.
- * Chấp nhận ba cách viết: `23:40`, `1h20m`, và số thường (kèm `%` thì so
- * thêm với dạng phân số).
+ * Every number in the sentence must trace back to the digest.
+ * Accepts three forms: `23:40`, `1h20m`, and plain numbers (with `%`, also
+ * compared as a fraction).
  */
 export function numbersCheckOut(body: string, allowed: Allowed): boolean {
   let text = body;
 
-  // 1. Giờ đồng hồ
+  // 1. Clock times
   const times = text.match(/\b\d{1,2}:\d{2}\b/g) ?? [];
   for (const t of times) {
     const [h, m] = t.split(':');
@@ -223,7 +223,7 @@ export function numbersCheckOut(body: string, allowed: Allowed): boolean {
   }
   text = text.replace(/\b\d{1,2}:\d{2}\b/g, ' ');
 
-  // 2. "1h20m" - chấp nhận cả cách đọc theo giờ lẫn theo phút
+  // 2. "1h20m" - accepted read as hours or as minutes
   const spans = [...text.matchAll(/\b(\d+)\s?h\s?(\d+)\s?m\b/gi)];
   for (const s of spans) {
     const h = Number(s[1]);
@@ -232,12 +232,12 @@ export function numbersCheckOut(body: string, allowed: Allowed): boolean {
   }
   text = text.replace(/\b(\d+)\s?h\s?(\d+)\s?m\b/gi, ' ');
 
-  // 3. Số còn lại
+  // 3. Remaining numbers
   for (const m of text.matchAll(/(\d+(?:\.\d+)?)\s*(%?)/g)) {
     const n = Number(m[1]);
     if (!Number.isFinite(n)) return false;
     if (known(n, allowed)) continue;
-    // "72%" khi digest lưu 0.72, hoặc ngược lại.
+    // "72%" when the digest stores 0.72, or the other way round.
     if (m[2] === '%' && (known(n / 100, allowed) || known(n * 100, allowed))) continue;
     return false;
   }
@@ -246,7 +246,7 @@ export function numbersCheckOut(body: string, allowed: Allowed): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Tra ngược chỉ số về digest - để UI hiện số gốc
+// Tracing a stat back to the digest - so the UI can show the raw number
 // ---------------------------------------------------------------------------
 
 export interface MetricHit {
@@ -254,7 +254,7 @@ export interface MetricHit {
   value: unknown;
 }
 
-/** `"dayShape.earlyStartDays"` hoặc chỉ `"earlyStartDays"` đều tra được. */
+/** Both `"dayShape.earlyStartDays"` and just `"earlyStartDays"` resolve. */
 export function lookupMetric(digest: Digest, metric: string): MetricHit | null {
   const key = metric.trim();
   if (!key) return null;
@@ -305,8 +305,8 @@ function cleanSentence(v: unknown, allowed: Allowed, checkNumbers: boolean): str
 }
 
 /**
- * @param raw    JSON model trả về, chưa tin được gì cả
- * @param digest bản digest ĐÃ gửi đi - mọi con số phải khớp với nó
+ * @param raw    the model's JSON, trusted for nothing yet
+ * @param digest the digest that WAS sent - every number must match it
  */
 export function sanitizeInsight(raw: unknown, digest: Digest): InsightResult {
   const allowed = allowedValues(digest);
@@ -330,15 +330,15 @@ export function sanitizeInsight(raw: unknown, digest: Digest): InsightResult {
     observations.push({
       title,
       body,
-      // Chỉ số không tra được thì bỏ nhãn, nhưng vẫn giữ nhận xét:
-      // câu đã qua được bước đối chiếu số nên nó vẫn đúng.
+      // A stat that cannot be traced loses its label, but the note stays:
+      // the sentence passed the number check, so it is still correct.
       metric: lookupMetric(digest, metric) ? metric : '',
       severity: SEVERITIES.includes(r.severity as Severity) ? (r.severity as Severity) : 'info',
     });
   }
 
-  // Gợi ý là câu hành động, có thể nhắc giờ trong lịch sinh hoạt (20:30) chứ
-  // không phải số đo - nên không soi số ở đây, chỉ soi từ ngữ.
+  // The suggestion is an action sentence, which may mention schedule times
+  // (20:30) rather than measurements - so no number check here, only words.
   let suggestion: InsightResult['suggestion'] = null;
   const sug = o.suggestion as Record<string, unknown> | null | undefined;
   if (sug && typeof sug === 'object') {

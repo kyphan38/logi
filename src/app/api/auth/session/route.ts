@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { adminAuth } from '@/lib/firebase-admin';
 import { getSessionUser } from '@/lib/server-auth';
 
-// Session cookie sống 14 ngày. KHÔNG lưu thẳng ID token (hết hạn sau 1 giờ).
+// The session cookie lives 14 days. NEVER store the ID token itself (expires in 1 hour).
 const MAX_AGE_SECONDS = Number(process.env.AUTH_COOKIE_MAX_AGE_SECONDS ?? 1209600);
 const EXPIRES_IN_MS = MAX_AGE_SECONDS * 1000;
 
@@ -14,14 +14,14 @@ function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-// GET - client hỏi: server có coi mình là đã đăng nhập không?
-// Dùng để làm mới cookie khi nó hết hạn mà client vẫn còn user.
+// GET - the client asks: does the server still see me as signed in?
+// Used to refresh the cookie when it expired but the client still has a user.
 export async function GET() {
   const user = await getSessionUser();
   return NextResponse.json({ authenticated: user !== null });
 }
 
-// POST - đổi ID token lấy session cookie
+// POST - exchange an ID token for a session cookie
 export async function POST(req: NextRequest) {
   let idToken: unknown;
   try {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     return fail('Invalid or expired sign-in token.', 401);
   }
 
-  // Lớp bảo vệ chính của app một-người-dùng.
+  // The main guard of a one-user app.
   const allowed = process.env.ALLOWED_USER_EMAIL;
   if (!allowed) {
     return fail('Server is misconfigured: ALLOWED_USER_EMAIL is not set.', 500);
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   return res;
 }
 
-// DELETE - đăng xuất
+// DELETE - sign out
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
   res.cookies.set({

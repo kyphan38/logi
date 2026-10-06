@@ -1,27 +1,27 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Khung cho MỘT hình / MỘT bảng
+// logi - A frame for ONE chart / ONE table
 //
-// Trước đây các phần của Analytics chỉ cách nhau bằng khoảng trắng. Cuộn trên
-// màn 375px thì nhãn trục X của chart này nằm ngay trên tiêu đề của chart kia,
-// mắt không biết con số nào thuộc về hình nào.
+// Analytics sections used to be separated only by white space. Scrolling on a
+// 375px screen, one chart's X-axis labels sat right above the next chart's
+// title, and the eye could not tell which numbers belonged to which chart.
 //
-// Một hình = một khung. Ba chỗ cố định:
-//   - `title`     góc trái trên, chữ nhỏ in hoa
-//   - `action`    góc phải trên - chỗ duy nhất cho dropdown của hình đó
-//   - `footnote`  đáy khung - câu giải thích cách đọc, không phải chú thích màu
+// One chart = one frame. Three fixed slots:
+//   - `title`     top left, small caps
+//   - `action`    top right - the only place for that chart's dropdown
+//   - `footnote`  frame bottom - how to read it, not a color legend
 // ---------------------------------------------------------------------------
 import type { ReactNode } from 'react';
 
 interface Props {
   title?: string;
-  /** Điều khiển riêng của hình này (dropdown…). Luôn nằm cùng hàng với title. */
+  /** This chart's own controls (dropdown…). Always on the same row as the title. */
   action?: ReactNode;
-  /** Câu ngắn dạy cách đọc hình. Đặt dưới cùng, sau khi đã nhìn xong hình. */
+  /** A short line on how to read the chart. At the bottom, after looking at it. */
   footnote?: ReactNode;
   children: ReactNode;
-  /** Nhãn cho screen reader khi khung không có `title` nhìn thấy được. */
+  /** Screen reader label when the frame has no visible `title`. */
   label?: string;
 }
 
@@ -31,8 +31,8 @@ export default function Card({ title, action, footnote, children, label }: Props
       aria-label={label ?? title}
       className="flex flex-col gap-3 rounded-md border border-line-strong bg-surface-2 p-4"
     >
-      {/* flex-wrap: khung nào nhiều dropdown thì action tự xuống hàng dưới
-          title, thay vì ép các ô hẹp tới mức cụt chữ. */}
+      {/* flex-wrap: a frame with many dropdowns wraps its action below the
+          title, instead of squeezing the cells until text is cut. */}
       {(title || action) && (
         <div className="flex min-h-7 flex-wrap items-center justify-between gap-x-3 gap-y-2">
           {title ? (
@@ -54,9 +54,9 @@ export default function Card({ title, action, footnote, children, label }: Props
 }
 
 /**
- * Dropdown dùng trong `action`. Dùng `<select>` thật chứ không dựng menu tay:
- * trên iOS nó mở bánh xe chọn của hệ thống, không bao giờ bị lệch hay bị cắt
- * bởi khung cha đang `overflow-hidden`.
+ * Dropdown for `action`. A real `<select>`, not a hand-built menu: on iOS it
+ * opens the system picker wheel, never misplaced or clipped by a parent with
+ * `overflow-hidden`.
  */
 export function CardSelect<T extends string>({
   value,

@@ -25,69 +25,69 @@ function cmd(o: Partial<ParsedCommand>): ParsedCommand {
   };
 }
 
-describe('planVoice - nhánh không ghi', () => {
-  it('unknown → nhập tay', () => {
+describe('planVoice - no-write branches', () => {
+  it('unknown → manual entry', () => {
     assert.equal(planVoice(cmd({ intent: 'unknown' }), { active: [] }).kind, 'manual');
   });
 
-  it('clarify → hỏi lại, kể cả khi confidence cao', () => {
+  it('clarify → ask again, even with high confidence', () => {
     assert.equal(planVoice(cmd({ intent: 'clarify', confidence: 1 }), { active: [] }).kind, 'clarify');
   });
 });
 
-describe('planVoice - ngưỡng tự ghi', () => {
-  it('0.95 + đủ field → ghi luôn', () => {
+describe('planVoice - auto-commit threshold', () => {
+  it('0.95 + all fields → commit right away', () => {
     assert.equal(planVoice(cmd({}), { active: [] }).kind, 'commit');
   });
 
-  it('đúng 0.85 → vẫn ghi luôn (ngưỡng tính cả biên)', () => {
+  it('exactly 0.85 → still commits (threshold is inclusive)', () => {
     assert.equal(planVoice(cmd({ confidence: 0.85 }), { active: [] }).kind, 'commit');
   });
 
-  it('0.84 → bắt xác nhận, nhưng không thiếu field', () => {
+  it('0.84 → confirm, but no missing fields', () => {
     const p = planVoice(cmd({ confidence: 0.84 }), { active: [] });
     assert.equal(p.kind, 'confirm');
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, []);
   });
 });
 
-describe('planVoice - field bắt buộc', () => {
-  it('start thiếu category → confirm + báo đúng field', () => {
+describe('planVoice - required fields', () => {
+  it('start without category → confirm + names the right field', () => {
     const p = planVoice(cmd({ category: null }), { active: [] });
     assert.equal(p.kind, 'confirm');
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['category']);
   });
 
-  it('start không có giờ vẫn ghi được - mặc định là bây giờ', () => {
+  it('start without a time still commits - defaults to now', () => {
     assert.equal(planVoice(cmd({ startAt: null }), { active: [] }).kind, 'commit');
   });
 
-  it('schedule thiếu giờ → confirm', () => {
+  it('schedule without a time → confirm', () => {
     const p = planVoice(cmd({ intent: 'schedule', startAt: null }), { active: [] });
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['startAt']);
   });
 
-  it('log_past thiếu cả hai mốc giờ → báo cả hai', () => {
+  it('log_past missing both times → reports both', () => {
     const p = planVoice(cmd({ intent: 'log_past' }), { active: [] });
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['startAt', 'endAt']);
   });
 
-  // Ghi vào QUÁ KHỨ thì không bao giờ tự lưu - xem ghi chú trong voice-plan.ts.
-  // "I read for two hours last night": model buộc phải đoán giờ, đoán xong mà
-  // commit im lặng thì lịch sử có record giả.
-  it('log_past đủ mốc giờ + confidence tuyệt đối → vẫn phải Confirm', () => {
+  // Writing to the PAST never auto-saves, see the note in voice-plan.ts.
+  // "I read for two hours last night": the model must guess the times, and a
+  // silent commit of a guess puts a fake record in history.
+  it('log_past with both times + full confidence → still Confirm', () => {
     const p = planVoice(
       cmd({ intent: 'log_past', startAt: NOW - 7_200_000, endAt: NOW, confidence: 1 }),
       { active: [] },
     );
     assert.equal(p.kind, 'confirm');
-    // Card mở ra với giờ đã điền sẵn - không bắt gõ lại từ đầu.
+    // The card opens with the times filled in, no retyping.
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, []);
     assert.equal(p.cmd.startAt, NOW - 7_200_000);
   });
 
-  // Câu nói rõ giờ cũng đi qua Confirm, nhưng chỉ tốn một cú chạm.
-  it('log_past nói rõ "8 AM to 11 AM" → confirm chứ không phải manual', () => {
+  // Explicit times also go through Confirm, but it costs only one tap.
+  it('log_past saying "8 AM to 11 AM" → confirm, not manual', () => {
     const p = planVoice(
       cmd({
         intent: 'log_past',
@@ -101,85 +101,85 @@ describe('planVoice - field bắt buộc', () => {
     assert.equal(p.cmd.category, 'work');
   });
 
-  it('confidence cao vẫn thua field thiếu - thiếu là phải hỏi', () => {
+  it('high confidence still loses to a missing field - missing means ask', () => {
     const p = planVoice(cmd({ category: null, confidence: 1 }), { active: [] });
     assert.equal(p.kind, 'confirm');
   });
 });
 
-describe('planVoice - chọn session cho stop/edit', () => {
+describe('planVoice - picking the session for stop/edit', () => {
   const one = [act({ id: 'x1', startAt: NOW - 3_600_000 })];
   const two = [
     act({ id: 'x1', category: 'work', startAt: NOW - 3_600_000 }),
     act({ id: 'x2', category: 'learn', startAt: NOW - 1_800_000 }),
   ];
 
-  it('đúng một session đang chạy → tự chọn, khỏi hỏi', () => {
+  it('exactly one running session → picked automatically, no question', () => {
     const p = planVoice(cmd({ intent: 'stop', category: null }), { active: one });
     assert.equal(p.kind, 'commit');
     assert.equal(p.cmd.targetActivityId, 'x1');
   });
 
-  it('hai session đang chạy → phải hỏi', () => {
+  it('two running sessions → must ask', () => {
     const p = planVoice(cmd({ intent: 'stop', category: null }), { active: two });
     assert.equal(p.kind, 'confirm');
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['target']);
   });
 
-  it('không có session nào → phải hỏi', () => {
+  it('no session → must ask', () => {
     assert.equal(planVoice(cmd({ intent: 'stop', category: null }), { active: [] }).kind, 'confirm');
   });
 
-  it('Gemini đã chỉ đúng id thì giữ nguyên, không ghi đè', () => {
+  it('an id given by Gemini is kept, not overwritten', () => {
     const p = planVoice(cmd({ intent: 'stop', targetActivityId: 'x2', category: null }), { active: two });
     assert.equal(p.kind, 'commit');
     assert.equal(p.cmd.targetActivityId, 'x2');
   });
 
-  it('stop không cần category - "I am done" là đủ', () => {
+  it('stop needs no category - "I am done" is enough', () => {
     const p = planVoice(cmd({ intent: 'stop', category: null }), { active: one });
     assert.equal(p.kind, 'commit');
   });
 
-  it('edit cũng tự chọn khi chỉ có một session', () => {
+  it('edit also auto-picks when there is only one session', () => {
     const p = planVoice(cmd({ intent: 'edit', category: 'learn' }), { active: one });
     assert.equal(p.kind, 'commit');
     assert.equal(p.cmd.targetActivityId, 'x1');
   });
 
-  it('không sửa lệnh gốc tại chỗ', () => {
+  it('does not mutate the original command', () => {
     const original = cmd({ intent: 'stop', category: null });
     planVoice(original, { active: one });
     assert.equal(original.targetActivityId, null);
   });
 });
 
-describe('planVoice - chỉ hỏi lại một lần (Task 5)', () => {
-  it('clarify lần đầu → hỏi', () => {
+describe('planVoice - asks again only once', () => {
+  it('first clarify → ask', () => {
     const p = planVoice(cmd({ intent: 'clarify' }), { active: [] });
     assert.equal(p.kind, 'clarify');
   });
 
-  it('clarify lần hai → mở sheet nhập tay, không hỏi vòng hai', () => {
+  it('second clarify → open the manual sheet, no second round', () => {
     const p = planVoice(cmd({ intent: 'clarify' }), { active: [], asked: true });
     assert.equal(p.kind, 'manual');
   });
 
-  it('trả lời xong mà lệnh đã đủ field → vẫn ghi bình thường', () => {
+  it('answer gives a complete command → commits as usual', () => {
     const p = planVoice(cmd({}), { active: [], asked: true });
     assert.equal(p.kind, 'commit');
   });
 
-  it('unknown lần hai vẫn là nhập tay', () => {
+  it('second unknown is still manual entry', () => {
     const p = planVoice(cmd({ intent: 'unknown' }), { active: [], asked: true });
     assert.equal(p.kind, 'manual');
   });
 });
 
-describe('planVoice - sửa bằng giọng nói record vừa ghi (Task 5)', () => {
+describe('planVoice - voice edit of the record just saved', () => {
   const one = [act({ id: 'x1', startAt: NOW - 3_600_000 })];
 
-  it('edit không có session nào đang chạy → sửa record vừa ghi', () => {
+  it('edit with no running session → edits the record just saved', () => {
     const p = planVoice(cmd({ intent: 'edit', category: 'learn' }), {
       active: [],
       lastCreatedId: 'past1',
@@ -188,7 +188,7 @@ describe('planVoice - sửa bằng giọng nói record vừa ghi (Task 5)', () =
     assert.equal(p.cmd.targetActivityId, 'past1');
   });
 
-  it('record vừa ghi thắng session đang chạy - "no, that was learning" nói về nó', () => {
+  it('the record just saved beats a running session - "no, that was learning" is about it', () => {
     const p = planVoice(cmd({ intent: 'edit', category: 'learn' }), {
       active: one,
       lastCreatedId: 'past1',
@@ -196,7 +196,7 @@ describe('planVoice - sửa bằng giọng nói record vừa ghi (Task 5)', () =
     assert.equal(p.cmd.targetActivityId, 'past1');
   });
 
-  it('Gemini đã chỉ id thì record vừa ghi không được ghi đè', () => {
+  it('an id given by Gemini is not overwritten by the record just saved', () => {
     const p = planVoice(cmd({ intent: 'edit', category: 'learn', targetActivityId: 'x9' }), {
       active: one,
       lastCreatedId: 'past1',
@@ -204,7 +204,7 @@ describe('planVoice - sửa bằng giọng nói record vừa ghi (Task 5)', () =
     assert.equal(p.cmd.targetActivityId, 'x9');
   });
 
-  it('stop KHÔNG lấy record vừa ghi - nó có thể đã dừng rồi', () => {
+  it('stop does NOT take the record just saved - it may be stopped already', () => {
     const p = planVoice(cmd({ intent: 'stop', category: null }), {
       active: [],
       lastCreatedId: 'past1',
@@ -212,7 +212,7 @@ describe('planVoice - sửa bằng giọng nói record vừa ghi (Task 5)', () =
     assert.equal(p.kind, 'confirm');
   });
 
-  it('hết hạn 5 phút (trang truyền null) → quay lại hỏi', () => {
+  it('after 5 minutes (page passes null) → back to asking', () => {
     const p = planVoice(cmd({ intent: 'edit', category: 'learn' }), {
       active: [],
       lastCreatedId: null,
@@ -223,15 +223,15 @@ describe('planVoice - sửa bằng giọng nói record vừa ghi (Task 5)', () =
 });
 
 // ---------------------------------------------------------------------------
-// BẮT ĐẦU HỒI TỐ - từ câu Gemini trả về, qua sanitize, tới quyết định và
-// lời gọi ghi. "Tôi bắt đầu 30 phút trước và vẫn đang xem" phải ra một
-// session ĐANG CHẠY với startAt trong quá khứ, không phải một khối đã đóng.
+// BACKDATED START - from the Gemini reply, through sanitize, to the decision
+// and the write call. "I started 30 minutes ago and am still watching" must
+// give a RUNNING session with a past startAt, not a closed block.
 // ---------------------------------------------------------------------------
 
-describe('bắt đầu hồi tố', () => {
+describe('backdated start', () => {
   const SAN = { now: NOW, knownIds: new Set<string>() };
 
-  /** Câu Gemini trả về (ISO string), trước khi sanitize. */
+  /** Gemini reply (ISO strings), before sanitize. */
   function raw(o: Record<string, unknown>) {
     return {
       category: 'leisure',
@@ -245,7 +245,7 @@ describe('bắt đầu hồi tố', () => {
     } as never;
   }
 
-  it('log_past thiếu endAt → thành start, và ghi được luôn', () => {
+  it('log_past without endAt → becomes start, and commits right away', () => {
     const c = sanitizeParse(
       raw({
         intent: 'log_past',
@@ -258,11 +258,11 @@ describe('bắt đầu hồi tố', () => {
     assert.equal(c.intent, 'start');
 
     const p = planVoice(c, { active: [] });
-    assert.equal(p.kind, 'commit'); // không hỏi giờ kết thúc nữa
+    assert.equal(p.kind, 'commit'); // no longer asks for an end time
     assert.equal(p.cmd.startAt, NOW - 30 * 60_000);
   });
 
-  it('start kèm endAt → bỏ endAt, vẫn là session đang chạy', () => {
+  it('start with endAt → endAt dropped, still a running session', () => {
     const c = sanitizeParse(
       raw({
         intent: 'start',
@@ -277,7 +277,7 @@ describe('bắt đầu hồi tố', () => {
     assert.equal(planVoice(c, { active: [] }).kind, 'commit');
   });
 
-  it('start có startAt quá khứ → startActivity nhận đúng giờ đó, endAt null', async () => {
+  it('start with a past startAt → startActivity gets that exact time, endAt null', async () => {
     const c = cmd({
       intent: 'start',
       category: 'leisure',
@@ -299,7 +299,7 @@ describe('bắt đầu hồi tố', () => {
     assert.equal(call.uid, 'u1');
     assert.equal(call.input.startAt, NOW - 30 * 60_000);
     assert.equal(call.input.category, 'leisure');
-    // Không truyền status → activities.ts mặc định 'active', endAt null.
+    // No status passed → activities.ts defaults to 'active', endAt null.
     assert.equal(call.input.status, undefined);
   });
 });

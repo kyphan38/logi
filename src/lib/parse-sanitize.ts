@@ -1,8 +1,8 @@
 // ============================================================
-// logi - Lọc kết quả Gemini trước khi trả cho client.
-// LLM có thể bịa: category lạ, ngày năm 1970, session dài 40h,
-// hay id không tồn tại. Client tin server, nên server phải sạch.
-// Thuần logic, không chạm Firestore → test được bằng node --test.
+// logi - Filtering Gemini output before it goes to the client.
+// An LLM can make things up: unknown categories, dates in 1970, 40h sessions,
+// or ids that do not exist. The client trusts the server, so the server must be clean.
+// Pure logic, no Firestore → testable with node --test.
 // ============================================================
 
 import { CATEGORIES, MAX_SESSION_MIN, type Category } from '@/types/logi';
@@ -10,14 +10,14 @@ import type { ParseResult } from '@/lib/gemini-parse';
 
 export type Intent = ParseResult['intent'];
 
-/** Giống ParseResult, nhưng mốc thời gian là epoch ms cho client khỏi parse ISO lần nữa. */
+/** Like ParseResult, but times are epoch ms so the client does not parse ISO again. */
 export interface ParsedCommand {
   intent: Intent;
   category: Category | null;
   label: string | null;
   startAt: number | null;
   endAt: number | null;
-  /** Lúc đi ngủ, epoch ms. Chỉ có nghĩa khi intent = bedtime - không bao giờ thành activity. */
+  /** Bedtime, epoch ms. Only meaningful when intent = bedtime - never becomes an activity. */
   bedtimeAt: number | null;
   confidence: number;
   clarifyQuestion: string | null;
@@ -39,7 +39,7 @@ const INTENTS: readonly Intent[] = [
 
 const MAX_TEXT = 200;
 const HOUR = 3_600_000;
-/** Khớp `MAX_BACKDATE_MS` trong activities.ts - quá 7 ngày thì validateTimes cũng chặn. */
+/** Matches `MAX_BACKDATE_MS` in activities.ts - over 7 days, validateTimes blocks it too. */
 const MAX_BACKDATE_MS = 7 * 24 * HOUR;
 const MAX_FUTURE_MS = 24 * HOUR;
 const MAX_SPAN_MS = MAX_SESSION_MIN * 60_000; // 15h
@@ -50,7 +50,7 @@ function clip(v: unknown): string | null {
   return s ? s.slice(0, MAX_TEXT) : null;
 }
 
-/** ISO string → epoch ms. Rác thì null. */
+/** ISO string → epoch ms. Junk gives null. */
 function toMs(v: unknown): number | null {
   if (typeof v !== 'string' || !v.trim()) return null;
   const ms = Date.parse(v);
@@ -67,14 +67,14 @@ export function sanitizeParse(
   let intent: Intent = INTENTS.includes(r.intent as Intent) ? (r.intent as Intent) : 'unknown';
   let question = clip(r.clarifyQuestion);
 
-  /** Đẩy về clarify: không tự ý ghi khi dữ liệu đáng ngờ, hỏi lại người dùng. */
+  /** Push to clarify: never save suspicious data on its own, ask the user. */
   function askBack(q: string) {
     intent = 'clarify';
     question = question ?? q;
   }
 
   // --- category ---------------------------------------------------
-  // null là hợp lệ (câu "stop" không cần category). Chỉ chữ lạ mới phải hỏi lại.
+  // null is valid ("stop" needs no category). Only an unknown word needs asking back.
   let category: Category | null = null;
   if (r.category != null) {
     if ((CATEGORIES as readonly string[]).includes(r.category)) {
@@ -84,40 +84,40 @@ export function sanitizeParse(
     }
   }
 
-  // --- mốc thời gian ----------------------------------------------
+  // --- times ------------------------------------------------------
   const startAt = toMs(r.startAt);
   let endAt = toMs(r.endAt);
-  // Mốc đi ngủ: chỉ đọc khi đúng intent bedtime. Câu khác có chữ giờ thì đó là
-  // giờ session, không phải giờ đi ngủ - không đoán hộ.
+  // The bedtime mark: only read for the bedtime intent. In other sentences a
+  // time is a session time, not a bedtime - never guess for the user.
   const bedtimeAt = intent === 'bedtime' ? toMs(r.bedtimeAt) : null;
 
   if (startAt !== null) {
     if (now - startAt > MAX_BACKDATE_MS) askBack('That looks more than 7 days ago. Is that right?');
     if (startAt - now > MAX_FUTURE_MS) askBack('That start time is far in the future. Is that right?');
   }
-  // Người dùng CÓ nói giờ kết thúc nhưng nó vô lý. Khác hẳn với việc không
-  // nói giờ kết thúc - xem lưới đỡ ngay bên dưới.
+  // The user DID give an end time, but it makes no sense. Very different from
+  // giving no end time - see the safety net just below.
   let badEndDropped = false;
 
   if (startAt !== null && endAt !== null) {
     if (endAt <= startAt) {
-      endAt = null; // giờ kết thúc vô lý → bỏ, để người dùng tự điền
+      endAt = null; // a nonsense end time → drop it, let the user fill it in
       badEndDropped = true;
     } else if (endAt - startAt > MAX_SPAN_MS) {
       askBack('That session is longer than 15 hours. Is that right?');
     }
   }
 
-  // --- Bắt đầu hồi tố: đã chạy từ lúc nào đó, GIỜ VẪN ĐANG CHẠY ----
+  // --- Started in the past, STILL RUNNING ----
   // "I started watching YouTube 30 minutes ago and haven't finished yet".
-  // Model thấy mốc giờ quá khứ là hay chọn log_past, mà log_past thì bắt buộc
-  // có endAt, nên card đòi một giờ kết thúc không hề tồn tại.
-  // Đây chỉ là lưới đỡ; chỗ sửa thật nằm ở buildSystemPrompt().
+  // Seeing a past time, the model tends to pick log_past, which requires an
+  // endAt, so the card asks for an end time that does not exist.
+  // This is only a safety net; the real fix lives in buildSystemPrompt().
   if (intent === 'log_past' && endAt === null && !badEndDropped) {
     intent = 'start';
   }
-  // "until now" nghĩa là VẪN ĐANG CHẠY, không phải giờ kết thúc.
-  // Đang chạy thì không có endAt - hai thứ này không đi cùng nhau được.
+  // "until now" means STILL RUNNING, not an end time.
+  // Running means no endAt - the two cannot go together.
   if (intent === 'start' && endAt !== null) {
     endAt = null;
   }
@@ -127,7 +127,7 @@ export function sanitizeParse(
   const confidence = Number.isFinite(c) && c >= 0 && c <= 1 ? c : 0;
 
   // --- target ------------------------------------------------------
-  // Chỉ nhận id có thật trong danh sách vừa đọc, tránh sửa nhầm record khác.
+  // Only accept ids really in the list just read, to avoid editing the wrong record.
   const target = typeof r.targetActivityId === 'string' ? r.targetActivityId : null;
   const targetActivityId = target && knownIds.has(target) ? target : null;
 
@@ -136,8 +136,8 @@ export function sanitizeParse(
     ? r.clarifyOptions.map(clip).filter((s): s is string => s !== null).slice(0, 5)
     : [];
 
-  // Bedtime không phải session: không category, không label, không start/end.
-  // Giữ đúng một mốc duy nhất để tầng ghi không thể tạo activity nhầm.
+  // Bedtime is not a session: no category, no label, no start/end.
+  // Keep exactly one mark so the write layer can never create a stray activity.
   if (intent === 'bedtime') {
     category = null;
     return {

@@ -1,10 +1,11 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Sheet xuất file (Stage 5 Task 7)
+// logi - Export sheet (Stage 5 Task 7)
 //
-// Tải hoàn toàn ở client bằng Blob. Không có API route: dữ liệu đã nằm sẵn
-// trong máy, gửi vòng lên server rồi tải về chỉ tốn tiền và tốn thời gian.
+// Downloads entirely on the client via Blob. No API route: the data is
+// already on the device; a round trip through the server only costs money
+// and time.
 // ---------------------------------------------------------------------------
 import { useState } from 'react';
 
@@ -22,9 +23,9 @@ interface Props {
   weekTargets: Map<string, Record<Category, number>>;
   now: number;
   onClose: () => void;
-  /** Tải toàn bộ dữ liệu. Vắng mặt thì chỉ export khoảng đang xem. */
+  /** Loads all data. Without it, only the viewed range is exported. */
   loadAllTime?: () => Promise<AllTimeExport>;
-  /** Gọi sau khi file đã tạo xong - để ghi mốc "lần export gần nhất". */
+  /** Called after the file is built - to record the "last export" time. */
   onExported?: () => void;
 }
 
@@ -43,13 +44,13 @@ export default function ExportSheet({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Bản đang được xuất: khoảng đang xem, hoặc toàn bộ nếu đã tải xong.
+  // What is being exported: the viewed range, or everything once loaded.
   const data =
     scope === 'all' && all ? all : { activities, range, weekTargets, debt: undefined };
 
   /**
-   * Chỉ tải toàn bộ khi người dùng thật sự chọn, và chỉ tải một lần.
-   * Sau một năm đây là vài nghìn document - không nên đọc sẵn cho vui.
+   * Only load everything when the user really picks it, and only once.
+   * After a year that is a few thousand documents - not worth reading for fun.
    */
   async function pickAll() {
     setScope('all');
@@ -209,12 +210,12 @@ function FormatButton({
 }
 
 /**
- * Lưu file.
+ * Saves the file.
  *
- * iOS Safari không tôn trọng thuộc tính `download` trên mọi phiên bản: có máy
- * mở thẳng nội dung trong tab thay vì lưu. Vẫn thử `download` trước vì trên
- * desktop và Safari mới thì nó cho file vào app Files đúng tên; nếu trình duyệt
- * không hỗ trợ thì mở tab mới để người dùng tự bấm Share → Save to Files.
+ * iOS Safari does not honor `download` in every version: some devices open
+ * the content in a tab instead of saving. Still try `download` first, since
+ * on desktop and newer Safari it puts the file in Files with the right name;
+ * if unsupported, open a new tab so the user can tap Share → Save to Files.
  */
 function save(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -231,6 +232,6 @@ function save(blob: Blob, filename: string) {
     window.open(url, '_blank', 'noopener');
   }
 
-  // Thu hồi ngay là hỏng file trên Safari - nó đọc blob sau khi hàm đã chạy xong.
+  // Revoking right away breaks the file in Safari - it reads the blob after this function returns.
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

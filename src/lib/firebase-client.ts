@@ -1,6 +1,6 @@
 // ============================================================
 // logi - Firebase client SDK (browser)
-// Singleton: Next.js hot reload sẽ nạp lại module nhiều lần.
+// Singleton: Next.js hot reload loads the module many times.
 // ============================================================
 
 import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
@@ -17,13 +17,13 @@ import {
 import { DB_ID } from '@/lib/db-id';
 
 /**
- * Trên domain thật, authDomain = chính domain của app (next.config.ts proxy
- * /__/auth/* sang firebaseapp.com). Nếu để firebaseapp.com, Safari coi đó là
- * domain bên thứ ba và chặn storage, nên app Add to Home Screen đăng nhập
- * xong vẫn không nhận được kết quả.
+ * On the real domain, authDomain = the app's own domain (next.config.ts proxies
+ * /__/auth/* to firebaseapp.com). With firebaseapp.com, Safari treats it as
+ * third-party and blocks storage, so a Home Screen app signs in but never
+ * gets the result.
  *
- * localhost và preview *.vercel.app giữ firebaseapp.com: các host đó chưa có
- * redirect URI trong Google OAuth client.
+ * localhost and *.vercel.app previews keep firebaseapp.com: those hosts have
+ * no redirect URI in the Google OAuth client yet.
  */
 function resolveAuthDomain(): string | undefined {
   const fallback = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
@@ -33,7 +33,7 @@ function resolveAuthDomain(): string | undefined {
   return host;
 }
 
-// Next.js chỉ inline được biến NEXT_PUBLIC_* khi viết đầy đủ, không destructure.
+// Next.js only inlines NEXT_PUBLIC_* vars written out in full, not destructured.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: resolveAuthDomain(),
@@ -60,24 +60,24 @@ export const app: FirebaseApp = getApps().length
 
 export const auth: Auth = getAuth(app);
 
-// Firestore chỉ được khởi tạo một lần cho mỗi app. Giữ ở globalThis để
-// hot reload không ném lỗi "Firestore has already been started".
+// Firestore may only be initialized once per app. Keep it on globalThis so
+// hot reload does not throw "Firestore has already been started".
 const globalCache = globalThis as unknown as { __logiDb?: Firestore };
 
 function createDb(): Firestore {
-  // Server-side (SSR / build): không có IndexedDB, dùng bản mặc định.
-  // KHÔNG cache vào globalThis: trên server Next có thể nạp firebase/firestore
-  // thành nhiều bản sao module khác nhau, dùng chung cache sẽ khiến
-  // collection(db, ...) ném "Expected first argument ... to be FirebaseFirestore".
-  // getFirestore(app, DB_ID) vốn đã idempotent nên không cần cache.
+  // Server-side (SSR / build): no IndexedDB, use the default instance.
+  // Do NOT cache on globalThis: on the server Next may load firebase/firestore
+  // as several module copies, and a shared cache makes collection(db, ...)
+  // throw "Expected first argument ... to be FirebaseFirestore".
+  // getFirestore(app, DB_ID) is already idempotent, so no cache is needed.
   if (typeof window === 'undefined') return getFirestore(app, DB_ID);
 
   if (globalCache.__logiDb) return globalCache.__logiDb;
 
   let db: Firestore;
   try {
-    // Offline-first: Start/Stop vẫn chạy khi mất mạng, sync lại sau.
-    // databaseId là tham số THỨ BA của initializeFirestore, sau settings.
+    // Offline-first: Start/Stop still work offline and sync later.
+    // databaseId is the THIRD argument of initializeFirestore, after settings.
     db = initializeFirestore(
       app,
       {
@@ -88,7 +88,7 @@ function createDb(): Firestore {
       DB_ID,
     );
   } catch (err) {
-    // iOS Safari private mode chặn IndexedDB → rơi về memory cache.
+    // iOS Safari private mode blocks IndexedDB → fall back to a memory cache.
     console.warn('[firebase-client] persistent cache unavailable, using memory cache', err);
     try {
       db = initializeFirestore(app, { localCache: memoryLocalCache() }, DB_ID);

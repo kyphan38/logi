@@ -1,9 +1,9 @@
 'use client';
 
 // ============================================================
-// logi - Máy nghe chưa rõ thì hỏi lại đúng MỘT câu (Task 5).
-// Bấm một lựa chọn → gửi lại cho parser → hiện card xác nhận.
-// Hỏi vòng hai là người dùng bỏ dùng voice, nên không có vòng hai.
+// logi - When unsure, ask back exactly ONE question (Task 5).
+// Tap a choice → send back to the parser → show the confirm card.
+// A second round makes people stop using voice, so there is none.
 // ============================================================
 
 const BTN =
@@ -22,7 +22,7 @@ export default function ClarifyCard({
   options: string[];
   transcript: string | null;
   busy: boolean;
-  /** Chọn xong thì hỏi parser lần cuối, không hỏi lại người dùng nữa. */
+  /** After a choice, ask the parser one last time; never ask the user again. */
   onPick: (option: string) => void;
   onManual: () => void;
   onCancel: () => void;

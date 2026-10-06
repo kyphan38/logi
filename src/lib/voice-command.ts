@@ -1,6 +1,6 @@
 // ============================================================
-// logi - Thực thi ParsedCommand. Mọi đường ghi vẫn qua activities.ts.
-// Phần quyết định (thuần logic) nằm ở voice-plan.ts.
+// logi - Executes a ParsedCommand. Every write still goes through activities.ts.
+// The (pure) decision part lives in voice-plan.ts.
 // ============================================================
 
 import {
@@ -26,8 +26,8 @@ export {
 export type { MissingField, VoicePlan } from '@/lib/voice-plan';
 
 /**
- * Đúng những cửa ghi mà applyVoice được phép dùng. Bản thật là activities.ts;
- * test bơm bản giả để kiểm tra "intent nào gọi hàm nào" mà không đụng Firestore.
+ * Exactly the write gates applyVoice may use. The real one is activities.ts;
+ * tests inject a fake to check "which intent calls which function" without Firestore.
  */
 export interface VoiceRepo {
   startActivity: typeof startActivity;
@@ -53,15 +53,15 @@ const LIVE: VoiceRepo = {
 
 export interface VoiceWrite {
   message: string;
-  /** Record vừa đụng tới. Giữ lại để câu nói kế tiếp sửa được nó. */
+  /** The record just touched. Kept so the next sentence can edit it. */
   activityId: string;
-  /** Trả về nguyên trạng. Mỗi nhánh tự biết cách lùi của mình. */
+  /** Restores the previous state. Each branch knows its own way back. */
   undo: () => Promise<void>;
 }
 
 /**
- * Ghi xuống Firestore. Mọi nhánh đều gọi hàm của activities.ts để `derive()`
- * và `validateTimes()` chạy đúng một lần, không có ngoại lệ.
+ * Writes to Firestore. Every branch calls activities.ts functions so `derive()`
+ * and `validateTimes()` run exactly once, no exceptions.
  */
 export async function applyVoice(
   uid: string,
@@ -109,13 +109,13 @@ export async function applyVoice(
     }
 
     case 'bedtime': {
-      // Mốc đi ngủ, KHÔNG phải activity. Không category, không target, không
-      // vào ngân sách 89h - chỉ một mốc trong dayLogs.
+      // A bedtime mark, NOT an activity. No category, no target, not in the
+      // 89h budget - just a mark in dayLogs.
       const at = cmd.bedtimeAt!;
       const date = await repo.setBedtime(uid, at);
       return {
-        // Bedtime không có activity nên không sửa tiếp bằng voice được.
-        // Chuỗi rỗng để nơi gọi biết mà bỏ qua `lastCreated`.
+        // Bedtime has no activity, so it cannot be edited by voice next.
+        // An empty string tells the caller to skip `lastCreated`.
         activityId: '',
         message: `Bedtime ${formatBedtime(at)} logged.`,
         undo: () => repo.clearBedtime(uid, date),
@@ -134,10 +134,10 @@ export async function applyVoice(
 
     case 'edit': {
       const id = cmd.targetActivityId!;
-      // Đọc trước khi ghi để Undo trả lại đúng giá trị cũ, không phải đoán.
+      // Read before writing so Undo restores the exact old value, not a guess.
       const before = await repo.getActivity(uid, id);
 
-      // Chỉ gửi field thật sự có trong câu nói, tránh xoá trắng dữ liệu cũ.
+      // Only send fields actually in the sentence, to avoid wiping old data.
       const patch: Parameters<typeof repo.updateActivity>[2] = { ...prov };
       if (cmd.category !== null) patch.category = cmd.category;
       if (cmd.label !== null) patch.label = cmd.label;
@@ -145,8 +145,8 @@ export async function applyVoice(
       if (cmd.endAt !== null) patch.endAt = cmd.endAt;
       await repo.updateActivity(uid, id, patch);
 
-      // "Yesterday I finished dinner at midnight" về đây chứ không về 'stop'.
-      // Câu nói kết thúc một session đang chạy thì phải báo là đã dừng.
+      // "Yesterday I finished dinner at midnight" lands here, not in 'stop'.
+      // A sentence that ends a running session must report it as stopped.
       const ended = before.endAt === null && cmd.endAt !== null;
 
       return {

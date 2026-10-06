@@ -26,14 +26,14 @@ const rows = (csv: string) => csv.replace(BOM, '').split('\r\n');
 // Escape - RFC 4180
 // ---------------------------------------------------------------------------
 
-test('label chứa dấu phẩy được bọc trong dấu nháy', () => {
+test('a label with a comma is wrapped in quotes', () => {
   const csv = toCsv([
     act({ startAt: at(D, '08:00'), endAt: at(D, '09:00'), label: 'devops, then lunch' }),
   ]);
   assert.ok(rows(csv)[1].includes('"devops, then lunch"'));
 });
 
-test('dấu nháy kép trong label được nhân đôi', () => {
+test('double quotes in a label are doubled', () => {
   assert.equal(csvField('he said "go"'), '"he said ""go"""');
 
   const csv = toCsv([
@@ -42,24 +42,24 @@ test('dấu nháy kép trong label được nhân đôi', () => {
   assert.ok(rows(csv)[1].includes('"he said ""go"""'));
 });
 
-test('xuống dòng trong label không làm vỡ số dòng', () => {
+test('a newline in a label does not break the row count', () => {
   const csv = toCsv([
     act({ startAt: at(D, '08:00'), endAt: at(D, '09:00'), label: 'line1\nline2' }),
   ]);
   assert.ok(csv.includes('"line1\nline2"'));
 });
 
-test('chữ thường không bị bọc thừa', () => {
+test('plain text is not wrapped needlessly', () => {
   assert.equal(csvField('work'), 'work');
   assert.equal(csvField(90), '90');
   assert.equal(csvField(null), '');
 });
 
 // ---------------------------------------------------------------------------
-// Header & cột
+// Header & columns
 // ---------------------------------------------------------------------------
 
-test('header đúng thứ tự cột', () => {
+test('header has the right column order', () => {
   const csv = toCsv([]);
   assert.equal(
     rows(csv)[0],
@@ -68,31 +68,31 @@ test('header đúng thứ tự cột', () => {
   assert.equal(CSV_COLUMNS.length, 10);
 });
 
-test('file bắt đầu bằng BOM để Excel đọc đúng UTF-8', () => {
+test('file starts with a BOM so Excel reads UTF-8', () => {
   assert.ok(toCsv([]).startsWith('﻿'));
 });
 
-test('session đang chạy để trống cột end, không bịa giờ kết thúc', () => {
+test('a running session leaves end empty, no made-up end time', () => {
   const csv = toCsv([act({ startAt: at(D, '08:00'), endAt: null })]);
   const cells = rows(csv)[1].split(',');
   assert.equal(cells[4], '');
 });
 
 // ---------------------------------------------------------------------------
-// Thời gian
+// Time
 // ---------------------------------------------------------------------------
 
-test('start ghi theo ISO 8601 kèm offset địa phương', () => {
+test('start is ISO 8601 with the local offset', () => {
   const s = isoWithOffset(at(D, '09:30'));
   assert.match(s, /^2026-08-25T09:30:00[+-]\d{2}:\d{2}$/);
-  assert.ok(s.endsWith('+07:00'), s); // test chạy với TZ=Asia/Ho_Chi_Minh
+  assert.ok(s.endsWith('+07:00'), s); // tests run with TZ=Asia/Ho_Chi_Minh
 });
 
 // ---------------------------------------------------------------------------
 // JSON
 // ---------------------------------------------------------------------------
 
-test('JSON kèm weekTargets để dựng lại được phần so với dự định', () => {
+test('JSON includes weekTargets to rebuild the vs-plan part', () => {
   const targets = new Map([['2026-W35', PRESETS.normal.weekly]]);
   const acts = [act({ startAt: at(D, '08:00'), endAt: at(D, '09:00') })];
   const parsed = JSON.parse(toJson(acts, full(D, D), targets, at('2026-08-26', '10:00')));
@@ -103,7 +103,7 @@ test('JSON kèm weekTargets để dựng lại được phần so với dự đ�
   assert.match(parsed.exportedAt, /^2026-08-26T10:00:00/);
 });
 
-test('weekTargets sắp xếp theo tuần tăng dần', () => {
+test('weekTargets sorted by week ascending', () => {
   const targets = new Map([
     ['2026-W36', PRESETS.crunch.weekly],
     ['2026-W35', PRESETS.normal.weekly],
@@ -116,10 +116,10 @@ test('weekTargets sắp xếp theo tuần tăng dần', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tên file
+// File name
 // ---------------------------------------------------------------------------
 
-test('tên file mang theo khoảng', () => {
+test('file name includes the range', () => {
   assert.equal(exportFilename(full('2026-08-01', '2026-08-31'), 'csv'), 'logi-2026-08-01_2026-08-31.csv');
   assert.equal(exportFilename(full(D, D), 'json'), 'logi-2026-08-25.json');
 });

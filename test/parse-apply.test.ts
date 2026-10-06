@@ -33,7 +33,7 @@ interface Call {
   args: unknown[];
 }
 
-/** Repo giả: ghi lại lời gọi thay vì đụng Firestore. */
+/** Fake repo: records calls instead of touching Firestore. */
 function spyRepo(before: Activity = act({ id: 'x1', startAt: NOW - H })) {
   const calls: Call[] = [];
   const log = (fn: string, args: unknown[]) => calls.push({ fn, args });
@@ -72,8 +72,8 @@ function spyRepo(before: Activity = act({ id: 'x1', startAt: NOW - H })) {
   return { repo, calls, names, first };
 }
 
-describe('applyVoice - mỗi intent gọi đúng hàm', () => {
-  it('start → startActivity, kèm nguồn "voice"', async () => {
+describe('applyVoice - each intent calls the right function', () => {
+  it('start → startActivity, with source "voice"', async () => {
     const s = spyRepo();
     const w = await applyVoice(UID, cmd({ intent: 'start', label: 'devops' }), s.repo);
 
@@ -93,7 +93,7 @@ describe('applyVoice - mỗi intent gọi đúng hàm', () => {
     assert.match(w.message, /Started Work/);
   });
 
-  it('schedule → startActivity với status "scheduled"', async () => {
+  it('schedule → startActivity with status "scheduled"', async () => {
     const s = spyRepo();
     const start = NOW + 4 * H;
     await applyVoice(UID, cmd({ intent: 'schedule', category: 'fitness', startAt: start }), s.repo);
@@ -104,7 +104,7 @@ describe('applyVoice - mỗi intent gọi đúng hàm', () => {
     assert.equal(args[1].startAt, start);
   });
 
-  it('log_past → createPastActivity với cả startAt và endAt', async () => {
+  it('log_past → createPastActivity with both startAt and endAt', async () => {
     const s = spyRepo();
     await applyVoice(
       UID,
@@ -118,7 +118,7 @@ describe('applyVoice - mỗi intent gọi đúng hàm', () => {
     assert.equal(args[1].endAt, NOW - H);
   });
 
-  it('stop → stopActivity đúng id đang chạy', async () => {
+  it('stop → stopActivity on the running id', async () => {
     const s = spyRepo();
     await applyVoice(
       UID,
@@ -130,13 +130,13 @@ describe('applyVoice - mỗi intent gọi đúng hàm', () => {
     assert.deepEqual(s.first('stopActivity')?.args, [UID, 'x1', NOW]);
   });
 
-  it('stop không nói giờ → để activities.ts tự lấy now', async () => {
+  it('stop with no time → activities.ts uses now', async () => {
     const s = spyRepo();
     await applyVoice(UID, cmd({ intent: 'stop', category: null, targetActivityId: 'x1' }), s.repo);
     assert.deepEqual(s.first('stopActivity')?.args, [UID, 'x1', undefined]);
   });
 
-  it('edit → đọc bản cũ trước, rồi chỉ patch field có trong câu nói', async () => {
+  it('edit → reads the old record first, then patches only the spoken fields', async () => {
     const s = spyRepo();
     await applyVoice(
       UID,
@@ -152,22 +152,22 @@ describe('applyVoice - mỗi intent gọi đúng hàm', () => {
     ]);
   });
 
-  it('intent không ghi được → ném lỗi, không đụng repo', async () => {
+  it('an intent that cannot be written → throws, does not touch the repo', async () => {
     const s = spyRepo();
     await assert.rejects(() => applyVoice(UID, cmd({ intent: 'clarify' }), s.repo), /Cannot apply/);
     assert.deepEqual(s.names(), []);
   });
 });
 
-describe('applyVoice - Undo trả lại nguyên trạng', () => {
-  it('undo của start / log_past là xoá record vừa tạo', async () => {
+describe('applyVoice - Undo restores the original state', () => {
+  it('undo of start / log_past deletes the new record', async () => {
     const s = spyRepo();
     const w = await applyVoice(UID, cmd({ intent: 'start' }), s.repo);
     await w.undo();
     assert.deepEqual(s.first('deleteActivity')?.args, [UID, 'new1']);
   });
 
-  it('undo của stop là mở lại session', async () => {
+  it('undo of stop reopens the session', async () => {
     const s = spyRepo();
     const w = await applyVoice(
       UID,
@@ -182,7 +182,7 @@ describe('applyVoice - Undo trả lại nguyên trạng', () => {
     ]);
   });
 
-  it('undo của edit trả lại giá trị cũ đã đọc, không đoán', async () => {
+  it('undo of edit restores the old values it read, no guessing', async () => {
     const before = act({ id: 'x1', category: 'work', label: 'devops', startAt: NOW - 2 * H });
     const s = spyRepo(before);
     const w = await applyVoice(
@@ -204,8 +204,8 @@ describe('applyVoice - Undo trả lại nguyên trạng', () => {
   });
 });
 
-describe('once - requestId trùng chỉ ghi một lần', () => {
-  it('gọi lại cùng requestId thì bỏ qua', async () => {
+describe('once - a repeated requestId writes only once', () => {
+  it('calling again with the same requestId is skipped', async () => {
     const s = spyRepo();
     const once = createOnce();
     const run = () => once.run('r1', () => applyVoice(UID, cmd({ intent: 'start' }), s.repo));
@@ -215,10 +215,10 @@ describe('once - requestId trùng chỉ ghi một lần', () => {
 
     assert.deepEqual(s.names(), ['startActivity']);
     assert.equal(a?.activityId, 'new1');
-    assert.equal(b, null, 'lần hai không trả kết quả mới');
+    assert.equal(b, null, 'second call returns no new result');
   });
 
-  it('hai requestId khác nhau thì ghi cả hai', async () => {
+  it('two different requestIds both write', async () => {
     const s = spyRepo();
     const once = createOnce();
     await once.run('r1', () => applyVoice(UID, cmd({ intent: 'start' }), s.repo));
@@ -226,12 +226,12 @@ describe('once - requestId trùng chỉ ghi một lần', () => {
     assert.equal(s.names().length, 2);
   });
 
-  it('ghi hỏng thì nhả id ra để thử lại', async () => {
+  it('a failed write releases the id for retry', async () => {
     const once = createOnce();
     let n = 0;
     const flaky = async () => {
       n += 1;
-      if (n === 1) throw new Error('mạng chết');
+      if (n === 1) throw new Error('network down');
       return 'ok';
     };
 
@@ -240,7 +240,7 @@ describe('once - requestId trùng chỉ ghi một lần', () => {
     assert.equal(n, 2);
   });
 
-  it('hai lời gọi song song cùng id: chỉ một cái chạy', async () => {
+  it('two parallel calls with the same id: only one runs', async () => {
     const s = spyRepo();
     const once = createOnce();
     const both = await Promise.all([
@@ -253,29 +253,29 @@ describe('once - requestId trùng chỉ ghi một lần', () => {
   });
 });
 
-describe('ngưỡng auto-commit', () => {
+describe('auto-commit threshold', () => {
   const ctx = { active: [] as Activity[] };
 
-  it('confidence 0.9 → ghi luôn', () => {
+  it('confidence 0.9 → write right away', () => {
     assert.equal(planVoice(cmd({ confidence: 0.9 }), ctx).kind, 'commit');
   });
 
-  it('confidence 0.7 → hỏi Confirm', () => {
+  it('confidence 0.7 → ask Confirm', () => {
     const p = planVoice(cmd({ confidence: 0.7 }), ctx);
     assert.equal(p.kind, 'confirm');
   });
 
-  it('confidence thấp nhưng thiếu field → vẫn là Confirm, không phải ghi bừa', () => {
+  it('low confidence and a missing field → still Confirm, no blind write', () => {
     const p = planVoice(cmd({ confidence: 0.7, category: null }), ctx);
     assert.equal(p.kind, 'confirm');
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['category']);
   });
 });
 
-describe('bedtime - mốc đi ngủ, KHÔNG phải activity', () => {
+describe('bedtime - a bedtime mark, NOT an activity', () => {
   const BED = at('2026-08-26', '23:12');
 
-  it('bedtime đủ giờ → commit, gọi setBedtime chứ không phải startActivity', async () => {
+  it('bedtime with a full time → commit, calls setBedtime, not startActivity', async () => {
     const s = spyRepo();
     const p = planVoice(cmd({ intent: 'bedtime', category: null, bedtimeAt: BED }), {
       active: [],
@@ -290,10 +290,10 @@ describe('bedtime - mốc đi ngủ, KHÔNG phải activity', () => {
     assert.deepEqual(s.names(), ['setBedtime']);
     assert.deepEqual(s.first('setBedtime')?.args, [UID, BED]);
     assert.match(w.message, /Bedtime/);
-    assert.equal(w.activityId, '', 'không có activity nên không sửa tiếp được');
+    assert.equal(w.activityId, '', 'no activity, so nothing to edit next');
   });
 
-  it('bedtime thiếu giờ → confirm, nêu đích danh Bedtime', () => {
+  it('bedtime without a time → confirm, names Bedtime', () => {
     const p = planVoice(cmd({ intent: 'bedtime', category: null, bedtimeAt: null }), {
       active: [],
     });
@@ -301,7 +301,7 @@ describe('bedtime - mốc đi ngủ, KHÔNG phải activity', () => {
     assert.deepEqual(p.kind === 'confirm' ? p.missing : null, ['bedtimeAt']);
   });
 
-  it('undo của bedtime là gỡ mốc, không xoá activity nào', async () => {
+  it('undo of bedtime removes the mark, deletes no activity', async () => {
     const s = spyRepo();
     const w = await applyVoice(
       UID,
@@ -313,7 +313,7 @@ describe('bedtime - mốc đi ngủ, KHÔNG phải activity', () => {
     assert.ok(!s.names().includes('deleteActivity'));
   });
 
-  it('model bó tay với câu giờ đi ngủ → chỉ đường tới nút, KHÔNG mở sheet activity', () => {
+  it('model gives up on a bedtime phrase → points to the button, does NOT open the activity sheet', () => {
     const p = planVoice(
       cmd({ intent: 'unknown', transcript: 'I went to bed at eleven thirty' }),
       { active: [] },

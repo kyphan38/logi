@@ -1,10 +1,10 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Bảng DONE / TARGET / LEFT|DIFF của Analytics (AMENDMENT mục 8.2)
+// logi - The DONE / TARGET / LEFT|DIFF table in Analytics (AMENDMENT section 8.2)
 //
-// Thay `TodayCard`: bảng cũ luôn kể chuyện hôm nay dù chọn range nào.
-// Toàn bộ số học nằm ở `@/lib/range-table`; đây chỉ là phần vẽ.
+// Replaces `TodayCard`: the old table always told today's story, whatever range was picked.
+// All the math lives in `@/lib/range-table`; this is only the drawing.
 // ---------------------------------------------------------------------------
 import Card from '@/components/Card';
 import { type Range } from '@/lib/range';
@@ -13,7 +13,7 @@ import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity, type Category } from '@/
 
 const h = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
 
-/** DIFF luôn có dấu, kể cả `+0.0` - không dấu thì đọc như con số tuyệt đối. */
+/** DIFF always has a sign, even `+0.0` - without one it reads as an absolute number. */
 const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${h(Math.abs(n))}`;
 
 export default function RangeTable({

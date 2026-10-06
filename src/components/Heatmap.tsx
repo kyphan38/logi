@@ -1,16 +1,16 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Heatmap 24h × ngày (Stage 5 Task 5)
+// logi - 24h × day heatmap (Stage 5 Task 5)
 //
-// Div + CSS grid. Recharts không có kiểu chart này, và một lưới ô vuông thì
-// CSS làm gọn hơn nhiều.
+// Div + CSS grid. Recharts has no such chart, and CSS handles a grid of
+// squares far more neatly.
 //
-// Trên mobile KHÔNG có hover, nên chi tiết phải mở bằng cách chạm - chạm vào ô
-// thì hiện một dòng ngay dưới lưới, không dùng tooltip bay.
+// Mobile has NO hover, so details open on tap - tapping a cell shows one line
+// right under the grid, no floating tooltip.
 //
-// Cột là ngày LỊCH và hàng là giờ đồng hồ thật (00:00 → 23:00), khác với tổng
-// giờ theo category (tính theo ngày logic, mốc 04:00). Xem heatmap.ts.
+// Columns are CALENDAR days and rows are real clock hours (00:00 → 23:00),
+// unlike category totals (logical days, 04:00 cut). See heatmap.ts.
 // ---------------------------------------------------------------------------
 import { useState } from 'react';
 
@@ -45,10 +45,10 @@ export default function Heatmap({ activities, range, now }: Props) {
     <div className="flex flex-col gap-2">
       <div
         className="grid gap-px"
-        // Cột co theo số ngày; hàng cao cố định 18px để mọi giờ so được với nhau.
+        // Columns shrink with the day count; rows are a fixed 18px so every hour compares.
         style={{ gridTemplateColumns: `2.25rem repeat(${days.length}, minmax(0, 1fr))` }}
       >
-        {/* Hàng đầu: nhãn ngày */}
+        {/* First row: day labels */}
         <div />
         {days.map((d) => (
           <div key={d} className="truncate text-center text-[10px] text-ink-muted">
@@ -62,7 +62,7 @@ export default function Heatmap({ activities, range, now }: Props) {
             hour={hours[row]}
             cells={cells}
             days={days}
-            // Chỉ ghi nhãn 4 giờ một lần, nếu không cột giờ sẽ dày đặc chữ.
+            // Only label every 4 hours, or the hour column gets crowded.
             showLabel={row % 4 === 0}
             picked={picked?.row === row ? picked.col : null}
             onPick={(col) =>
@@ -131,8 +131,8 @@ function Row({
             c.category
               ? {
                   backgroundColor: CATEGORY_COLOR[c.category],
-                  // Ô chỉ log 15 phút phải nhạt hơn ô log đủ 60 phút. Sàn 0.25
-                  // để một chấm nhỏ vẫn nhìn thấy được.
+                  // A cell with 15 logged minutes must be lighter than a full
+                  // 60. The 0.25 floor keeps a small dot visible.
                   opacity: 0.25 + 0.75 * Math.min(1, c.minutes / 60),
                 }
               : undefined

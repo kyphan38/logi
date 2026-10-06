@@ -1,10 +1,10 @@
 'use client';
 
 // ============================================================
-// logi - Target tuần + sổ nợ cho UI.
+// logi - Weekly targets + debt ledger for the UI.
 //
-// `useRollover()` là chốt chuyển tuần. Không có server cron, nên nó chạy
-// ở client lúc mở app và lúc app quay lại foreground.
+// `useRollover()` is the week rollover hook. There is no server cron, so it
+// runs on the client when the app opens and returns to the foreground.
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -29,25 +29,26 @@ import { DEBT_LOCK_THRESHOLD, type WeekTarget } from '@/types/logi';
 
 const EMPTY_DEBT: DebtBalance = {};
 
-/** Tuần logic hiện tại, tự đổi lúc 04:00 sáng thứ Hai mà không cần reload. */
+/** The current logical week; changes at 04:00 Monday by itself, no reload. */
 export function useCurrentWeek(): string {
   return logicalWeek(useTick(60_000, true));
 }
 
 // ------------------------------------------------------------
-// Chuyển tuần
+// Week rollover
 // ------------------------------------------------------------
 
 /**
- * Chạy rollover một lần cho mỗi tuần, mỗi phiên app.
+ * Runs rollover once per week, per app session.
  *
- * Ba lớp chống chạy trùng, vì cộng nợ hai lần thì im lặng và rất khó lần ra:
- *  1. `once` - chặn hai lần gọi song song trong cùng một tab.
- *  2. `runTransaction` trong `targets.ts` - chặn hai tab / hai máy.
- *  3. Cột mốc `lastProcessedWeek` - chặn mọi lần chạy về sau.
+ * Three layers against double runs, because adding debt twice is silent and
+ * very hard to trace:
+ *  1. `once` - blocks two parallel calls in the same tab.
+ *  2. `runTransaction` in `targets.ts` - blocks two tabs / two devices.
+ *  3. The `lastProcessedWeek` marker - blocks every later run.
  *
- * Lỗi thì nuốt: người dùng không làm gì được với "rollover failed", và
- * lần mở app sau sẽ thử lại.
+ * Errors are swallowed: the user can do nothing with "rollover failed", and
+ * the next app open retries.
  */
 export function useRollover(): RolloverResult | null {
   const { user } = useAuth();
@@ -59,23 +60,23 @@ export function useRollover(): RolloverResult | null {
 
   const run = useCallback(() => {
     if (!uid) return;
-    // Offline thì transaction treo tới khi có mạng. Để lần sau.
+    // Offline, the transaction hangs until the network returns. Leave it for next time.
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
 
     void once.current
       .run(`${uid}|${week}`, async () => {
         const res = await runRollover(uid);
         setResult(res);
-        // Khoá lười. Hai tuần cần kiểm:
-        //  - tuần trước: rollover có thể chưa chạm tới (VD tuần đó không có doc).
-        //  - tuần này: từ 21:00 CN tới 04:00 T2 thì tuần "hiện tại" đã đóng sổ
-        //    rồi, nhưng rollover chưa chạy vì cột mốc vẫn là tuần này.
+        // Lazy lock. Two weeks to check:
+        //  - last week: rollover may not have reached it (e.g. that week has no doc).
+        //  - this week: from 21:00 Sun to 04:00 Mon the "current" week is
+        //    already closed, but rollover has not run since the marker is still this week.
         for (const w of [addWeeks(week, -1), week]) {
           await lockIfClosed(uid, w).catch(() => {});
         }
       })
       .catch(() => {
-        // `once` đã nhả id ra rồi - lần foreground sau sẽ thử lại.
+        // `once` has released the id - the next foreground retries.
       });
   }, [uid, week]);
 
@@ -86,7 +87,7 @@ export function useRollover(): RolloverResult | null {
 }
 
 // ------------------------------------------------------------
-// Target của một tuần
+// A week's target
 // ------------------------------------------------------------
 
 export function useWeekTarget(week: string | null) {
@@ -127,7 +128,7 @@ export function useWeekTarget(week: string | null) {
 }
 
 // ------------------------------------------------------------
-// Sổ nợ
+// Debt ledger
 // ------------------------------------------------------------
 
 export function useDebt() {
@@ -137,8 +138,8 @@ export function useDebt() {
   const [balance, setBalance] = useState<DebtBalance>(EMPTY_DEBT);
   const [loading, setLoading] = useState(true);
 
-  // Đổi user → xoá sổ nợ ngay trong lúc render, đừng để nợ người này
-  // hiện trên màn hình người kia dù chỉ một frame.
+  // User changed → clear the ledger during render, so one person's debt never
+  // shows on another's screen, not even for a frame.
   const [prevUid, setPrevUid] = useState(uid);
   if (prevUid !== uid) {
     setPrevUid(uid);
@@ -163,16 +164,16 @@ export function useDebt() {
     balance,
     total,
     loading,
-    /** Nợ quá 20h thì Crunch bị khoá - không thể vay thêm mãi. */
+    /** Over 20h of debt locks Crunch - no borrowing forever. */
     crunchLocked: total > DEBT_LOCK_THRESHOLD,
   };
 }
 
 // ------------------------------------------------------------
-// Lịch sử preset
+// Preset history
 // ------------------------------------------------------------
 
-/** 6 tuần gần nhất, để hỏi "4/6 tuần crunch - đây có còn là ngoại lệ không?" */
+/** The last 6 weeks, to ask "4/6 weeks of crunch - is this still an exception?" */
 export function useCrunchStreak(deps: unknown = null) {
   const { user } = useAuth();
   const uid = user?.uid ?? null;

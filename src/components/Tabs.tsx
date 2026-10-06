@@ -1,15 +1,15 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Thanh tab cho Analytics
+// logi - Tab bar for Analytics
 //
-// Trước đây ba khái niệm thời gian (picker chọn khoảng, "By day", span của Trend) nằm
-// chồng nhau trong một trang cuộn dọc, không rõ cái nào chi phối cái nào. Tab
-// cắt hẳn: mỗi tab một câu hỏi, một cách đếm thời gian.
+// Three time concepts (range picker, "By day", Trend span) used to stack in one
+// long scrolling page, with no clear sense of which controlled which. Tabs cut
+// them apart: one question, one way of counting time per tab.
 //
-// Sticky vì thanh tab mất hút khi cuộn thì người đọc quên mình đang ở tab nào.
-// Trạng thái để trong `useState` chứ không đẩy lên URL: nút Back trên mobile
-// dùng để RỜI Analytics, không phải để lùi tab.
+// Sticky, because when the tab bar scrolls away readers forget which tab they
+// are on. State lives in `useState`, not the URL: the mobile Back button is for
+// LEAVING Analytics, not for stepping back through tabs.
 // ---------------------------------------------------------------------------
 export interface TabItem<T extends string> {
   value: T;
@@ -23,18 +23,18 @@ export default function Tabs<T extends string>({
   onChange,
   label,
 }: {
-  /** Tiền tố id, do TRANG CHA tạo bằng `useId` rồi truyền xuống cả Tabs lẫn
-   *  TabPanel. Gọi `useId` riêng ở mỗi component thì `aria-controls` trỏ vào
-   *  một id không tồn tại. */
+  /** Id prefix, created by the PARENT page with `useId` and passed to both Tabs
+   *  and TabPanel. Calling `useId` in each component makes `aria-controls`
+   *  point to an id that does not exist. */
   base: string;
   items: readonly TabItem<T>[];
   value: T;
   onChange: (v: T) => void;
   label: string;
 }) {
-  // ← → nhảy tab và chọn luôn (automatic activation). Home/End về đầu/cuối.
-  // Chỉ tab đang chọn có tabIndex 0 - Tab từ bàn phím vào thanh này một lần,
-  // không phải bấm ba lần mới qua hết.
+  // ← → move between tabs and select (automatic activation). Home/End jump to
+  // first/last. Only the selected tab has tabIndex 0 - keyboard Tab enters
+  // this bar once, not three times.
   function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     const i = items.findIndex((t) => t.value === value);
     let next = -1;
@@ -79,7 +79,7 @@ export default function Tabs<T extends string>({
   );
 }
 
-/** Khung nội dung của một tab. `id`/`aria-labelledby` phải khớp với `Tabs`. */
+/** One tab's content frame. `id`/`aria-labelledby` must match `Tabs`. */
 export function TabPanel({
   base,
   value,

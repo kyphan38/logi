@@ -1,18 +1,18 @@
 // ---------------------------------------------------------------------------
-// logi - Bảng DONE / TARGET / LEFT|DIFF bám theo range (AMENDMENT mục 8.2)
+// logi - The DONE / TARGET / LEFT|DIFF table follows the range (AMENDMENT section 8.2)
 //
-// Bảng cũ luôn hiện số của HÔM NAY dù người dùng chọn range nào - chọn "Last
-// week" mà bảng vẫn kể chuyện hôm nay. Nay bảng đi theo range, và cột thứ ba
-// đổi ý nghĩa theo việc khoảng đã đóng hay chưa:
+// The old table always showed TODAY's numbers whatever range was picked -
+// "Last week" picked, and the table still told today's story. Now it follows
+// the range, and the third column's meaning depends on whether the range is closed:
 //
-//   - Khoảng CHƯA kết thúc → `LEFT` = max(0, target − done). Còn thời gian để làm nốt.
-//   - Khoảng ĐÃ đóng      → `DIFF` = done − target, có dấu. Hỏi "còn lại bao
-//     nhiêu giờ" ở một tuần đã qua là vô nghĩa.
+//   - Range NOT over → `LEFT` = max(0, target − done). Time left to finish.
+//   - Range closed   → `DIFF` = done − target, signed. Asking "how many hours
+//     left" for a past week makes no sense.
 //
-// Target lấy trên CẢ kỳ, không pro-rate: "Hours left this week" phải trừ vào
-// target của bảy ngày, không phải của mấy ngày đã trôi qua.
+// The target covers the WHOLE period, not pro-rated: "Hours left this week" must
+// subtract from seven days' target, not just the days so far.
 //
-// File thuần: không React, không Firestore.
+// Pure file: no React, no Firestore.
 // ---------------------------------------------------------------------------
 import { logicalDate } from '@/lib/balance';
 import { addDays } from '@/lib/timeline';
@@ -20,31 +20,31 @@ import { chipLabel, mondayOf, rangeLabel, type Range } from '@/lib/range';
 import { actualForRange, expectedForRange } from '@/lib/range-target';
 import { CATEGORIES, type Activity, type Category } from '@/types/logi';
 
-/** `left` cho khoảng còn đang diễn ra, `diff` cho khoảng đã đóng. */
+/** `left` for a range still running, `diff` for a closed one. */
 export type TailKind = 'left' | 'diff';
 
 export interface RangeTableRow {
   category: Category;
   done: number;
   target: number;
-  /** `LEFT` (không âm) hoặc `DIFF` (có dấu), tuỳ `tail`. */
+  /** `LEFT` (never negative) or `DIFF` (signed), depending on `tail`. */
   tail: number;
 }
 
 export interface RangeTable {
   title: string;
   tail: TailKind;
-  /** Nhãn cột thứ ba, viết hoa sẵn cho UI. */
+  /** The third column's label, already uppercased for the UI. */
   tailLabel: string;
   note: string;
   rows: RangeTableRow[];
 }
 
 /**
- * Cả kỳ mà range đang đại diện.
+ * The whole period the range stands for.
  *
- * `this_week` dừng ở hôm nay để chart không báo thiếu oan, nhưng target thì
- * phải tính đủ bảy ngày. `this_month` cũng vậy.
+ * `this_week` stops at today so the chart does not report false shortfalls,
+ * but the target must cover all seven days. Same for `this_month`.
  */
 export function fullPeriod(range: Range): Range {
   const closed = (from: string, to: string): Range => ({
@@ -70,7 +70,7 @@ export function fullPeriod(range: Range): Range {
   }
 }
 
-/** Kỳ còn đang diễn ra? Chỉ khi đó mới hỏi "còn lại bao nhiêu" được. */
+/** Is the period still running? Only then can "how much is left" be asked. */
 export function isOpenPeriod(range: Range, now: number = Date.now()): boolean {
   return fullPeriod(range).to >= logicalDate(now);
 }
@@ -102,8 +102,8 @@ export function rangeTable(
   for (const c of CATEGORIES) {
     const d = done[c];
     const t = target[c];
-    // Chỉ giấu khi cả hai đều 0 (VD Work vào một Chủ nhật đơn lẻ). Còn lại luôn
-    // hiện đủ để so sánh giữa các category.
+    // Only hidden when both are 0 (e.g. Work on a single Sunday). Otherwise
+    // always shown in full, to compare across categories.
     if (d === 0 && t === 0) continue;
     rows.push({ category: c, done: d, target: t, tail: open ? Math.max(0, t - d) : d - t });
   }

@@ -1,10 +1,10 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Dữ liệu cho màn hình Analytics (Stage 5)
+// logi - Data for the Analytics screen (Stage 5)
 //
-// Một khoảng → MỘT query activities + MỘT query weekTargets. Không bao giờ
-// lặp query theo từng ngày.
+// One range → ONE activities query + ONE weekTargets query. Never a query
+// loop per day.
 // ---------------------------------------------------------------------------
 import { useEffect, useState } from 'react';
 
@@ -19,13 +19,13 @@ const EMPTY: Activity[] = [];
 
 export interface RangeData {
   activities: Activity[];
-  /** logicalWeek → target tuần đó. Tuần chưa có doc thì lùi về PRESETS.normal. */
+  /** logicalWeek → that week's target. A week with no doc falls back to PRESETS.normal. */
   weekTargets: Map<string, Record<Category, number>>;
-  /** Tuần bị đổi target sau 21:00 CN - chart phải nói ra, không giấu. */
+  /** Weeks whose target changed after 21:00 Sunday - the chart must say so, not hide it. */
   lateWeeks: Set<string>;
   loading: boolean;
   error: string | null;
-  /** Dựng lại cả hai query. Dùng cho nút Retry khi mạng chập chờn. */
+  /** Rebuild both queries. For the Retry button on a flaky network. */
   reload: () => void;
 }
 
@@ -45,8 +45,8 @@ export function useRangeData(range: Range): RangeData {
 
   const { from, to, kind } = range;
 
-  // Đổi khoảng → xoá sạch số cũ ngay. Nếu không, chart sẽ hiển thị số của
-  // khoảng trước dưới nhãn của khoảng mới trong một nhịp render.
+  // Range changed → clear old numbers at once. Otherwise the chart shows the old
+  // range's numbers under the new range's labels for one render.
   const key = uid ? `${uid}|${from}|${to}|${kind}|${nonce}` : null;
   const [prevKey, setPrevKey] = useState(key);
   if (prevKey !== key) {
@@ -61,7 +61,7 @@ export function useRangeData(range: Range): RangeData {
 
   useEffect(() => {
     if (!uid) return;
-    void nonce; // Retry: đổi nonce là chạy lại cả hai effect.
+    void nonce; // Retry: a new nonce reruns both effects.
     return subscribeByRange(
       uid,
       { from, to },
@@ -80,7 +80,7 @@ export function useRangeData(range: Range): RangeData {
   useEffect(() => {
     if (!uid) return;
     void nonce;
-    // Cần lấy đủ tuần cho cả range lẫn fullPeriod (RangeTable tính cả tháng)
+    // Fetch enough weeks for both the range and fullPeriod (RangeTable covers the whole month)
     const period = fullPeriod(range);
     const weeks = weeksOf(period);
 
@@ -100,7 +100,7 @@ export function useRangeData(range: Range): RangeData {
         setLoadingTargets(false);
       },
       (e: unknown) => {
-        // Thiếu target thì chart vẫn vẽ được phần "actual"; đừng chặn cả trang.
+        // Without targets the chart can still draw "actual"; do not block the page.
         const out = new Map<string, Record<Category, number>>();
         for (const w of weeks) out.set(w, PRESETS.normal.weekly);
         setWeekTargets(out);

@@ -58,106 +58,106 @@ function state(o: Partial<RolloverState> & { currentWeek: string }): RolloverSta
   };
 }
 
-// --- Số học tuần -----------------------------------------------------
+// --- Week math -------------------------------------------------------
 
-test('weekStart: rơi vào thứ Hai, và logicalWeek() đọc ngược lại đúng tên tuần', () => {
+test('weekStart: lands on Monday, and logicalWeek() maps back to the week name', () => {
   for (const w of ['2026-W01', '2026-W35', '2026-W52', '2027-W01']) {
     const ts = weekStart(w);
-    assert.equal(new Date(ts).getDay(), 1, `${w} phải là thứ Hai`);
+    assert.equal(new Date(ts).getDay(), 1, `${w} must be a Monday`);
     assert.equal(logicalWeek(ts), w);
   }
 });
 
-test('addWeeks: qua năm vẫn đúng', () => {
+test('addWeeks: correct across years', () => {
   assert.equal(addWeeks('2026-W35', 1), '2026-W36');
   assert.equal(addWeeks('2026-W35', -1), '2026-W34');
   assert.equal(addWeeks('2026-W52', 1), '2026-W53');
   assert.equal(weekDiff('2026-W50', addWeeks('2026-W50', 5)), 5);
 });
 
-test('weekLockAt: 21:00 Chủ nhật, không phải Chủ nhật đầu tuần', () => {
+test('weekLockAt: Sunday 21:00, not the Sunday before the week', () => {
   const lock = new Date(weekLockAt('2026-W35'));
-  assert.equal(lock.getDay(), 0, 'phải là Chủ nhật');
+  assert.equal(lock.getDay(), 0, 'must be a Sunday');
   assert.equal(lock.getHours(), 21);
-  assert.ok(lock.getTime() > weekStart('2026-W35'), 'Chủ nhật phải nằm SAU thứ Hai');
+  assert.ok(lock.getTime() > weekStart('2026-W35'), 'Sunday must come AFTER Monday');
 
   assert.equal(isWeekClosed('2026-W35', lock.getTime() - 1), false);
   assert.equal(isWeekClosed('2026-W35', lock.getTime()), true);
 });
 
-test('isLateChange: T6/T7/CN là muộn, T2–T5 thì không', () => {
-  assert.equal(isLateChange(at('2026-08-31', '10:00')), false, 'thứ Hai');
-  assert.equal(isLateChange(at('2026-09-03', '10:00')), false, 'thứ Năm');
-  assert.equal(isLateChange(at('2026-09-04', '10:00')), true, 'thứ Sáu');
-  assert.equal(isLateChange(at('2026-09-06', '10:00')), true, 'Chủ nhật');
-  // 02:00 Chủ nhật vẫn là thứ Bảy theo mốc cắt 04:00 → vẫn muộn.
+test('isLateChange: Fri/Sat/Sun are late, Mon–Thu are not', () => {
+  assert.equal(isLateChange(at('2026-08-31', '10:00')), false, 'Monday');
+  assert.equal(isLateChange(at('2026-09-03', '10:00')), false, 'Thursday');
+  assert.equal(isLateChange(at('2026-09-04', '10:00')), true, 'Friday');
+  assert.equal(isLateChange(at('2026-09-06', '10:00')), true, 'Sunday');
+  // 02:00 Sunday is still Saturday with the 04:00 cutoff → still late.
   assert.equal(isLateChange(at('2026-09-06', '02:00')), true);
 });
 
-test('weekLabel: nhãn ngắn cho card', () => {
+test('weekLabel: short label for the card', () => {
   assert.equal(weekLabel('2026-W35'), 'W35');
 });
 
-// --- Trả nợ mà vẫn giữ ngân sách 89h ---------------------------------
+// --- Pay debt while keeping the 89h budget ---------------------------
 
-test('settleWithinBudget: trả nợ Learn nhưng tổng vẫn đúng 89h', () => {
+test('settleWithinBudget: pays Learn debt but total stays 89h', () => {
   const out = settleWithinBudget(PRESETS.normal.weekly, { learn: 6 });
   assert.equal(total(out), TOTAL_BUDGET);
-  assert.equal(out.learn, 37, 'Learn phải nhận đủ 6h nợ');
+  assert.equal(out.learn, 37, 'Learn must get the full 6h of debt');
   assert.ok(validateTargets(out).ok, validateTargets(out).errors.join(' '));
 });
 
-test('settleWithinBudget: không cắt xuống dưới sàn cứng', () => {
+test('settleWithinBudget: never cuts below the hard floor', () => {
   const out = settleWithinBudget(PRESETS.normal.weekly, { learn: 10, fitness: 8 });
   assert.ok(out.fitness >= 4.5);
   assert.ok(validateTargets(out).ok, validateTargets(out).errors.join(' '));
 });
 
-test('buildWeekly: trả 50% nợ, phần còn lại giữ trong sổ', () => {
+test('buildWeekly: pays 50% of debt, the rest stays in the ledger', () => {
   const { weekly, applied, remaining } = buildWeekly(PRESETS.normal.weekly, { learn: 12 });
-  assert.equal(applied.learn, 6, '50% của 12h');
+  assert.equal(applied.learn, 6, '50% of 12h');
   assert.equal(remaining.learn, 6);
   assert.equal(total(weekly), TOTAL_BUDGET);
 });
 
-test('buildWeekly: nợ khổng lồ vẫn bị trần 10h chặn lại', () => {
+test('buildWeekly: huge debt is still capped at 10h', () => {
   const { applied } = buildWeekly(PRESETS.normal.weekly, { learn: 100 });
-  assert.equal(applied.learn, 10, 'trần 10h/tuần');
+  assert.equal(applied.learn, 10, '10h/week cap');
 });
 
-test('reapplyDebt: đổi preset không tiêu thêm nợ', () => {
+test('reapplyDebt: switching preset spends no extra debt', () => {
   const first = buildWeekly(PRESETS.normal.weekly, { learn: 12 });
   const switched = reapplyDebt(PRESETS.deep_learn.weekly, first.applied);
   assert.equal(total(switched), TOTAL_BUDGET);
-  assert.equal(switched.learn, PRESETS.deep_learn.weekly.learn + 6, 'vẫn đúng 6h đã trả');
+  assert.equal(switched.learn, PRESETS.deep_learn.weekly.learn + 6, 'still exactly the 6h paid');
 });
 
-test('roundToBudget: sai số dấu phẩy động không làm validateTargets trượt', () => {
+test('roundToBudget: floating point error does not break validateTargets', () => {
   const messy: Weekly = { work: 43.333333, learn: 31.333333, fitness: 8.966667, leisure: 5.7 };
   const out = roundToBudget(messy);
   assert.equal(total(out), TOTAL_BUDGET);
   assert.ok(validateTargets(out).ok);
 });
 
-// --- weeksToRead: đọc trước khi ghi (luật transaction Firestore) ------
+// --- weeksToRead: read before write (Firestore transaction rule) ------
 
-test('weeksToRead: gồm tuần hiện tại và mọi tuần chưa xử lý', () => {
+test('weeksToRead: includes the current week and every unprocessed week', () => {
   const got = weeksToRead('2026-W35', '2026-W32');
   assert.deepEqual([...got].sort(), ['2026-W32', '2026-W33', '2026-W34', '2026-W35']);
 });
 
-test('weeksToRead: lần đầu chạy chỉ cần tuần hiện tại', () => {
+test('weeksToRead: first run only needs the current week', () => {
   assert.deepEqual(weeksToRead('2026-W35', null), ['2026-W35']);
   assert.deepEqual(weeksToRead('2026-W35', '2026-W35'), ['2026-W35']);
 });
 
-test('weeksToRead: lùi quá 8 tuần thì không đọc cả năm', () => {
+test('weeksToRead: more than 8 weeks back does not read the whole year', () => {
   assert.deepEqual(weeksToRead('2026-W35', '2025-W02'), ['2026-W35']);
 });
 
-// --- Rollover: idempotent (yêu cầu số 1) -----------------------------
+// --- Rollover: idempotent (requirement 1) -----------------------------
 
-test('chạy hai lần chỉ ghi nợ MỘT lần', () => {
+test('running twice records debt only ONCE', () => {
   const s0 = state({
     currentWeek: '2026-W36',
     lastProcessedWeek: '2026-W35',
@@ -167,29 +167,29 @@ test('chạy hai lần chỉ ghi nợ MỘT lần', () => {
   const p1 = planRollover(s0);
   assert.equal(p1.reason, 'processed');
   assert.deepEqual(p1.processed, ['2026-W35']);
-  // Crunch cắt Learn 31 → 19, ghi nợ 12h. Ngay sau đó target tuần mới trả 50%,
-  // nên sổ nợ còn 6h. Đây là số phải KHÔNG đổi khi chạy lần hai.
+  // Crunch cuts Learn 31 → 19, recording 12h debt. The new week's target pays back 50%,
+  // so 6h is left. This number must NOT change on the second run.
   assert.equal(p1.creates[0].debtApplied.learn, 6);
   assert.equal(p1.debt?.learn, 6);
   assert.equal(p1.lastProcessedWeek, '2026-W36');
 
-  // Mở lại app ngay sau đó - state đã có cột mốc mới.
+  // Reopen the app right after - state already has the new marker.
   const s1 = applyPlan(s0, p1);
   const p2 = planRollover(s1);
 
-  assert.equal(p2.reason, 'same-week', 'cột mốc chặn lần chạy thứ hai');
+  assert.equal(p2.reason, 'same-week', 'the marker blocks the second run');
   assert.deepEqual(p2.processed, []);
   assert.deepEqual(p2.locks, []);
   assert.deepEqual(p2.creates, []);
-  assert.equal(p2.debt, null, 'không ghi đè sổ nợ');
-  assert.equal(p2.lastProcessedWeek, null, 'không cần ghi gì');
+  assert.equal(p2.debt, null, 'debt is not overwritten');
+  assert.equal(p2.lastProcessedWeek, null, 'nothing to write');
 
-  // Nợ sau hai lần chạy phải bằng nợ sau một lần chạy.
+  // Debt after two runs must equal debt after one run.
   const s2 = applyPlan(s1, p2);
   assert.deepEqual(s2.debt, s1.debt);
 });
 
-test('chạy mười lần liên tiếp: nợ đứng yên', () => {
+test('ten runs in a row: debt stays put', () => {
   let s = state({
     currentWeek: '2026-W36',
     lastProcessedWeek: '2026-W35',
@@ -202,20 +202,20 @@ test('chạy mười lần liên tiếp: nợ đứng yên', () => {
   assert.deepEqual(s.debt, after1);
 });
 
-// --- Rollover: các nhánh còn lại -------------------------------------
+// --- Rollover: other branches -------------------------------------
 
-test('lần đầu dùng app: chỉ đặt cột mốc, KHÔNG ghi nợ', () => {
+test('first use: only sets the marker, records NO debt', () => {
   const p = planRollover(state({ currentWeek: '2026-W35', lastProcessedWeek: null }));
   assert.equal(p.reason, 'first-run');
-  assert.equal(p.debt, null, 'người mới không nợ ai cả');
+  assert.equal(p.debt, null, 'a new user owes nothing');
   assert.deepEqual(p.processed, []);
   assert.deepEqual(p.locks, []);
   assert.equal(p.lastProcessedWeek, '2026-W35');
-  assert.equal(p.creates.length, 1, 'vẫn tạo target tuần này');
+  assert.equal(p.creates.length, 1, 'still creates the target for this week');
   assert.equal(p.creates[0].preset, 'normal');
 });
 
-test('cùng tuần: không làm gì cả', () => {
+test('same week: does nothing', () => {
   const p = planRollover(
     state({ currentWeek: '2026-W35', lastProcessedWeek: '2026-W35', debt: { learn: 5 } })
   );
@@ -224,7 +224,7 @@ test('cùng tuần: không làm gì cả', () => {
   assert.deepEqual(p.creates, []);
 });
 
-test('nghỉ 3 tuần: xử lý đủ 3 tuần, đúng thứ tự', () => {
+test('3 weeks away: processes all 3 weeks, in order', () => {
   const p = planRollover(
     state({
       currentWeek: '2026-W36',
@@ -236,15 +236,15 @@ test('nghỉ 3 tuần: xử lý đủ 3 tuần, đúng thứ tự', () => {
       },
     })
   );
-  assert.deepEqual(p.processed, ['2026-W33', '2026-W34', '2026-W35'], 'theo thứ tự thời gian');
+  assert.deepEqual(p.processed, ['2026-W33', '2026-W34', '2026-W35'], 'in time order');
   assert.deepEqual(p.locks, ['2026-W33', '2026-W34', '2026-W35']);
-  // 3 tuần × 12h = 36h nợ. Target tuần mới trả 50% nhưng đụng trần 10h/tuần.
+  // 3 weeks × 12h = 36h debt. The new week's target pays 50% but hits the 10h/week cap.
   assert.equal(p.creates[0].debtApplied.learn, 10);
-  assert.equal(p.debt?.learn, 26, '36h nợ − 10h trả - không tuần nào bị bỏ');
+  assert.equal(p.debt?.learn, 26, '36h debt − 10h paid - no week is skipped');
   assert.equal(p.lastProcessedWeek, '2026-W36');
 });
 
-test('tuần không có kế hoạch bị bỏ qua - không nợ từ hư không', () => {
+test('weeks with no plan are skipped - no debt from nothing', () => {
   const p = planRollover(
     state({
       currentWeek: '2026-W36',
@@ -254,11 +254,11 @@ test('tuần không có kế hoạch bị bỏ qua - không nợ từ hư không
   );
   assert.deepEqual(p.skipped, ['2026-W33', '2026-W35']);
   assert.deepEqual(p.processed, ['2026-W34']);
-  // Chỉ W34 sinh nợ: 12h, trừ 6h vừa trả = 6h. Hai tuần trống không góp gì.
-  assert.equal(p.debt?.learn, 6, 'chỉ tuần có kế hoạch mới sinh nợ');
+  // Only W34 creates debt: 12h, minus 6h just paid = 6h. The two empty weeks add nothing.
+  assert.equal(p.debt?.learn, 6, 'only weeks with a plan create debt');
 });
 
-test('tuần đã khoá không bị khoá lại (rules chặn update khi lockedAt != null)', () => {
+test('a locked week is not locked again (rules block update when lockedAt != null)', () => {
   const p = planRollover(
     state({
       currentWeek: '2026-W36',
@@ -266,11 +266,11 @@ test('tuần đã khoá không bị khoá lại (rules chặn update khi lockedA
       targets: { '2026-W35': wt('2026-W35', 'crunch', 111) },
     })
   );
-  assert.deepEqual(p.locks, [], 'không ghi đè lockedAt');
-  assert.deepEqual(p.processed, ['2026-W35'], 'nhưng vẫn ghi nợ của tuần đó');
+  assert.deepEqual(p.locks, [], 'lockedAt is not overwritten');
+  assert.deepEqual(p.processed, ['2026-W35'], 'but the debt for that week is still recorded');
 });
 
-test('preset Normal không sinh nợ', () => {
+test('Normal preset creates no debt', () => {
   const p = planRollover(
     state({
       currentWeek: '2026-W36',
@@ -278,11 +278,11 @@ test('preset Normal không sinh nợ', () => {
       targets: { '2026-W35': wt('2026-W35', 'normal') },
     })
   );
-  assert.deepEqual(p.debt, {}, 'đúng baseline thì không nợ gì');
+  assert.deepEqual(p.debt, {}, 'at baseline there is no debt');
   for (const c of CATEGORIES) assert.equal(PRESETS.normal.weekly[c], BASELINE_WEEKLY[c]);
 });
 
-test('bỏ app quá 8 tuần: chỉ đặt lại cột mốc, không dựng lại lịch sử', () => {
+test('away more than 8 weeks: only reset the marker, do not rebuild history', () => {
   const old = addWeeks('2026-W36', -(MAX_ROLLOVER_WEEKS + 1));
   const p = planRollover(
     state({ currentWeek: '2026-W36', lastProcessedWeek: old, targets: {} })
@@ -293,7 +293,7 @@ test('bỏ app quá 8 tuần: chỉ đặt lại cột mốc, không dựng lạ
   assert.equal(p.lastProcessedWeek, '2026-W36');
 });
 
-test('đồng hồ chạy lùi (cột mốc ở tương lai): không ghi nợ âm', () => {
+test('clock goes backwards (marker in the future): no negative debt', () => {
   const p = planRollover(
     state({ currentWeek: '2026-W30', lastProcessedWeek: '2026-W35', targets: {} })
   );
@@ -301,7 +301,7 @@ test('đồng hồ chạy lùi (cột mốc ở tương lai): không ghi nợ â
   assert.deepEqual(p.processed, []);
 });
 
-test('target tuần mới đã trừ nợ và vẫn đúng ngân sách', () => {
+test('the target for the new week already subtracts debt and stays within budget', () => {
   const p = planRollover(
     state({
       currentWeek: '2026-W36',
@@ -313,11 +313,11 @@ test('target tuần mới đã trừ nợ và vẫn đúng ngân sách', () => {
   assert.equal(seed.week, '2026-W36');
   assert.equal(total(seed.weekly), TOTAL_BUDGET);
   assert.ok(validateTargets(seed.weekly).ok);
-  assert.equal(seed.debtApplied.learn, 6, 'trả 50% của 12h vừa ghi');
-  assert.equal(p.debt?.learn, 6, 'còn lại 6h trong sổ');
+  assert.equal(seed.debtApplied.learn, 6, 'pays 50% of the 12h just recorded');
+  assert.equal(p.debt?.learn, 6, '6h left in the ledger');
 });
 
-test('tuần hiện tại đã có target: không tạo đè lên', () => {
+test('current week already has a target: do not overwrite it', () => {
   const p = planRollover(
     state({
       currentWeek: '2026-W36',
@@ -328,6 +328,6 @@ test('tuần hiện tại đã có target: không tạo đè lên', () => {
       },
     })
   );
-  assert.deepEqual(p.creates, [], 'kế hoạch người dùng tự đặt phải được giữ');
-  assert.equal(p.debt?.learn, 12, 'nợ chưa được trả vì không tạo target mới');
+  assert.deepEqual(p.creates, [], 'a plan the user set must be kept');
+  assert.equal(p.debt?.learn, 12, 'debt is not paid since no new target is created');
 });

@@ -47,7 +47,7 @@ function s(category: Category, date: string, from: string, to: string, endDate =
   });
 }
 
-/** Một tháng dữ liệu dày: 5 session mỗi ngày, 31 ngày. */
+/** A month of dense data: 5 sessions a day, 31 days. */
 function month(): { acts: Activity[]; range: Range } {
   const acts: Activity[] = [];
   for (let i = 0; i < 31; i++) {
@@ -67,16 +67,16 @@ function month(): { acts: Activity[]; range: Range } {
 }
 
 // ------------------------------------------------------------
-// Hình dạng digest
+// Digest shape
 // ------------------------------------------------------------
 
-test('digest có đủ 4 category, mỗi cái ít nhất 3 chỉ số', () => {
+test('the digest has all 4 categories, each with at least 3 stats', () => {
   const d = buildDigest(sig([s('work', '2026-08-24', '08:00', '17:00')]));
   const totals = d.totals as Record<string, Record<string, unknown>>;
   assert.deepEqual(Object.keys(totals).sort(), ['fitness', 'learn', 'leisure', 'work']);
   for (const c of ['learn', 'work', 'fitness', 'leisure']) {
-    assert.ok(totals[c], `thiếu ${c}`);
-    assert.ok(Object.keys(totals[c]).length >= 3, `${c} quá mỏng`);
+    assert.ok(totals[c], `missing ${c}`);
+    assert.ok(Object.keys(totals[c]).length >= 3, `${c} is too thin`);
   }
   const period = d.period as Record<string, unknown>;
   assert.equal(period.days, 7);
@@ -84,22 +84,22 @@ test('digest có đủ 4 category, mỗi cái ít nhất 3 chỉ số', () => {
   assert.equal(typeof period.label, 'string');
 });
 
-test('chỉ số null bị loại khỏi digest', () => {
+test('null stats are dropped from the digest', () => {
   const d = buildDigest(sig([s('work', '2026-08-24', '08:00', '17:00')]));
-  // Không có buổi tập nào → không có trung vị, không có khoảng cách.
+  // No workouts → no median, no gap.
   const fitness = d.fitness as Record<string, unknown>;
   assert.equal('medianSessionMin' in fitness, false);
   assert.equal('longestGapDays' in fitness, false);
   assert.equal('daysSinceLast' in fitness, false);
-  // Chỉ có một ngày có log → không đo được độ lệch giờ kết thúc.
+  // Only one day with logs → the end-time spread cannot be measured.
   const dayShape = d.dayShape as Record<string, unknown>;
   assert.equal('lastActivityEndSpreadMin' in dayShape, false);
-  // Không có kỳ trước → không có cột so sánh.
+  // No previous period → no comparison column.
   const totals = d.totals as Record<string, Record<string, unknown>>;
   assert.equal('vsPreviousHours' in totals.work, false);
 });
 
-test('chỉ số liên hệ dưới 3 mẫu không được đưa vào digest', () => {
+test('correlations under 3 samples are left out of the digest', () => {
   const two = buildDigest(
     sig([
       s('work', '2026-08-24', '08:00', '18:30'),
@@ -124,7 +124,7 @@ test('chỉ số liên hệ dưới 3 mẫu không được đưa vào digest', 
   assert.ok(Math.abs(link.value - 0.3) < 0.05);
 });
 
-test('giờ được viết dạng HH:MM, không phải số phút thô', () => {
+test('times are written as HH:MM, not raw minutes', () => {
   const d = buildDigest(
     sig([
       s('learn', '2026-08-24', '20:00', '23:20'),
@@ -134,22 +134,22 @@ test('giờ được viết dạng HH:MM, không phải số phút thô', () => 
   const dayShape = d.dayShape as Record<string, unknown>;
   assert.equal(dayShape.medianLastActivityEnd, '23:20');
   assert.equal(dayShape.daysWithActivityAfter23, 2);
-  // 1470 phút = 24:30 trên trục ngày logic → vẫn phải in ra giờ đồng hồ thật.
+  // 1470 minutes = 24:30 on the logical-day axis → must still print the real clock time.
   assert.equal(hhmm(1470), '00:30');
 });
 
-test('digest một tháng vẫn dưới ngân sách token', () => {
+test('a month\'s digest stays under the token budget', () => {
   const { acts, range } = month();
   const d = buildDigest(sig(acts, range));
   const tokens = estimateTokens(d);
-  assert.ok(tokens < TOKEN_BUDGET, `digest ${tokens} token, quá ${TOKEN_BUDGET}`);
-  // Và không được chứa record thô: không id, không nhãn, không epoch.
+  assert.ok(tokens < TOKEN_BUDGET, `digest is ${tokens} tokens, over ${TOKEN_BUDGET}`);
+  // And it must not contain raw records: no ids, no labels, no epochs.
   const text = JSON.stringify(d);
   assert.equal(/"id"|rawText|"startAt"/.test(text), false);
   assert.equal(/17[0-9]{11}/.test(text), false);
 });
 
-test('cùng dữ liệu ra cùng hash, đổi một record là hash đổi', () => {
+test('same data gives the same hash, changing one record changes it', () => {
   const a = buildDigest(sig([s('work', '2026-08-24', '08:00', '17:00')]));
   const b = buildDigest(sig([s('work', '2026-08-24', '08:00', '17:00')]));
   const c = buildDigest(sig([s('work', '2026-08-24', '08:00', '18:00')]));
@@ -159,24 +159,24 @@ test('cùng dữ liệu ra cùng hash, đổi một record là hash đổi', () 
 });
 
 // ------------------------------------------------------------
-// Cổng chặn
+// The gate
 // ------------------------------------------------------------
 
-test('không có record nào → chặn, nói rõ là chưa log gì', () => {
+test('no records → blocked, saying clearly nothing was logged', () => {
   const g = canAnalyze(sig([]));
   assert.equal(g.ok, false);
   assert.match(g.reason!, /Nothing logged/);
 });
 
-test('khoảng dưới 3 ngày → chặn', () => {
+test('a range under 3 days → blocked', () => {
   const two: Range = { from: '2026-08-24', to: '2026-08-25', kind: 'custom', isPartial: false };
   const g = canAnalyze(sig([s('work', '2026-08-24', '08:00', '17:00')], two));
   assert.equal(g.ok, false);
   assert.match(g.reason!, /at least 3 days/);
 });
 
-test('log quá thưa → chặn và nêu đúng số ngày', () => {
-  // 7 ngày trong khoảng, chỉ 3 ngày có log → dưới ngưỡng 60%.
+test('very sparse logs → blocked, with the exact day count', () => {
+  // 7 days in the range, only 3 with logs → under the 60% threshold.
   const acts = ['24', '25', '26'].map((d) => s('work', `2026-08-${d}`, '08:00', '17:00'));
   const g = canAnalyze(sig(acts));
   assert.equal(g.ok, false);
@@ -184,7 +184,7 @@ test('log quá thưa → chặn và nêu đúng số ngày', () => {
   assert.match(g.hint!, /Log more/);
 });
 
-test('dữ liệu đầy đủ → cho chạy', () => {
+test('complete data → allowed to run', () => {
   const { acts, range } = month();
   const g = canAnalyze(sig(acts, range));
   assert.equal(g.ok, true);
@@ -192,7 +192,7 @@ test('dữ liệu đầy đủ → cho chạy', () => {
 });
 
 // ------------------------------------------------------------
-// Dữ liệu cực đoan (Task 8)
+// Extreme data (Task 8)
 // ------------------------------------------------------------
 
 const plain = (over: Record<string, unknown> = {}) => ({
@@ -201,34 +201,34 @@ const plain = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-test('tuần bình thường thì im lặng - mặc định là không nói gì', () => {
+test('a normal week stays quiet - saying nothing is the default', () => {
   assert.equal(extremeNote(plain()), null);
 });
 
-test('work trên 70h/tuần → nói, nhưng vẫn nêu số bình thường', () => {
+test('work over 70h/week → says so, still stating plain numbers', () => {
   const note = extremeNote(plain({ totals: { work: { hours: 78, targetHours: 43 } } }))!;
   assert.match(note, /78h a week/);
   assert.match(note, /your own ceiling of 43h/);
 });
 
-test('dòng cực đoan không chứa từ y tế, phán xét hay từ về giấc ngủ', () => {
+test('the extreme line has no medical, judging or sleep words', () => {
   const note = extremeNote(plain({ totals: { work: { hours: 96, targetHours: 43 } } }))!;
   assert.equal(hasBannedWord(note), false);
 });
 
-test('khoảng dài quy đổi work về một tuần trước khi so', () => {
-  // 30 ngày, 200h work = 46.7h/tuần → chưa tới ngưỡng.
+test('a long range scales work to one week before comparing', () => {
+  // 30 days, 200h of work = 46.7h/week → under the threshold.
   const note = extremeNote(
     plain({ period: { days: 30 }, totals: { work: { hours: 200, targetHours: 184 } } })
   );
   assert.equal(note, null);
 });
 
-test('thiếu chỉ số work thì không đoán bừa', () => {
+test('a missing work stat means no wild guess', () => {
   assert.equal(extremeNote({ period: { days: 7 }, totals: {} }), null);
 });
 
-test('digest không còn bất cứ chỗ nào nhắc tới giấc ngủ', () => {
+test('the digest no longer mentions sleep anywhere', () => {
   const { acts, range } = month();
   const text = JSON.stringify(buildDigest(sig(acts, range)));
   assert.equal(/sleep|bedtime|wake|nap/i.test(text), false);

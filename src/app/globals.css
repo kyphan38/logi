@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* dark: theo Theme trong Settings (data-theme), "system" thì theo máy. */
+/* dark: follows Theme in Settings (data-theme); "system" follows the device. */
 @custom-variant dark {
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     @slot;
@@ -12,8 +12,8 @@
   }
 }
 
-/* App viết class zinc-* cứng (kèm dark:). Dải zinc của Tailwind hơi ngả xanh;
-   đổi sang xám trung tính R=G=B của DESIGN.md mà không phải sửa từng class. */
+/* The app hardcodes zinc-* classes (with dark:). Tailwind's zinc leans slightly
+   blue; switch to DESIGN.md's neutral R=G=B grays without editing each class. */
 @theme {
   --color-zinc-50: #fafafa;
   --color-zinc-100: #f4f4f4;
@@ -31,39 +31,39 @@
 /* ===========================================================================
    Design tokens (Stage 4.6)
 
-   Nguyên tắc: BỚT VIỀN, THÊM NỀN. Card phân biệt bằng nền khác biệt, không
-   phải bằng viền bao quanh. Màu chỉ dùng cho category, không dùng cho khung.
-   Còn lại chỉ đen, trắng, xám: giá trị chung của ws/app/DESIGN.md
-   (2026-10-05). Cảnh báo nói bằng chữ và độ đậm, không bằng màu.
+   Rule: FEWER BORDERS, MORE FILL. Cards stand apart by background, not by a
+   surrounding border. Color is only for categories, never for frames.
+   Everything else is black, white and gray: shared values from
+   ws/app/DESIGN.md (2026-10-05). Warnings use words and weight, not color.
 
-   Màu gốc category vẫn nằm ở CATEGORY_COLOR trong logi.ts - file này chỉ
-   thêm biến thể dẫn xuất (tint / ink). KHÔNG sửa logi.ts.
+   The base category colors still live in CATEGORY_COLOR in logi.ts - this file
+   only adds derived variants (tint / ink). Do NOT edit logi.ts.
    =========================================================================== */
 :root {
   --background: #fafafa;
   --foreground: #171717;
   --select: rgb(23 23 23 / 0.14);
 
-  /* --- Bán kính --- */
+  /* --- Radius --- */
   --radius-sm: 8px;    /* button, input, chip */
   --radius-md: 12px;   /* card, timeline block, sheet row */
   --radius-lg: 16px;   /* bottom sheet, modal */
   --radius-full: 9999px;
 
-  /* --- Bề mặt & viền --- */
-  --surface-0: #fafafa; /* nền trang */
+  /* --- Surfaces & borders --- */
+  --surface-0: #fafafa; /* page background */
   --surface-1: #f4f4f4; /* card */
-  --surface-2: #ffffff; /* card nổi / sheet */
+  --surface-2: #ffffff; /* raised card / sheet */
   --border: #e5e5e5;        /* hairline */
-  --border-strong: #d4d4d4; /* viền đứt vùng untracked */
+  --border-strong: #d4d4d4; /* dashed border of untracked areas */
 
-  /* --- Chữ --- */
+  /* --- Text --- */
   --text-primary: #171717;
   --text-secondary: #555555;
   --text-muted: #8a8a8a;
 
-  /* --- Category dẫn xuất (tint = nền block, ink = chữ trên tint) ---
-     Sinh từ CATEGORY_COLOR bằng script; mọi cặp đạt tương phản >= 4.5. */
+  /* --- Derived category colors (tint = block fill, ink = text on tint) ---
+     Generated from CATEGORY_COLOR by a script; every pair reaches contrast >= 4.5. */
   --cat-learn-tint: #e5e6f7;
   --cat-learn-ink: #5659d2;
   --cat-work-tint: #f7ecdc;
@@ -73,7 +73,7 @@
   --cat-leisure-tint: #f6e2ed;
   --cat-leisure-ink: #b33774;
 
-  /* --- Bề rộng nội dung tối đa trên desktop --- */
+  /* --- Max content width on desktop --- */
   --content-max: 720px;
   color-scheme: light;
 }
@@ -106,7 +106,7 @@
   }
 }
 
-/* Chọn tay trong Settings: thắng cài đặt của máy. */
+/* A manual choice in Settings beats the device setting. */
 :root[data-theme="dark"] {
   --background: #111111;
   --foreground: #e8e8e8;
@@ -139,7 +139,7 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Cho phép dùng thẳng trong Tailwind: bg-surface-1, text-muted, rounded-md… */
+  /* Usable directly in Tailwind: bg-surface-1, text-muted, rounded-md… */
   --color-surface-0: var(--surface-0);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
@@ -175,13 +175,13 @@ body {
 }
 
 @layer base {
-  /* Số liệu KHÔNG được nhảy qua lại khi timer chạy. */
+  /* Numbers must NOT jump around while a timer runs. */
   .tabular-nums,
   [class*='tabular'] {
     font-variant-numeric: tabular-nums;
   }
 
-  /* iOS: bỏ ô sáng khi chạm, bỏ độ trễ 300ms. Trạng thái :active tự vẽ. */
+  /* iOS: no tap highlight, no 300ms delay. :active states are drawn by hand. */
   a,
   button,
   select,
@@ -193,7 +193,7 @@ body {
     touch-action: manipulation;
   }
 
-  /* Dưới 16px là iOS Safari tự zoom khi focus vào input. */
+  /* Below 16px, iOS Safari zooms in when an input gets focus. */
   input,
   select,
   textarea {
@@ -201,7 +201,7 @@ body {
   }
 }
 
-/* ===== Thẻ trượt lên từ đáy (voice confirm / clarify) ===== */
+/* ===== Sheet sliding up from the bottom (voice confirm / clarify) ===== */
 @keyframes sheet-up {
   from {
     transform: translateY(1.25rem);
@@ -230,7 +230,7 @@ body {
   animation: dim-in 150ms ease-out;
 }
 
-/* Người dùng tắt hiệu ứng trong Cài đặt thì tôn trọng lựa chọn đó. */
+/* Respect the user's choice when motion is turned off in system settings. */
 @media (prefers-reduced-motion: reduce) {
   .sheet-up,
   .dim-in {
@@ -238,7 +238,7 @@ body {
   }
 }
 
-/* ===== Bề rộng nội dung - mọi màn hình dùng chung (Task 8) ===== */
+/* ===== Content width - shared by every screen (Task 8) ===== */
 .content-width {
   width: 100%;
   max-width: var(--content-max);

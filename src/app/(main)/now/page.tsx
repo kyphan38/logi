@@ -45,10 +45,10 @@ import { nowTiles } from '@/lib/day-progress';
 import { routineForDay } from '@/lib/routine';
 import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
-/** Từ 3 session song song trở lên thì card thu lại, để màn Now vẫn vừa một màn. */
+/** From 3 parallel sessions up, cards collapse so Now still fits one screen. */
 const COMPACT_FROM = 3;
 
-/** "2026-08-26" → "Wednesday, Aug 26". Parse tay để không lệch múi giờ. */
+/** "2026-08-26" → "Wednesday, Aug 26". Parsed by hand to avoid timezone shifts. */
 function prettyLogicalDate(d: string): string {
   const [y, m, day] = d.split('-').map(Number);
   return new Date(y, m - 1, day).toLocaleDateString([], {
@@ -62,11 +62,11 @@ export default function NowPage() {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
 
-  // Weekly Review: banner từ 19:00 CN, còn hạn tới hết thứ Ba.
+  // Weekly Review: banner from 19:00 Sunday, valid until the end of Tuesday.
   const reviewWeek = useReviewDue();
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
 
-  // Ngày logic đổi lúc 04:00, không phải nửa đêm → tick 60s là đủ.
+  // The logical day turns at 04:00, not midnight → a 60s tick is enough.
   const nowMinute = useTick(60_000, true);
   const today = logicalDate(nowMinute);
 
@@ -75,11 +75,11 @@ export default function NowPage() {
   const { activities: todayActivities } = useDayActivities(today);
   const { toasts, push, dismiss } = useToasts();
 
-  // Chuyển tuần. Không có cron nên nó phải bám vào lúc người dùng mở app.
-  // Idempotent, nên gọi thừa cũng không sao.
+  // Week rollover. There is no cron, so it hooks onto the app being opened.
+  // Idempotent, so extra calls are harmless.
   useRollover();
 
-  // Cân bằng tuần. Một dòng, hoặc không dòng nào.
+  // Weekly balance. One line, or none.
   const week = useCurrentWeek();
   const { target: weekTarget } = useWeekTarget(week);
   const { activities: weekActivities } = useWeekActivities(week);
@@ -88,7 +88,7 @@ export default function NowPage() {
     [weekActivities, weekTarget, nowMinute]
   );
 
-  // Nhắc thắng balance banner: nó có hành động cụ thể hơn.
+  // Reminders beat the balance banner: they have a more concrete action.
   const { reminder, dismiss: dismissReminder } = useReminders(
     todayActivities,
     weekActivities,
@@ -96,23 +96,23 @@ export default function NowPage() {
   );
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
-  // Record dưới một phút đang chờ người dùng xác nhận (4.6 Task 5).
+  // A sub-minute record waiting for the user to confirm (4.6 Task 5).
   const [zeroStop, setZeroStop] = useState<{ id: string; at: number } | null>(null);
 
   const voice = useVoice(uid, active, push);
 
-  // Card voice đang mở thì FAB phải nhường chỗ.
+  // While the voice card is open, the FAB steps aside.
   const voiceCardOpen = voice.pending !== null || voice.clarify !== null;
 
-  // Voice bí thì luôn phải có đường lui: mở sheet nhập tay, 1 tiếng vừa rồi.
+  // When voice is stuck there must be a way out: the manual sheet, for the last hour.
   const openManual = useCallback(() => {
     const end = roundDown(Date.now(), 15);
     setSheet({ mode: 'create', startAt: end - 3_600_000, endAt: end });
   }, []);
 
-  // Chồng lấn hiện theo giờ, một chữ số thập phân - mỗi bậc là 6 phút. Tick
-  // mỗi giây ở đây sẽ render lại CẢ trang 60 lần/phút chỉ để đổi cùng một con
-  // số. Đồng hồ đếm giây nằm trong từng card (`useElapsed`), không phải ở đây.
+  // Overlap shows in hours with one decimal - each step is 6 minutes. A
+  // per-second tick here would re-render the WHOLE page 60 times a minute for
+  // the same number. The seconds clock lives in each card (`useElapsed`).
   const overlap = useMemo(
     () => (active.length > 1 ? overlapHours(active, nowMinute) : 0),
     [active, nowMinute]
@@ -120,15 +120,15 @@ export default function NowPage() {
 
   const running = useMemo(() => new Set(active.map((a) => a.category)), [active]);
 
-  // Dải tiến độ nằm ngay trong nút category (AMENDMENT-remove-sleep 6b): mỗi
-  // nút tự nói hôm nay đã làm bao nhiêu so với target của đúng thứ hôm nay.
+  // The progress strip sits inside the category button (AMENDMENT-remove-sleep
+  // 6b): each button shows today's progress against today's own target.
   const tiles = useMemo(
     () => nowTiles(todayActivities, weekTarget?.weekly ?? null, logicalWeekday(nowMinute), nowMinute),
     [todayActivities, weekTarget, nowMinute]
   );
 
-  // "3h 20m tracked" ở header: giờ thật, đã trừ phần log song song. Không có
-  // mẫu số 24h ở đâu cả - ngày không được coi là phải lấp đầy.
+  // "3h 20m tracked" in the header: real hours, parallel logs removed. No 24h
+  // denominator anywhere - a day is not meant to be filled.
   const trackedMs = useMemo(() => {
     const actual = actualHours(todayActivities, nowMinute);
     const sum = CATEGORIES.reduce((t, c) => t + actual[c], 0);
@@ -136,8 +136,8 @@ export default function NowPage() {
   }, [todayActivities, nowMinute]);
 
 
-  // Routine hôm nay (Stage 10): chỉ tick, không gắn với giờ. `today` đổi lúc
-  // 04:00 → hook đọc doc tick của ngày mới, đang trống. Đó là cơ chế reset.
+  // Today's routine (Stage 10): ticks only, not tied to hours. `today` turns at
+  // 04:00 → the hook reads the new day's empty tick doc. That is the reset.
   const { groups: routineGroups } = useRoutines();
   const routine = useRoutineChecks(today);
   const routineToday = useMemo(
@@ -145,33 +145,33 @@ export default function NowPage() {
     [routineGroups, nowMinute, routine.isChecked]
   );
 
-  // Bedtime là mốc trong dayLogs, không phải activity. Nút nhỏ trong header
-  // chỉ hiện đêm nay; sheet mới là chỗ thấy và sửa được cả đêm qua.
+  // Bedtime is a mark in dayLogs, not an activity. The small header button only
+  // shows tonight; the sheet is where last night can be seen and edited.
   const { tonight: bedtimeLog, lastNight } = useRecentBedtime(today);
   const [bedtimeOpen, setBedtimeOpen] = useState(false);
 
-  // Session `active` quá 15h. `active` là stream realtime nên danh sách này tự
-  // cập nhật khi mount, khi app quay lại foreground (useTick bắt 'focus'),
-  // và ngay khi người dùng xử lý xong từng cái.
+  // `active` sessions over 15h. `active` is a realtime stream, so this list
+  // updates on mount, when the app returns to the foreground (useTick catches
+  // 'focus'), and as soon as the user handles each one.
   const stale = useMemo(() => findStale(active, nowMinute), [active, nowMinute]);
 
   /**
-   * `when.startAt === null` là đường thường ngày: một chạm, bắt đầu ngay.
-   * `scheduled` thì record nằm im tới giờ, `promoteScheduled()` bật nó lên.
+   * `when.startAt === null` is the everyday path: one tap, start now.
+   * `scheduled` means the record waits until its time; `promoteScheduled()` starts it.
    */
   async function handleStart(category: Category, when: StartWhen) {
     if (!uid || busy) return;
     setBusy(true);
     try {
-      // Offline: cache đã ghi ngay, đừng bắt nút chờ server ack.
+      // Offline: the cache already has the write, do not make the button wait for a server ack.
       const started = startActivity(uid, {
         category,
         startAt: when.startAt ?? undefined,
         status: when.scheduled ? 'scheduled' : 'active',
       });
       await capWait(started, (e) => push(`Sync failed. ${(e as Error).message}`));
-      // Lớp 3 của 6c: Start chỉ một chạm, nên phải luôn có đường lui 5 giây.
-      // `started` giữ riêng vì `capWait` có thể trả về trước khi có id.
+      // Layer 3 of 6c: Start is one tap, so there must always be a 5-second way back.
+      // `started` is kept separately because `capWait` may return before there is an id.
       const done =
         when.scheduled && when.startAt !== null
           ? `${CATEGORY_LABEL[category]} scheduled for ${clockTime(when.startAt)}`
@@ -195,13 +195,13 @@ export default function NowPage() {
     }
   }
 
-  /** Giữ lâu một nút đang chạy = "tôi bắt đầu sai giờ" → mở thẳng sheet sửa. */
+  /** Long-press a running button = "I started at the wrong time" → open the edit sheet. */
   function editRunning(category: Category) {
     const a = active.find((x) => x.category === category);
     if (a) setSheet({ mode: 'edit', activity: a });
   }
 
-  /** Huỷ session đã hẹn: xoá hẳn record, kèm Undo vì bấm nhầm thì mất luôn lịch. */
+  /** Cancel a scheduled session: hard-delete the record, with Undo since a mistap loses the plan. */
   async function handleCancelScheduled(a: Activity) {
     if (!uid || busy) return;
     setBusy(true);
@@ -227,12 +227,12 @@ export default function NowPage() {
 
   async function handleStop(id: string) {
     if (!uid || busy) return;
-    // Chốt mốc dừng NGAY lúc bấm. Nếu đợi tới lúc người dùng bấm Save trong
-    // hộp thoại thì record dài thêm đúng bằng thời gian họ do dự.
+    // Fix the stop time AT the tap. Waiting until the user taps Save in the
+    // dialog would stretch the record by exactly their hesitation.
     const at = Date.now();
     const a = active.find((x) => x.id === id);
-    // Start rồi stop trong cùng một phút gần như luôn là thao tác nhầm.
-    // Hỏi lại, nhưng KHÔNG tự chặn - có thể họ thật sự muốn ghi.
+    // Start then stop in the same minute is almost always a mistake.
+    // Ask, but DO NOT block - they may really want to record it.
     if (a && at - a.startAt < 60_000) {
       setZeroStop({ id, at });
       return;
@@ -271,21 +271,21 @@ export default function NowPage() {
     }
   }
 
-  /** Mốc đang có của một đêm, để Undo trả lại đúng cái cũ chứ không xoá trắng. */
+  /** A night's existing mark, so Undo restores it instead of clearing. */
   function bedtimeOf(date: string): number | null {
     if (date === bedtimeLog.date) return bedtimeLog.bedtimeAt;
     if (date === lastNight.date) return lastNight.bedtimeAt;
     return null;
   }
 
-  /** Undo dùng chung cho ghi và xoá: có mốc cũ thì ghi lại, không thì xoá. */
+  /** Shared Undo for save and delete: rewrite the old mark if any, else delete. */
   function restoreBedtime(date: string, prev: number | null) {
     if (!uid) return;
     const back = prev === null ? clearBedtime(uid, date) : logBedtime(uid, prev);
     void back.catch((e) => push(`Could not undo. ${(e as Error).message}`));
   }
 
-  /** Ghi mốc đi ngủ. `at` có thể là tối qua - ngày logic suy ra từ chính nó. */
+  /** Log the bedtime. `at` may be last night - the logical day comes from it. */
   async function handleBedtime(at: number) {
     if (!uid || busy) return;
     setBedtimeOpen(false);
@@ -307,7 +307,7 @@ export default function NowPage() {
     }
   }
 
-  /** Xoá mốc ghi nhầm. Chỉ có trong sheet - ngoài header không ai xoá nhầm được. */
+  /** Delete a mistaken mark. Only in the sheet - nobody deletes it by accident from the header. */
   async function handleClearBedtime(date: string) {
     if (!uid || busy) return;
     setBedtimeOpen(false);
@@ -327,8 +327,8 @@ export default function NowPage() {
   }
 
   function focusRunning(category: Category) {
-    // Chạm lại category đang chạy: không tạo trùng. Cuộn tới card + nói rõ lý do,
-    // nếu không thì cú chạm trông như bị nuốt khi card vốn đã nằm trong màn hình.
+    // Tapping a running category again: no duplicate. Scroll to its card and say
+    // why, otherwise the tap looks swallowed when the card is already on screen.
     document
       .getElementById(`session-${category}`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -336,10 +336,10 @@ export default function NowPage() {
   }
 
   return (
-    // pb-20: chừa chỗ cho nút mic FAB, để nó không đè lên nút Stop của card cuối.
+    // pb-20: room for the mic FAB, so it does not cover the last card's Stop button.
     <div className="flex flex-1 flex-col gap-6 pb-20">
-      {/* Header một dòng: ngày logic bên trái, số giờ đã ghi bên phải. Nút
-           Sign out chuyển sang Settings để màn Now vừa một màn hình. */}
+      {/* One-line header: logical date on the left, logged hours on the right.
+           Sign out moved to Settings so Now fits one screen. */}
       <header className="flex items-baseline justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Now</h1>
@@ -349,8 +349,8 @@ export default function NowPage() {
           <p className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
             {formatDuration(trackedMs)} tracked
           </p>
-          {/* Bedtime: nút chữ nhỏ, cùng hàng thông tin với tracked để không tốn
-              thêm một khối chiều cao nào. */}
+          {/* Bedtime: a small text button on the same info row as tracked, so it
+              adds no height. */}
           <button
             type="button"
             onClick={() => setBedtimeOpen(true)}
@@ -407,8 +407,8 @@ export default function NowPage() {
         </section>
       ) : null}
 
-      {/* Chưa biết có session nào đang chạy hay không thì giữ chỗ, đừng để
-          CategoryGrid nhảy xuống ngay khi dữ liệu về. */}
+      {/* Until we know whether a session is running, hold the space so
+          CategoryGrid does not jump down when data arrives. */}
       {activeLoading && active.length === 0 ? (
         <div
           className="h-[76px] animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-900"
@@ -467,12 +467,9 @@ export default function NowPage() {
       {zeroStop ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center">
           <div className="w-full max-w-lg rounded-t-lg bg-surface-2 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:rounded-lg md:pb-5">
-            <h3 className="mb-1 text-base font-semibold text-ink">
+            <h3 className="mb-4 text-base font-semibold text-ink">
               Less than a minute. Save anyway?
             </h3>
-            <p className="mb-4 text-sm text-ink-soft">
-              Start and stop landed in the same minute.
-            </p>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -505,7 +502,7 @@ export default function NowPage() {
         />
       ) : null}
 
-      {/* Đang nghĩ / đang ghi → làm mờ nhẹ, vẫn đọc được, vẫn bấm được. */}
+      {/* Thinking / recording → fade slightly, still readable and clickable. */}
       {voice.thinking || voice.saving ? (
         <div
           aria-hidden="true"
@@ -513,7 +510,7 @@ export default function NowPage() {
         />
       ) : null}
 
-      {/* Có card voice thì giấu FAB - nếu không nó đè lên nút Confirm/Cancel. */}
+      {/* Hide the FAB while a voice card is open - otherwise it covers Confirm/Cancel. */}
       {voiceCardOpen ? null : (
         <MicButton
           disabled={busy || voice.saving}

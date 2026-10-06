@@ -1,23 +1,23 @@
 // ---------------------------------------------------------------------------
-// logi - Sinh icon PWA (Stage 6 Task 2)
+// logi - PWA icon generator
 //
-// Không dùng thư viện vẽ ảnh: icon chỉ là vài thanh bo tròn, viết thẳng PNG
-// bằng zlib còn nhẹ hơn kéo về một dependency chỉ để chạy một lần.
+// No image library: the icon is just a few rounded bars, and writing the PNG
+// with zlib is lighter than a dependency used once.
 //
-// Hình phải khớp `public/favicon.svg` (bộ icon dùng chung cho mọi app trong
-// ws/app): nền sáng, 4 thanh sóng âm màu đen vẽ trên lưới 24x24.
-// PNG cố tình vẽ tràn viền (không bo góc) vì Android/iOS tự cắt theo mặt nạ
-// của hệ điều hành - bo sẵn sẽ lòi ra viền trắng.
+// Must match `public/favicon.svg` (the icon set shared by every app in
+// ws/app): light background, 4 black sound-wave bars on a 24x24 grid.
+// The PNG is full-bleed (no rounded corners) because Android/iOS apply their
+// own mask - pre-rounded corners would show a white edge.
 //
-// Chạy lại:  node scripts/make-icons.mjs
+// Rerun:  node scripts/make-icons.mjs
 // ---------------------------------------------------------------------------
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-const BG = [0xf4, 0xf4, 0xf1]; // nền sáng chung của bộ icon
+const BG = [0xf4, 0xf4, 0xf1]; // shared light background of the icon set
 const FG = [0x14, 0x14, 0x14];
 
-// Toạ độ trên lưới 24x24, giống hệt các <path> trong favicon.svg.
+// Coordinates on the 24x24 grid, same as the <path>s in favicon.svg.
 const STROKE = 2.4;
 const BARS = [
   { x: 5.0, y0: 9.5, y1: 14.5 },
@@ -45,14 +45,14 @@ function chunk(type, data) {
 }
 
 function png(size) {
-  // Vùng an toàn cho icon maskable: nội dung nằm trong 60% giữa, vì iOS và
-  // Android đều cắt góc theo hình dạng riêng của hệ điều hành.
+  // Maskable safe zone: content stays in the middle 60%, since iOS and
+  // Android crop to their own shapes.
   const pad = size * 0.2;
   const unit = (size - pad * 2) / 24;
   const to = (v) => pad + v * unit;
   const r = (STROKE / 2) * unit;
 
-  // Thanh bo tròn = hình chữ nhật cộng hai nửa tròn ở hai đầu.
+  // Rounded bar = a rectangle plus a half circle at each end.
   const caps = BARS.map((b) => ({
     cx: to(b.x),
     top: to(b.y0) + r,
@@ -71,7 +71,7 @@ function png(size) {
     return BG;
   };
 
-  // Mỗi hàng bắt đầu bằng 1 byte filter type 0 (None).
+  // Each row starts with 1 byte of filter type 0 (None).
   const raw = Buffer.alloc(size * (size * 3 + 1));
   let o = 0;
   for (let y = 0; y < size; y++) {

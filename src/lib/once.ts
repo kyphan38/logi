@@ -1,20 +1,20 @@
 // ============================================================
-// logi - Chạy đúng một lần cho mỗi requestId.
-// Bấm Confirm hai cái, mic bắn onResult lại, mạng chập chờn rồi retry -
-// tất cả đều dẫn tới cùng một requestId và chỉ được ghi một bản.
-// File thuần, không React, để test bằng `node --test`.
+// logi - Run exactly once per requestId.
+// Confirm tapped twice, the mic firing onResult again, a flaky network retry -
+// all lead to the same requestId and may only write one copy.
+// Pure file, no React, testable with `node --test`.
 // ============================================================
 
 export interface Once {
   /**
-   * Lần đầu với `id` → chạy `fn` và trả kết quả.
-   * Lần sau với `id` cũ → bỏ qua, trả `null`.
-   * `fn` ném lỗi → nhả `id` ra rồi ném tiếp, để người dùng thử lại câu đó.
+   * First time with `id` → runs `fn` and returns the result.
+   * Later with an old `id` → skipped, returns `null`.
+   * If `fn` throws → releases `id` and rethrows, so the user can retry that sentence.
    */
   run<T>(id: string, fn: () => Promise<T>): Promise<T | null>;
-  /** Quên `id` đi, coi như chưa từng chạy. */
+  /** Forget `id`, as if it never ran. */
   forget(id: string): void;
-  /** Đã giữ bao nhiêu id. Chủ yếu cho test. */
+  /** How many ids are held. Mostly for tests. */
   readonly size: number;
 }
 

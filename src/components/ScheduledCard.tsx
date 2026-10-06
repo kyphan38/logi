@@ -5,11 +5,11 @@ import { clockTime, countdown } from '@/lib/datetime';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
 /**
- * Session đã hẹn giờ, chưa chạy (Task 6). Nằm phía trên các session đang chạy
- * trong màn hình Now.
+ * A scheduled session that has not started (Task 6). Sits above the running
+ * sessions on the Now screen.
  *
- * Tới giờ mà `promoteScheduled()` chưa kịp ghi xong thì hiện "starting…" - card
- * tự biến mất khi record đổi sang `active`.
+ * If the time arrives before `promoteScheduled()` finishes writing, it shows
+ * "starting…" - the card disappears once the record turns `active`.
  */
 export default function ScheduledCard({
   activity,
@@ -20,7 +20,7 @@ export default function ScheduledCard({
   activity: Activity;
   onCancel: () => void;
   busy: boolean;
-  /** Ghi còn nằm trong hàng đợi, chưa lên server. */
+  /** The write is still queued, not on the server yet. */
   pending?: boolean;
 }) {
   const now = useTick(1000, true);

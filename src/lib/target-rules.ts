@@ -1,8 +1,8 @@
 // ============================================================
-// logi - Luật thuần của Targets.
+// logi - Pure Targets rules.
 //
-// Tách khỏi `targets.ts` vì file đó import Firestore. Ở đây không có
-// I/O nào, nên `node --test` chạy thẳng được.
+// Separate from `targets.ts` because that file imports Firestore. No I/O
+// here, so `node --test` runs it directly.
 // ============================================================
 
 import { validateTargets } from '@/lib/balance';
@@ -23,7 +23,7 @@ export const WEEK_CLOSED = 'This week is closed';
 
 export function assertOpen(wt: WeekTarget | null, week: string, now: number): void {
   if (wt && wt.lockedAt !== null) throw new TargetError('locked', WEEK_CLOSED);
-  // Khoá lười: tuần đã qua 21:00 CN thì coi như đóng, kể cả chưa kịp ghi lockedAt.
+  // Lazy lock: a week past 21:00 Sunday counts as closed, even before lockedAt is written.
   if (isWeekClosed(week, now)) throw new TargetError('locked', WEEK_CLOSED);
 }
 
@@ -32,7 +32,7 @@ export function assertValid(weekly: Weekly): void {
   if (!check.ok) throw new TargetError('invalid', check.errors.join(' '));
 }
 
-/** Nợ phát sinh nếu đổi sang preset này - để confirm sheet nêu rõ giá phải trả. */
+/** Debt created by switching to this preset - so the confirm sheet shows the cost. */
 export function previewSwitch(
   from: Weekly,
   toPreset: PresetId,
@@ -43,7 +43,7 @@ export function previewSwitch(
     category: c,
     from: from[c],
     to: next[c],
-    // Nợ ghi theo phần cắt so với BASELINE, không phải so với tuần hiện tại.
+    // Debt is recorded against the BASELINE cut, not against the current week.
     debt: Math.max(0, PRESETS.normal.weekly[c] - next[c]),
   }));
 }

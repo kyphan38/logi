@@ -1,34 +1,35 @@
 // ---------------------------------------------------------------------------
-// logi - Gợi ý bù theo số ngày còn lại (Stage 7)
+// logi - Catch-up suggestion by days left (Stage 7)
 //
-// `dailyTargetFor()` chia target tuần theo hình dạng baseline, không nhìn tuần
-// đã đi tới đâu. Thứ Hai học 10h thì thứ Ba nó vẫn nói 3h - đúng kế hoạch cũ,
-// nhưng vô ích: kế hoạch đó đã sai từ hôm qua rồi.
+// `dailyTargetFor()` splits the weekly target by the baseline shape, ignoring
+// how far the week has gone. Study 10h on Monday and on Tuesday it still says
+// 3h - true to the old plan, but useless: that plan was already wrong yesterday.
 //
-// Ở đây gợi ý = phần CÒN LẠI của tuần, chia cho các ngày CHƯA QUA, giữ nguyên
-// tỉ lệ ngày thường / cuối tuần của baseline.
+// Here the suggestion = the week's REMAINING hours, spread over the days NOT
+// YET PASSED, keeping the baseline's weekday / weekend ratio.
 //
-//     suggest(d) = remaining * shape[d] / (tổng shape các ngày từ d tới CN)
+//     suggest(d) = remaining * shape[d] / (sum of shape from d to Sunday)
 //
-// Tính chất quan trọng: nếu hôm nay làm đúng số gợi ý thì ngày mai tính lại vẫn
-// ra đúng con số mà hôm nay đã dự tính. Kế hoạch không tự trôi.
+// Key property: if today does exactly the suggestion, tomorrow's recompute gives
+// exactly the number today predicted. The plan does not drift.
 //
 //     R' = R - R·s_d/S = R·(S-s_d)/S = R·S'/S
 //     suggest(d+1) = R'·s_{d+1}/S' = R·s_{d+1}/S   ✓
 //
-// Rồi chặn trần ngày: nợ 30h Learn mà còn đúng thứ Sáu thì bảo học 30h là điên.
-// Hàm thuần, không đụng React → test bằng `node --test`.
+// Then cap per day: owing 30h of Learn with only Friday left, saying "study
+// 30h" would be absurd.
+// Pure function, no React → tested with `node --test`.
 // ---------------------------------------------------------------------------
 import { BASELINE_DAILY, BASELINE_WEEKLY, CATEGORIES, type Category } from '@/types/logi';
 
 /**
- * Trần một ngày - gợi ý không bao giờ vượt số này.
+ * The cap for one day - a suggestion never exceeds it.
  *
- * Không phải "chuẩn", là mức trần: chuẩn Learn ngày thường là 3h, trần 5h nghĩa
- * là được bù thêm 2h. Cuối tuần chuẩn đã 8h nên trần phải 10h, nếu để 5h thì
- * một ngày Bảy bình thường cũng bị chặn.
+ * Not a "standard", a cap: a weekday Learn standard of 3h with a 5h cap means
+ * 2h of catch-up allowed. The weekend standard is already 8h, so its cap must
+ * be 10h; a 5h cap would block a normal Saturday.
  *
- * Cuối tuần = Chủ nhật (0) và thứ Bảy (6).
+ * Weekend = Sunday (0) and Saturday (6).
  */
 export const DAY_CAP: Record<Category, { weekday: number; weekend: number }> = {
   learn: { weekday: 5, weekend: 10 },
@@ -46,41 +47,41 @@ export function dayCap(c: Category, dow: number): number {
 }
 
 /**
- * Tuần logic chạy T2 → CN, còn `dow` là 0 = CN … 6 = T7 (khớp `Date.getDay()`).
- * Đổi sang vị trí trong tuần để biết còn mấy ngày: T2 = 0 … CN = 6.
+ * The logical week runs Mon → Sun, while `dow` is 0 = Sun … 6 = Sat (like `Date.getDay()`).
+ * Convert to a position in the week to know days left: Mon = 0 … Sun = 6.
  */
 export function weekPos(dow: number): number {
   return (dow + 6) % 7;
 }
 
-/** Ngược lại `weekPos`. */
+/** The inverse of `weekPos`. */
 export function dowAt(pos: number): number {
   return (pos + 1) % 7;
 }
 
 export interface CatchUp {
-  /** Giờ nên làm hôm đó. Đã chặn trần, đã làm tròn 0.1. */
+  /** Hours to do that day. Capped and rounded to 0.1. */
   suggested: number;
-  /** Chia theo baseline, không nhìn tuần đã đi tới đâu. Để so sánh. */
+  /** Split by baseline, ignoring how far the week has gone. For comparison. */
   standard: number;
-  /** Giờ còn nợ của cả tuần, tính tới đầu ngày này. */
+  /** Hours still owed for the week, as of the start of this day. */
   remaining: number;
-  /** Số ngày còn lại kể cả ngày này. */
+  /** Days left, including this one. */
   daysLeft: number;
-  /** Xong target tuần rồi - phần còn lại là 0. */
+  /** Weekly target done - the rest is 0. */
   met: boolean;
-  /** Trần đã cắt bớt: một ngày không nhét hết chỗ nợ được. */
+  /** The cap cut it: one day cannot hold all the debt. */
   capped: boolean;
 }
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
 /**
- * @param weekly     target tuần đang áp dụng (`weekTarget.weekly`)
- * @param doneBefore giờ đã log ở các ngày TRƯỚC ngày này, trong cùng tuần logic.
- *   Không tính giờ của chính ngày đang xem - nếu tính thì mẫu số tụt dần trong
- *   lúc bạn đang đuổi theo nó, mỗi lần nhìn lại ra một đích khác.
- * @param dow        0 = CN … 6 = T7
+ * @param weekly     the weekly target in effect (`weekTarget.weekly`)
+ * @param doneBefore hours logged on days BEFORE this one, in the same logical week.
+ *   Leaves out the viewed day's own hours - otherwise the denominator shrinks
+ *   while you chase it, a different target on each look.
+ * @param dow        0 = Sun … 6 = Sat
  */
 export function catchUp(
   weekly: Record<Category, number>,
@@ -95,8 +96,8 @@ export function catchUp(
   for (const c of CATEGORIES) {
     const shape = BASELINE_DAILY[c];
     const base = BASELINE_WEEKLY[c];
-    // Giữ bản chưa làm tròn để làm trần: làm tròn trước rồi so sánh thì 12.645
-    // thành 12.6, và một kế hoạch đúng y nguyên lại bị gắn cờ "chạm trần".
+    // Keep the unrounded value for the cap: rounding first then comparing turns
+    // 12.645 into 12.6, and an exact plan gets flagged "at cap".
     const stdRaw = base > 0 ? shape[dow] * (weekly[c] / base) : 0;
     const standard = r1(stdRaw);
 
@@ -108,21 +109,21 @@ export function catchUp(
       continue;
     }
 
-    // Tổng hình dạng của các ngày chưa qua.
+    // Sum of the shape over the days not yet passed.
     let sum = 0;
     for (let p = pos; p <= 6; p++) sum += shape[dowAt(p)];
 
-    // shape[dow] === 0 là ngày nghỉ của category này - Fitness Chủ nhật, Work
-    // cuối tuần. Nợ bao nhiêu cũng không đẩy vào ngày nghỉ: `raw` tự ra 0.
-    // sum === 0 thì mọi ngày còn lại đều là ngày nghỉ, chia cho 0 nên chặn tay.
-    // Lúc đó target tuần thành không với tới được - đó là sự thật, không phải
-    // lỗi, và Analytics đã nói chuyện thiếu hụt rồi.
+    // shape[dow] === 0 is this category's day off - Fitness on Sunday, Work on
+    // weekends. No debt is ever pushed onto a day off: `raw` comes out 0.
+    // sum === 0 means every remaining day is off; dividing by 0 is blocked here.
+    // The weekly target is then out of reach - that is the truth, not a bug,
+    // and Analytics already reports the shortfall.
     const raw = sum > 0 ? remaining * (shape[dow] / sum) : 0;
 
-    // Trần chỉ để chặn phần BÙ, không được cãi lại chính kế hoạch. Target Learn
-    // 49h/tuần thì chuẩn thứ Bảy đã là 12.6h, cao hơn trần 10h - lấy trần 10h
-    // là tuần nào đi đúng kế hoạch cũng bị báo "chạm trần" và không bao giờ với
-    // tới target. Trần thật = trần cứng, hoặc chuẩn của ngày, cái nào cao hơn.
+    // The cap only limits the CATCH-UP part; it must not overrule the plan. With
+    // a 49h/week Learn target, Saturday's standard is already 12.6h, above the
+    // 10h cap - capping at 10h flags every on-plan week "at cap" and never reaches
+    // the target. The real cap = the hard cap or the day's standard, whichever is higher.
     const cap = Math.max(dayCap(c, dow), stdRaw);
     const suggested = Math.min(raw, cap);
 
@@ -132,8 +133,8 @@ export function catchUp(
       remaining: r1(remaining),
       daysLeft,
       met,
-      // Chỉ báo khi vết cắt đáng kể (> 15 phút). Mỗi ngày làm tròn 0.1h nên cả
-      // tuần trôi được vài phút; gắn cờ "chạm trần" vì mấy phút đó là báo động giả.
+      // Only flag a meaningful cut (> 15 minutes). Daily 0.1h rounding drifts a
+      // few minutes over a week; flagging "at cap" for those is a false alarm.
       capped: raw - suggested > 0.25,
     };
   }

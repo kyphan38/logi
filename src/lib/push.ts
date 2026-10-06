@@ -1,13 +1,13 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Push notification (Stage 6 Task 2)
+// logi - Push notifications (Stage 6 Task 2)
 //
-// Nhắc 06:15 / 20:45 / 19:00 CN hiện ở màn khoá, kể cả khi app đã đóng.
-// Nhắc trong app của Stage 4 GIỮ NGUYÊN làm dự phòng - push có thể bị chặn,
-// hết hạn token, hoặc người dùng chưa cài lên màn hình chính.
+// Reminders at 06:15 / 20:45 / 19:00 Sun show on the Lock Screen, even with
+// the app closed. Stage 4's in-app reminders STAY as a fallback - push may be
+// blocked, the token may expire, or the app may not be on the Home Screen.
 //
-// Token nằm ở `users/{uid}/meta/fcm`. File này là nơi duy nhất ghi doc đó.
+// The token lives at `users/{uid}/meta/fcm`. This file is the only writer of that doc.
 // ---------------------------------------------------------------------------
 
 import { doc, setDoc, deleteField } from 'firebase/firestore';
@@ -29,7 +29,7 @@ export async function pushState(): Promise<PushState> {
   if (typeof window === 'undefined') return 'unsupported';
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return 'unsupported';
   if (!(await isSupported())) return 'unsupported';
-  // Safari trên iOS: chưa cài lên màn hình chính thì coi như chưa hỗ trợ.
+  // Safari on iOS: not on the Home Screen yet counts as unsupported.
   if (isIOS() && !isStandalone()) return 'unsupported';
   return Notification.permission as PushState;
 }
@@ -37,10 +37,11 @@ export async function pushState(): Promise<PushState> {
 export class PushError extends Error {}
 
 /**
- * Bật push. PHẢI gọi từ đúng một cú chạm của người dùng: trình duyệt chỉ cho
- * hỏi quyền khi có tương tác, và hỏi sai lúc thì mất luôn cơ hội hỏi lại.
+ * Turns push on. MUST be called from a single user tap: browsers only allow a
+ * permission prompt on interaction, and asking at the wrong time loses the
+ * chance to ask again.
  *
- * Trả về token, hoặc ném lỗi có câu chữ hiển thị được cho người dùng.
+ * Returns the token, or throws with a message fit to show the user.
  */
 export async function enablePush(uid: string): Promise<string> {
   const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
@@ -51,8 +52,8 @@ export async function enablePush(uid: string): Promise<string> {
     throw new PushError('Notifications are blocked. Turn them on in your browser settings.');
   }
 
-  // Đăng ký SW của mình rồi đưa cho FCM dùng, thay vì để nó tự tìm
-  // `/firebase-messaging-sw.js` - app chỉ có một service worker duy nhất.
+  // Register our own SW and hand it to FCM, instead of letting it look for
+  // `/firebase-messaging-sw.js` - the app has a single service worker.
   const registration = await navigator.serviceWorker.register(SW_URL, { scope: '/' });
   await navigator.serviceWorker.ready;
 
@@ -67,8 +68,8 @@ export async function enablePush(uid: string): Promise<string> {
     {
       token,
       platform: isIOS() ? 'ios' : 'other',
-      // Token web hết hạn im lặng. Cloud Function xoá token chết, còn mốc này
-      // cho biết lần cuối máy này còn nói chuyện được.
+      // Web tokens expire silently. The Cloud Function removes dead tokens, and
+      // this mark shows when this device last checked in.
       updatedAt: Date.now(),
     },
     { merge: true }
@@ -78,8 +79,8 @@ export async function enablePush(uid: string): Promise<string> {
 }
 
 /**
- * Tắt push từ phía app: xoá token nên server không gửi nữa.
- * Quyền của trình duyệt thì chỉ người dùng tự thu hồi trong cài đặt được.
+ * Turns push off from the app: deletes the token so the server stops sending.
+ * The browser permission can only be revoked by the user in settings.
  */
 export async function disablePush(uid: string): Promise<void> {
   await setDoc(

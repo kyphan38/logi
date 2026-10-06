@@ -1,11 +1,11 @@
 /**
- * true khi app chạy từ màn hình chính (Add to Home Screen), không phải tab
- * trình duyệt. Tách riêng khỏi push.ts để AuthContext dùng được mà không kéo
- * firebase/messaging vào mọi trang.
+ * true when the app runs from the Home Screen (Add to Home Screen), not a
+ * browser tab. Separate from push.ts so AuthContext can use it without
+ * pulling firebase/messaging into every page.
  *
- * iOS chỉ cho phép push khi app đang chạy standalone. Mở trong tab Safari thì
- * `Notification` có tồn tại nhưng `requestPermission()` sẽ luôn trả về
- * 'denied' - hỏi lúc đó chỉ làm người dùng mất quyền vĩnh viễn.
+ * iOS only allows push when the app runs standalone. In a Safari tab
+ * `Notification` exists, but `requestPermission()` always returns 'denied' -
+ * asking then only loses the permission for good.
  */
 export function isStandalone(): boolean {
   if (typeof window === 'undefined') return false;

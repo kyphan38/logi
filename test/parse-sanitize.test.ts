@@ -8,7 +8,7 @@ const NOW = at('2026-08-26', '12:00');
 const IDS = new Set(['a1']);
 const opts = { now: NOW, knownIds: IDS };
 
-/** ParseResult tối thiểu, hợp lệ - mỗi test chỉ bẻ một chỗ. */
+/** Minimal valid ParseResult - each test breaks one field. */
 function base(over: Record<string, unknown> = {}) {
   return {
     intent: 'log_past',
@@ -25,7 +25,7 @@ function base(over: Record<string, unknown> = {}) {
   } as never;
 }
 
-test('sanitize: câu hợp lệ đi qua, thời gian ra epoch ms', () => {
+test('sanitize: a valid result passes, times become epoch ms', () => {
   const r = sanitizeParse(base(), opts);
   assert.equal(r.intent, 'log_past');
   assert.equal(r.category, 'work');
@@ -34,33 +34,33 @@ test('sanitize: câu hợp lệ đi qua, thời gian ra epoch ms', () => {
   assert.equal(r.confidence, 0.9);
 });
 
-test('sanitize: category lạ → null + clarify', () => {
+test('sanitize: unknown category → null + clarify', () => {
   const r = sanitizeParse(base({ category: 'cooking' }), opts);
   assert.equal(r.category, null);
   assert.equal(r.intent, 'clarify');
   assert.ok(r.clarifyQuestion);
 });
 
-test('sanitize: category null vẫn ok (câu "stop")', () => {
+test('sanitize: null category is fine ("stop")', () => {
   const r = sanitizeParse(base({ intent: 'stop', category: null }), opts);
   assert.equal(r.intent, 'stop');
   assert.equal(r.category, null);
 });
 
-test('sanitize: ngày rác → null', () => {
+test('sanitize: garbage date → null', () => {
   const r = sanitizeParse(base({ startAt: 'yesterday morning', endAt: '' }), opts);
   assert.equal(r.startAt, null);
   assert.equal(r.endAt, null);
 });
 
-test('sanitize: lùi quá 7 ngày → clarify', () => {
+test('sanitize: more than 7 days back → clarify', () => {
   for (const days of [8, 10]) {
     const r = sanitizeParse(base({ startAt: new Date(NOW - days * 24 * H).toISOString() }), opts);
-    assert.equal(r.intent, 'clarify', `${days} ngày trước phải hỏi lại`);
+    assert.equal(r.intent, 'clarify', `${days} days back must ask again`);
   }
 });
 
-test('sanitize: xa hơn 24h trong tương lai → clarify', () => {
+test('sanitize: more than 24h in the future → clarify', () => {
   const r = sanitizeParse(
     base({ startAt: new Date(NOW + 30 * H).toISOString(), endAt: null }),
     opts,
@@ -68,7 +68,7 @@ test('sanitize: xa hơn 24h trong tương lai → clarify', () => {
   assert.equal(r.intent, 'clarify');
 });
 
-test('sanitize: schedule trong 24h tới thì giữ nguyên', () => {
+test('sanitize: schedule within the next 24h is kept', () => {
   const r = sanitizeParse(
     base({ intent: 'schedule', startAt: new Date(NOW + 4 * H).toISOString(), endAt: null }),
     opts,
@@ -76,13 +76,13 @@ test('sanitize: schedule trong 24h tới thì giữ nguyên', () => {
   assert.equal(r.intent, 'schedule');
 });
 
-test('sanitize: end <= start → bỏ end, không clarify', () => {
+test('sanitize: end <= start → drop end, no clarify', () => {
   const r = sanitizeParse(base({ endAt: new Date(NOW - 3 * H).toISOString() }), opts);
   assert.equal(r.endAt, null);
   assert.equal(r.intent, 'log_past');
 });
 
-test('sanitize: dài hơn 15h → clarify kèm câu hỏi', () => {
+test('sanitize: longer than 15h → clarify with a question', () => {
   const r = sanitizeParse(
     base({ startAt: new Date(NOW - 20 * H).toISOString(), endAt: new Date(NOW).toISOString() }),
     opts,
@@ -91,30 +91,30 @@ test('sanitize: dài hơn 15h → clarify kèm câu hỏi', () => {
   assert.match(r.clarifyQuestion ?? '', /15 hours/);
 });
 
-test('sanitize: confidence ngoài [0,1] hoặc thiếu → 0', () => {
+test('sanitize: confidence outside [0,1] or missing → 0', () => {
   assert.equal(sanitizeParse(base({ confidence: 1.5 }), opts).confidence, 0);
   assert.equal(sanitizeParse(base({ confidence: 7 }), opts).confidence, 0);
   assert.equal(sanitizeParse(base({ confidence: -1 }), opts).confidence, 0);
   assert.equal(sanitizeParse(base({ confidence: undefined }), opts).confidence, 0);
 });
 
-test('sanitize: targetActivityId lạ → null, id có thật thì giữ', () => {
+test('sanitize: unknown targetActivityId → null, a real id is kept', () => {
   assert.equal(sanitizeParse(base({ targetActivityId: 'zzz' }), opts).targetActivityId, null);
   assert.equal(sanitizeParse(base({ targetActivityId: 'a1' }), opts).targetActivityId, 'a1');
 });
 
-test('sanitize: cắt transcript và label ở 200 ký tự', () => {
+test('sanitize: transcript and label cut at 200 chars', () => {
   const long = 'x'.repeat(500);
   const r = sanitizeParse(base({ transcript: long, label: long }), opts);
   assert.equal(r.transcript.length, 200);
   assert.equal(r.label?.length, 200);
 });
 
-test('sanitize: intent lạ → unknown', () => {
+test('sanitize: unknown intent → unknown', () => {
   assert.equal(sanitizeParse(base({ intent: 'delete_everything' }), opts).intent, 'unknown');
 });
 
-test('sanitize: body rỗng không làm crash', () => {
+test('sanitize: empty body does not crash', () => {
   const r = sanitizeParse(null, opts);
   assert.equal(r.intent, 'unknown');
   assert.equal(r.transcript, '');
@@ -122,12 +122,12 @@ test('sanitize: body rỗng không làm crash', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Bắt đầu hồi tố: "đã bắt đầu 30 phút trước và VẪN đang làm".
-// Model hay đọc mốc giờ quá khứ thành log_past → card đòi giờ kết thúc
-// không hề tồn tại. Lưới đỡ này chỉ vá lúc model chọn sai.
+// Backdated start: "started 30 minutes ago and STILL going".
+// The model often reads a past time as log_past → the card asks for an end
+// time that does not exist. This safety net only fixes a wrong model choice.
 // ---------------------------------------------------------------------------
 
-test('sanitize: log_past mà không có endAt → thành start, giữ nguyên startAt', () => {
+test('sanitize: log_past without endAt → becomes start, startAt kept', () => {
   const r = sanitizeParse(
     base({
       intent: 'log_past',
@@ -142,7 +142,7 @@ test('sanitize: log_past mà không có endAt → thành start, giữ nguyên st
   assert.equal(r.endAt, null);
 });
 
-test('sanitize: start mà vẫn kèm endAt → bỏ endAt ("until now" không phải giờ kết thúc)', () => {
+test('sanitize: start with an endAt → drop endAt ("until now" is not an end time)', () => {
   const r = sanitizeParse(
     base({
       intent: 'start',
@@ -157,21 +157,21 @@ test('sanitize: start mà vẫn kèm endAt → bỏ endAt ("until now" không ph
   assert.equal(r.endAt, null);
 });
 
-test('sanitize: log_past đủ hai mốc giờ thì KHÔNG bị đổi thành start', () => {
+test('sanitize: log_past with both times is NOT turned into start', () => {
   const r = sanitizeParse(base(), opts);
   assert.equal(r.intent, 'log_past');
   assert.equal(r.endAt, NOW - H);
 });
 
-// Người dùng CÓ nói giờ kết thúc, chỉ là nó vô lý. Đừng biến câu đó thành
-// một session đang chạy - hỏi lại giờ kết thúc mới đúng.
-test('sanitize: end <= start vẫn là log_past, không rơi vào lưới đỡ', () => {
+// The user DID give an end time, it just makes no sense. Do not turn it into
+// a running session - ask for the end time again.
+test('sanitize: end <= start stays log_past, skips the safety net', () => {
   const r = sanitizeParse(base({ endAt: new Date(NOW - 3 * H).toISOString() }), opts);
   assert.equal(r.intent, 'log_past');
   assert.equal(r.endAt, null);
 });
 
-test('sanitize: bedtime giữ đúng một mốc, KHÔNG thành activity', () => {
+test('sanitize: bedtime keeps exactly one time, NOT an activity', () => {
   const r = sanitizeParse(
     base({
       intent: 'bedtime',
@@ -183,12 +183,12 @@ test('sanitize: bedtime giữ đúng một mốc, KHÔNG thành activity', () =>
   );
   assert.equal(r.intent, 'bedtime');
   assert.equal(r.bedtimeAt, NOW - H);
-  assert.equal(r.category, null, 'bedtime không được mang category');
+  assert.equal(r.category, null, 'bedtime must not carry a category');
   assert.equal(r.startAt, null);
   assert.equal(r.endAt, null);
 });
 
-test('sanitize: câu không phải bedtime thì bedtimeAt luôn null', () => {
+test('sanitize: non-bedtime phrase always has bedtimeAt null', () => {
   const r = sanitizeParse(base({ bedtimeAt: new Date(NOW - H).toISOString() }), opts);
   assert.equal(r.intent, 'log_past');
   assert.equal(r.bedtimeAt, null);

@@ -1,15 +1,15 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Nhận xét AI cho khoảng đang chọn (Stage 7 Task 5)
+// logi - AI notes for the selected range (Stage 7 Task 5)
 //
-// Đặt DƯỚI các chart: chart trả lời "cái gì", phần này trả lời "nên để ý gì".
-// Dùng đúng range của Stage 5, không có picker riêng.
+// Placed BELOW the charts: charts answer "what", this answers "what to notice".
+// Uses the same Stage 5 range, no picker of its own.
 //
-// Quy ước hiển thị:
-//   - `severity` chỉ đổi độ đậm của nhãn. KHÔNG dùng màu đỏ, không cảnh báo
-//   - Tap `metric` → hiện số gốc trong digest, để đối chiếu với chart
-//   - Nút preset chỉ mở màn Targets với gợi ý; không bao giờ tự áp dụng
+// Display rules:
+//   - `severity` only changes the label weight. NO red, no warnings
+//   - Tap `metric` → show the raw number from the digest, to check against the chart
+//   - The preset button only opens Targets with a suggestion; never applies it
 // ---------------------------------------------------------------------------
 import Link from 'next/link';
 import { useState } from 'react';
@@ -81,11 +81,12 @@ function dayWord(range: Range): string {
 // ------------------------------------------------------------
 
 /**
- * Nút mở phân tích. Bị chặn thì nút VẪN hiện, chỉ mờ đi và kèm lý do.
+ * The analysis button. When blocked the button STILL shows, just faded, with
+ * the reason.
  *
- * Trước đây gate chặn là nút biến mất, chỉ còn một khung đứt nét - người dùng
- * tưởng app hỏng chứ không biết là còn tính năng này. Nút mờ nói được hai điều
- * cùng lúc: có thứ để bấm, và vì sao chưa bấm được.
+ * A blocking gate used to hide the button, leaving a dashed frame - users
+ * thought the app was broken and never knew the feature existed. A faded
+ * button says two things at once: there is something to tap, and why not yet.
  */
 function Analyse({
   range,
@@ -94,7 +95,7 @@ function Analyse({
   onRun,
 }: {
   range: Range;
-  /** null = mở được. Khác null = lý do bị chặn. */
+  /** null = can open. Non-null = the blocking reason. */
   reason: string | null;
   hint?: string;
   onRun: () => void;
@@ -176,7 +177,7 @@ function Result({
         <p className="text-[13px] text-ink-soft">{result.positive}</p>
       )}
 
-      {/* Dòng của code, không phải của AI - chỉ hiện khi số quá lệch. */}
+      {/* A line from the code, not the AI - only shown when the numbers are far off. */}
       {digest && extremeNote(digest) && (
         <p className="text-[13px] text-ink-soft">{extremeNote(digest)}</p>
       )}
@@ -237,7 +238,7 @@ function PresetLink({ id }: { id: PresetId }) {
   );
 }
 
-/** Số gốc trong digest, hiện y nguyên - đây là bước đối chiếu, không làm đẹp. */
+/** Raw numbers from the digest, shown as-is - this is for checking, not for looks. */
 function format(v: unknown): string {
   if (v === null || v === undefined) return '-';
   if (typeof v === 'object') return JSON.stringify(v);

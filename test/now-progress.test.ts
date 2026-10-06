@@ -6,7 +6,7 @@ import { logicalWeekday } from '@/lib/balance';
 import { BASELINE_WEEKLY, type Category } from '@/types/logi';
 import { act, at } from './_helpers.ts';
 
-// 2026-08-25 là thứ Ba, 2026-08-30 là Chủ nhật.
+// 2026-08-25 is a Tuesday, 2026-08-30 is a Sunday.
 const TUE = '2026-08-25';
 const SUN = '2026-08-30';
 
@@ -19,7 +19,7 @@ function tilesOn(date: string, activities: Parameters<typeof nowTiles>[0], hhmm 
   return nowTiles(activities, NORMAL, logicalWeekday(now), now);
 }
 
-test('target lấy đúng thứ trong tuần: thứ Ba Work = 9.5h', () => {
+test('target uses the right weekday: Tuesday Work = 9.5h', () => {
   const t = tilesOn(TUE, []);
   assert.equal(tileOf(t, 'work').target, 9.5);
   assert.equal(tileOf(t, 'learn').target, 3);
@@ -37,16 +37,16 @@ test('fill = actual / target', () => {
   assert.equal(w.label, '4.0 / 9.5h today');
 });
 
-test('vượt target → fill kẹp ở 1, cờ over bật', () => {
+test('over target → fill clamps at 1, over flag set', () => {
   const acts = [
     act({ startAt: at(TUE, '06:00'), endAt: at(TUE, '18:00'), category: 'work' }), // 12h
   ];
   const w = tileOf(tilesOn(TUE, acts), 'work');
-  assert.equal(w.fill, 1, 'không bao giờ quá 1');
+  assert.equal(w.fill, 1, 'never above 1');
   assert.equal(w.over, true);
 });
 
-test('Chủ nhật: Work không có target → không vẽ dải, nhãn 0.0 / -', () => {
+test('Sunday: Work has no target → no bar, label 0.0 / -', () => {
   const w = tileOf(tilesOn(SUN, []), 'work');
   assert.equal(w.target, 0);
   assert.equal(w.noTarget, true);
@@ -54,7 +54,7 @@ test('Chủ nhật: Work không có target → không vẽ dải, nhãn 0.0 / -'
   assert.equal(w.label, '0.0 / - today');
 });
 
-test('có log mà ngày đó không target → vẫn không vẽ dải, số vẫn đúng', () => {
+test('logs on a day with no target → still no bar, numbers still right', () => {
   const acts = [
     act({ startAt: at(SUN, '10:00'), endAt: at(SUN, '12:30'), category: 'work' }),
   ];
@@ -64,14 +64,14 @@ test('có log mà ngày đó không target → vẫn không vẽ dải, số v�
   assert.equal(w.label, '2.5 / - today');
 });
 
-test('chưa có weekTarget → mọi nút đều noTarget, không đoán bừa', () => {
+test('no weekTarget yet → every node is noTarget, no guessing', () => {
   const now = at(TUE, '20:00');
   const tiles = nowTiles([], null, logicalWeekday(now), now);
   assert.equal(tiles.length, 4);
   assert.ok(tiles.every((t) => t.noTarget));
 });
 
-test('đúng 4 category, không còn sleep', () => {
+test('exactly 4 categories, no sleep', () => {
   const tiles = tilesOn(TUE, []);
   assert.deepEqual(
     tiles.map((t) => t.category),
@@ -79,7 +79,7 @@ test('đúng 4 category, không còn sleep', () => {
   );
 });
 
-test('session đang chạy được tính tới now', () => {
+test('a running session counts up to now', () => {
   const now = at(TUE, '11:00');
   const acts = [act({ startAt: at(TUE, '09:00'), endAt: null, category: 'learn' })];
   const t = nowTiles(acts, NORMAL, logicalWeekday(now), now);

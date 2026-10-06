@@ -1,16 +1,16 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Chất lượng log & overlap (Stage 5 Task 6, sửa ở
-// AMENDMENT-remove-sleep mục 3.2)
+// logi - Log quality & overlap (Stage 5 Task 6, revised in
+// AMENDMENT-remove-sleep section 3.2)
 //
-// Đặt TRƯỚC các chart, không phải sau. Log thưa thì "Learn thiếu 12h" là câu
-// vô nghĩa: có thể đã học nhưng quên bấm. Người đọc cần biết điều đó trước khi
-// tin bất kỳ con số nào bên dưới.
+// Placed BEFORE the charts, not after. With sparse logs, "Learn short by 12h"
+// means nothing: you may have studied and forgotten to tap. The reader needs
+// to know that before trusting any number below.
 //
-// Trước đây ô này hiện một tỉ lệ trên nền 24h/ngày. Bỏ Sleep thì kế hoạch chỉ
-// còn 89h/168h = 53%, tức là log hoàn hảo vẫn bị báo động - nên nay hiện ba
-// con số thô, mỗi con số tự kiểm chứng được.
+// This box used to show a ratio against 24h/day. With Sleep gone the plan is
+// only 89h/168h = 53%, so even perfect logging raised an alarm - now it shows
+// three raw numbers, each one checkable.
 // ---------------------------------------------------------------------------
 
 import Card from '@/components/Card';
@@ -18,7 +18,7 @@ import { isThin, logQualityLine, thinWarning, type LogQuality } from '@/lib/log-
 
 interface Props {
   quality: LogQuality;
-  /** Số giờ bị đếm hai lần. */
+  /** Hours counted twice. */
   overlap: number;
 }
 

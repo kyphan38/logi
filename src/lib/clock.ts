@@ -1,44 +1,44 @@
 // ---------------------------------------------------------------------------
-// logi - Đọc một chuỗi giờ "HH:MM" thành mốc epoch
+// logi - Reading an "HH:MM" string into an epoch time
 //
-// Người dùng gõ giờ, gần như không bao giờ gõ ngày. Khi KHÔNG biết ngày, nó
-// được suy ra bằng một luật duy nhất, dùng chung cho cả sheet "khi nào bắt đầu"
-// lẫn sheet bedtime bên Now:
+// People type times, almost never dates. When the date is NOT known, it is
+// derived by one rule, shared by the "when did it start" sheet and the
+// bedtime sheet on Now:
 //
-//     'past'   → lần xuất hiện GẦN NHẤT TRONG QUÁ KHỨ của giờ đó
-//     'future' → lần xuất hiện KẾ TIẾP
+//     'past'   → the MOST RECENT PAST occurrence of that time
+//     'future' → the NEXT occurrence
 //
-// Luật này tự giải đúng ca vắt qua nửa đêm, chỗ mà một ô chọn ngày sẽ bắt người
-// dùng phải tự nghĩ:
+// This rule handles crossing midnight by itself, where a date picker would
+// make the user think:
 //
-//     T7 07:30 + "23:30" → T6 23:30      (giờ đó hôm nay chưa tới, nên là hôm qua)
-//     T7 07:30 + "01:00" → T7 01:00      (đã qua rồi, nên là hôm nay)
-//     T7 00:30 + "23:50" → T6 23:50
+//     Sat 07:30 + "23:30" → Fri 23:30      (not reached today yet, so yesterday)
+//     Sat 07:30 + "01:00" → Sat 01:00      (already passed, so today)
+//     Sat 00:30 + "23:50" → Fri 23:50
 //
-// Nó ăn khớp sẵn với mốc cắt ngày 04:00 của `logicalDate()`: T7 01:00 vẫn thuộc
-// ngày logic T6, nên "đêm qua" ra đúng đêm qua mà ở đây không cần biết gì về
-// mốc cắt đó.
+// It already fits `logicalDate()`'s 04:00 cut: Sat 01:00 still belongs to
+// Friday's logical day, so "last night" comes out right without this code
+// knowing about the cut.
 //
-// Chỗ ĐÃ biết ngày rồi thì dùng `resolveClockOnDate()`: bên History người dùng
-// chọn ngày trước rồi mới gõ giờ, nên luật "gần nhất trong quá khứ" vừa thừa
-// vừa sai - nó không với xa quá 24 tiếng.
+// Where the date IS known, use `resolveClockOnDate()`: on History the user
+// picks the day first, then types the time, so "most recent past" is both
+// redundant and wrong - it never reaches beyond 24 hours.
 //
-// File thuần: không React, không Firestore, không DOM.
+// Pure file: no React, no Firestore, no DOM.
 // ---------------------------------------------------------------------------
 import { formatDuration } from '@/lib/datetime';
 import { DAY_CUTOFF_HOUR } from '@/types/logi';
 
-/** Chấp nhận "7:15" lẫn "07:15" - iOS trả về dạng có số 0, gõ tay thì không. */
+/** Accepts "7:15" and "07:15" - iOS returns the zero-padded form, hand typing does not. */
 const CLOCK_RE = /^(\d{1,2}):(\d{2})$/;
 
 export type ClockDir = 'past' | 'future';
 
 /**
- * "07:15" → mốc epoch gần nhất theo hướng. Sai định dạng → `null`.
+ * "07:15" → the nearest epoch time in the given direction. Bad format → `null`.
  *
- * Dời ngày bằng `setDate()` chứ không phải cộng trừ 24 tiếng: đúng ở nơi có
- * giờ mùa hè. Việt Nam thì không có, nhưng một hàm giờ giấc sai theo múi giờ
- * là loại lỗi không ai tìm ra được về sau.
+ * Moves days with `setDate()`, not by adding 24 hours: correct where daylight
+ * saving exists. Vietnam has none, but a time function that breaks by timezone
+ * is the kind of bug nobody finds later.
  */
 export function resolveClockTime(hhmm: string, now: number, dir: ClockDir): number | null {
   const c = parseClock(hhmm);
@@ -47,14 +47,14 @@ export function resolveClockTime(hhmm: string, now: number, dir: ClockDir): numb
   const d = new Date(now);
   d.setHours(c.h, c.min, 0, 0);
 
-  // Đúng bằng `now` thì để yên: đó là "bây giờ", không phải hôm qua.
+  // Exactly `now` stays as is: that is "now", not yesterday.
   if (dir === 'past' && d.getTime() > now) d.setDate(d.getDate() - 1);
   if (dir === 'future' && d.getTime() <= now) d.setDate(d.getDate() + 1);
 
   return d.getTime();
 }
 
-/** "07:15" → `{ h: 7, min: 15 }`. Sai định dạng hoặc quá biên → `null`. */
+/** "07:15" → `{ h: 7, min: 15 }`. Bad format or out of range → `null`. */
 function parseClock(hhmm: string): { h: number; min: number } | null {
   const m = CLOCK_RE.exec(hhmm.trim());
   if (!m) return null;
@@ -67,14 +67,14 @@ function parseClock(hhmm: string): { h: number; min: number } | null {
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
- * "23:30" + ngày logic '2026-09-05' → mốc epoch nằm ĐÚNG trong đêm hôm đó.
+ * "23:30" + logical day '2026-09-05' → an epoch time exactly within that night.
  *
- * Khác `resolveClockTime`: ở đây ngày là dữ liệu vào, không phải thứ phải đoán.
- * Nhờ vậy sửa được mốc của một đêm bất kỳ, không riêng hai đêm gần nhất.
+ * Unlike `resolveClockTime`: here the day is an input, not something to guess.
+ * So any night's mark can be edited, not only the last two.
  *
- * Ngày logic D chạy từ D 04:00 tới D+1 04:00, nên giờ TRƯỚC 04:00 rơi vào ngày
- * lịch KẾ TIẾP: 01:00 của "đêm thứ Sáu" là 01:00 rạng sáng thứ Bảy. Bỏ bước
- * này thì mốc lùi hẳn một ngày, đúng loại lỗi không ai soi ra khi đọc lại.
+ * Logical day D runs from D 04:00 to D+1 04:00, so times BEFORE 04:00 fall on
+ * the NEXT calendar day: 01:00 of "Friday night" is 01:00 early Saturday. Skip
+ * this and the mark lands a whole day early, the kind of bug nobody catches on rereading.
  */
 export function resolveClockOnDate(hhmm: string, date: string): number | null {
   const c = parseClock(hhmm);
@@ -87,20 +87,20 @@ export function resolveClockOnDate(hhmm: string, date: string): number | null {
   const mo = Number(dm[2]);
   const d = Number(dm[3]);
 
-  // Ngày không có thật ('2026-09-31', '2026-02-30') phải bị chặn ở đây: để lọt
-  // thì `Date` lặng lẽ đẩy sang tháng sau và mốc ghi vào một đêm không ai chọn.
+  // Days that do not exist ('2026-09-31', '2026-02-30') must be blocked here:
+  // otherwise `Date` quietly rolls into the next month and saves to a night nobody picked.
   const base = new Date(y, mo - 1, d, c.h, c.min, 0, 0);
   if (base.getMonth() !== mo - 1 || base.getDate() !== d) return null;
 
-  // Dời ngày bằng `setDate` (ngày 31 tự tràn sang tháng sau) chứ không cộng 24
-  // tiếng - đúng ở cả nơi có giờ mùa hè.
+  // Move days with `setDate` (day 31 rolls into the next month), not +24 hours -
+  // correct where daylight saving exists too.
   if (c.h < DAY_CUTOFF_HOUR) base.setDate(base.getDate() + 1);
 
   const ts = base.getTime();
   return Number.isNaN(ts) ? null : ts;
 }
 
-/** ts → "07:15" (24h, đúng thứ `<input type="time">` nhận và trả về). */
+/** ts → "07:15" (24h, exactly what `<input type="time">` takes and returns). */
 export function toClockInput(ts: number): string {
   const d = new Date(ts);
   const p = (n: number) => String(n).padStart(2, '0');
@@ -110,7 +110,7 @@ export function toClockInput(ts: number): string {
 /**
  * "15m ago" / "in 30m" / "just now".
  *
- * Dưới một phút thì không nói con số: "0m ago" đọc lên như thể có gì sai.
+ * Under a minute, no number: "0m ago" reads as if something is wrong.
  */
 export function relativeLabel(ts: number, now: number): string {
   const diff = ts - now;

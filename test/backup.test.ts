@@ -21,31 +21,31 @@ const full = (from: string, to: string): Range => ({
   isPartial: false,
 });
 
-// 2026-09-06 là Chủ nhật đầu tiên của tháng 9.
+// 2026-09-06 is the first Sunday of September.
 const FIRST_SUN = at('2026-09-06', '10:00');
 const MID_MONTH = at('2026-09-16', '10:00');
 
 // ------------------------------------------------------------
-// Nhắc export
+// Export reminder
 // ------------------------------------------------------------
 
-test('không có dữ liệu → không nhắc', () => {
+test('no data → no reminder', () => {
   const n = exportNudge({ lastExport: null, firstRecord: null, now: FIRST_SUN });
   assert.equal(n.show, false);
 });
 
-test('chưa export bao giờ, dữ liệu > 30 ngày → nhắc ngay, không đợi Chủ nhật', () => {
+test('never exported, data > 30 days → remind now, no wait for Sunday', () => {
   const n = exportNudge({ lastExport: null, firstRecord: '2026-06-01', now: MID_MONTH });
   assert.equal(n.show, true);
   assert.match(n.text, /Never exported/);
 });
 
-test('chưa export nhưng mới dùng 10 ngày → chưa nhắc', () => {
+test('never exported but only 10 days of use → no reminder yet', () => {
   const n = exportNudge({ lastExport: null, firstRecord: '2026-09-08', now: MID_MONTH });
   assert.equal(n.show, false);
 });
 
-test('Chủ nhật đầu tháng → nhắc kèm số ngày', () => {
+test('first Sunday of the month → remind with the day count', () => {
   const n = exportNudge({
     lastExport: at('2026-07-21', '10:00'),
     firstRecord: '2026-01-01',
@@ -56,7 +56,7 @@ test('Chủ nhật đầu tháng → nhắc kèm số ngày', () => {
   assert.match(n.text, /Last export: 47 days ago/);
 });
 
-test('giữa tháng thì im lặng', () => {
+test('mid-month stays quiet', () => {
   const n = exportNudge({
     lastExport: at('2026-07-21', '10:00'),
     firstRecord: '2026-01-01',
@@ -65,7 +65,7 @@ test('giữa tháng thì im lặng', () => {
   assert.equal(n.show, false);
 });
 
-test('Chủ nhật thứ hai của tháng không tính', () => {
+test('the second Sunday of the month does not count', () => {
   const n = exportNudge({
     lastExport: at('2026-07-21', '10:00'),
     firstRecord: '2026-01-01',
@@ -74,7 +74,7 @@ test('Chủ nhật thứ hai của tháng không tính', () => {
   assert.equal(n.show, false);
 });
 
-test('một ngày thì viết "day", không phải "days"', () => {
+test('one day says "day", not "days"', () => {
   const n = exportNudge({
     lastExport: at('2026-09-05', '10:00'),
     firstRecord: '2026-01-01',
@@ -84,7 +84,7 @@ test('một ngày thì viết "day", không phải "days"', () => {
 });
 
 // ------------------------------------------------------------
-// Đọc file
+// Reading the file
 // ------------------------------------------------------------
 
 const sample = () => {
@@ -96,33 +96,33 @@ const sample = () => {
   return toJson(acts, full(D, D), targets, at(D, '12:00'));
 };
 
-test('đọc lại đúng file mà chính app xuất ra', () => {
+test('reads back exactly the file the app exported', () => {
   const { file, error } = parseBackup(sample());
   assert.equal(error, null);
   assert.equal(file!.activities.length, 2);
   assert.equal(file!.weekTargets.length, 1);
 });
 
-test('không phải JSON → báo lỗi, không ném', () => {
+test('not JSON → reports an error, does not throw', () => {
   const { file, error } = parseBackup('id,category,label\n1,work,x');
   assert.equal(file, null);
   assert.match(error!, /valid JSON/);
 });
 
-test('JSON hợp lệ nhưng không phải backup → từ chối', () => {
+test('valid JSON but not a backup → rejected', () => {
   const { file, error } = parseBackup('{"hello":1}');
   assert.equal(file, null);
   assert.match(error!, /No activities/);
 });
 
-test('record thiếu id bị loại, không được ghi vào DB', () => {
+test('a record without an id is dropped, never written to the DB', () => {
   const bad = JSON.stringify({
     activities: [{ category: 'work', startAt: 1, logicalDate: D }],
   });
   assert.equal(parseBackup(bad).file, null);
 });
 
-test('record hỏng bị loại nhưng record tốt vẫn nhận', () => {
+test('broken records are dropped but good ones are kept', () => {
   const mixed = JSON.stringify({
     activities: [{ nonsense: true }, { id: 'x', category: 'work', startAt: 1, logicalDate: D }],
   });
@@ -130,18 +130,18 @@ test('record hỏng bị loại nhưng record tốt vẫn nhận', () => {
   assert.equal(file!.activities.length, 1);
 });
 
-test('file mảng rỗng → từ chối', () => {
+test('an empty array file → rejected', () => {
   assert.equal(parseBackup('{"activities":[]}').file, null);
 });
 
-test('sổ nợ đi kèm file all-time và đọc lại được', () => {
+test('the debt ledger comes with an all-time file and reads back', () => {
   const acts = [act({ id: 'a', startAt: at(D, '08:00'), endAt: at(D, '09:00') })];
   const text = toJson(acts, full(D, D), new Map(), at(D, '12:00'), { learn: 6 });
   const { file } = parseBackup(text);
   assert.deepEqual(file!.debt, { learn: 6 });
 });
 
-test('file không có debt vẫn đọc được - bản export cũ', () => {
+test('a file without debt still reads - an old export', () => {
   const { file } = parseBackup(sample());
   assert.equal(file!.debt, undefined);
 });
@@ -150,7 +150,7 @@ test('file không có debt vẫn đọc được - bản export cũ', () => {
 // Preview
 // ------------------------------------------------------------
 
-test('preview đếm đúng record, tuần và khoảng ngày', () => {
+test('preview counts records, weeks and the date range right', () => {
   const { file } = parseBackup(sample());
   const p = previewBackup(file!);
   assert.equal(p.records, 2);
@@ -161,24 +161,24 @@ test('preview đếm đúng record, tuần và khoảng ngày', () => {
 });
 
 // ------------------------------------------------------------
-// Kế hoạch khôi phục - CHỈ THÊM
+// Restore plan - ADD ONLY
 // ------------------------------------------------------------
 
 const file2 = (): BackupFile => parseBackup(sample()).file!;
 
-test('database rỗng → thêm tất cả', () => {
+test('empty database → add everything', () => {
   const plan = planRestore(file2(), new Set());
   assert.equal(plan.add.length, 2);
   assert.equal(plan.skip, 0);
 });
 
-test('record đã tồn tại → bỏ qua, KHÔNG ghi đè', () => {
+test('existing record → skipped, NEVER overwritten', () => {
   const plan = planRestore(file2(), new Set(['a']));
   assert.deepEqual(plan.add.map((x) => x.id), ['b']);
   assert.equal(plan.skip, 1);
 });
 
-test('import lại lần hai → không tạo bản trùng', () => {
+test('importing a second time → no duplicates', () => {
   const f = file2();
   const first = planRestore(f, new Set());
   const ids = new Set(first.add.map((a) => a.id));
@@ -187,7 +187,7 @@ test('import lại lần hai → không tạo bản trùng', () => {
   assert.equal(second.skip, 2);
 });
 
-test('id trùng ngay trong file cũng chỉ thêm một lần', () => {
+test('a duplicate id inside the file is added only once', () => {
   const f = file2();
   f.activities = [...f.activities, f.activities[0]];
   const plan = planRestore(f, new Set());
@@ -195,7 +195,7 @@ test('id trùng ngay trong file cũng chỉ thêm một lần', () => {
   assert.equal(plan.skip, 1);
 });
 
-test('kế hoạch không bao giờ chứa lệnh xoá', () => {
+test('the plan never contains a delete', () => {
   const plan = planRestore(file2(), new Set(['a', 'b', 'zzz']));
   assert.equal(plan.add.length, 0);
   assert.ok(!('remove' in plan));

@@ -1,6 +1,6 @@
 // ============================================================
-// logi - Voice → JSON qua Gemini Flash (audio input native)
-// Chạy SERVER-SIDE ONLY. Không bao giờ gọi từ browser.
+// logi - Voice → JSON via Gemini Flash (native audio input)
+// SERVER-SIDE ONLY. Never called from the browser.
 // ============================================================
 
 import type { Activity, Category } from '@/types/logi';
@@ -15,7 +15,7 @@ export const PARSE_SCHEMA = {
     intent: {
       type: 'string',
       enum: ['start', 'stop', 'log_past', 'schedule', 'edit', 'bedtime', 'clarify', 'unknown'],
-      description: 'start = bắt đầu ngay; log_past = hồi tố; schedule = bắt đầu sau N phút; edit = sửa record vừa tạo; bedtime = mốc giờ đi ngủ, KHÔNG phải session; clarify = thiếu thông tin cần hỏi lại',
+      description: 'start = start now; log_past = log something already done; schedule = start in N minutes; edit = fix the record just made; bedtime = a bedtime mark, NOT a session; clarify = missing info, ask back',
     },
     category: {
       type: 'string',
@@ -25,46 +25,46 @@ export const PARSE_SCHEMA = {
     label: {
       type: 'string',
       nullable: true,
-      description: 'Cụm từ ngắn người dùng nói, VD "devops", "gym", "reading". Không phải cả câu.',
+      description: 'The short phrase the user said, e.g. "devops", "gym", "reading". Not the whole sentence.',
     },
     startAt: {
       type: 'string',
       nullable: true,
-      description: 'ISO 8601 kèm offset +07:00. Null nếu intent là stop.',
+      description: 'ISO 8601 with offset +07:00. Null if intent is stop.',
     },
     endAt: {
       type: 'string',
       nullable: true,
-      description: 'ISO 8601 kèm offset +07:00.',
+      description: 'ISO 8601 with offset +07:00.',
     },
     confidence: {
       type: 'number',
-      description: '0..1. Dưới 0.85 buộc người dùng xác nhận trước khi ghi.',
+      description: '0..1. Below 0.85 the user must confirm before saving.',
     },
     clarifyQuestion: {
       type: 'string',
       nullable: true,
-      description: 'Câu hỏi tiếng Anh ngắn khi mơ hồ. VD "Did you mean 10 AM or 10 PM?"',
+      description: 'A short English question when unclear. E.g. "Did you mean 10 AM or 10 PM?"',
     },
     clarifyOptions: {
       type: 'array',
       nullable: true,
       items: { type: 'string' },
-      description: 'Tối đa 3 lựa chọn hiện thành nút bấm.',
+      description: 'At most 3 choices, shown as buttons.',
     },
     bedtimeAt: {
       type: 'string',
       nullable: true,
-      description: 'ISO 8601 kèm offset +07:00. Chỉ dùng khi intent = bedtime: lúc đi ngủ.',
+      description: 'ISO 8601 with offset +07:00. Only when intent = bedtime: the time of going to bed.',
     },
     targetActivityId: {
       type: 'string',
       nullable: true,
-      description: 'Chỉ dùng khi intent = edit hoặc stop, trỏ tới activity trong context.',
+      description: 'Only when intent = edit or stop; points to an activity in the context.',
     },
     transcript: {
       type: 'string',
-      description: 'Nguyên văn người dùng nói, để hiển thị lại và debug.',
+      description: 'Exactly what the user said, for display and debugging.',
     },
   },
   required: ['intent', 'confidence', 'transcript'],
@@ -76,7 +76,7 @@ export interface ParseResult {
   label: string | null;
   startAt: string | null;
   endAt: string | null;
-  /** Lúc đi ngủ, ISO 8601. Chỉ có nghĩa khi intent = bedtime. */
+  /** Bedtime, ISO 8601. Only meaningful when intent = bedtime. */
   bedtimeAt: string | null;
   confidence: number;
   clarifyQuestion: string | null;
@@ -90,9 +90,9 @@ export interface ParseResult {
 // ------------------------------------------------------------
 
 /**
- * Context là thứ quyết định chất lượng parse.
- * Có lịch sinh hoạt + activity gần đây, "I went out at 10" đoán được ngay là 10 PM
- * và số lần phải hỏi lại giảm hẳn.
+ * Context decides parse quality.
+ * With the daily schedule + recent activities, "I went out at 10" is clearly
+ * 10 PM, and far fewer questions need asking back.
  */
 export function buildSystemPrompt(ctx: {
   nowISO: string;      // "2026-08-26T20:41:00+07:00"
@@ -213,22 +213,22 @@ ${ctx.recentActivities.length
 }
 
 // ------------------------------------------------------------
-// 3. Gọi Gemini với audio
+// 3. Calling Gemini with audio
 // ------------------------------------------------------------
 
 export const AUTO_COMMIT_THRESHOLD = 0.85;
 
-// gemini-2.5-flash đã bị Google ngừng cấp cho key mới (API trả 404).
-// Toàn bộ app trong workspace dùng chung gemini-3.8-flash. Số liệu ~1.3s/câu bên dưới
-// đo trên bản 3.5 lite cũ - cần đo lại 10 câu của roadmap trên model mới.
+// Google stopped granting gemini-2.5-flash to new keys (the API returns 404).
+// Every app in the workspace shares gemini-3.8-flash. The ~1.3s/sentence below
+// was measured on the old 3.5 lite - re-measure the roadmap's 10 sentences on the new model.
 const MODEL = 'gemini-3.8-flash';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 /**
- * Audio đi thẳng vào Gemini - không qua bước speech-to-text riêng.
- * Một lần gọi thay vì hai, và model nghe trực tiếp sẽ parse tốt hơn
- * là parse lại từ một transcript đã sai.
- * Audio KHÔNG được lưu ở bất kỳ đâu sau khi request kết thúc.
+ * Audio goes straight to Gemini - no separate speech-to-text step.
+ * One call instead of two, and a model hearing the audio parses better
+ * than re-parsing an already wrong transcript.
+ * Audio is NEVER stored anywhere after the request ends.
  */
 export async function parseAudio(
   audioBase64: string,
@@ -263,7 +263,7 @@ export async function parseAudio(
   return JSON.parse(text) as ParseResult;
 }
 
-/** Sửa nhanh bằng giọng nói - gửi lại record vừa tạo, nhận về patch. */
+/** Quick voice fix - sends the record just made, gets back a patch. */
 export async function parseTextCorrection(
   utterance: string,
   systemPrompt: string,
@@ -288,8 +288,8 @@ export async function parseTextCorrection(
 }
 
 /**
- * iOS Safari/Edge (WebKit) KHÔNG hỗ trợ audio/webm.
- * Không kiểm tra cái này thì MediaRecorder ném lỗi ngay trên iPhone 11.
+ * iOS Safari/Edge (WebKit) do NOT support audio/webm.
+ * Without this check MediaRecorder throws at once on an iPhone 11.
  */
 export function pickAudioMime(): string {
   if (typeof MediaRecorder === 'undefined') return 'audio/mp4';

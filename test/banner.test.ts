@@ -8,39 +8,39 @@ import { act, at, H } from './_helpers.ts';
 
 const WEEKLY = PRESETS.normal.weekly;
 
-// 2026-08-31 là thứ Hai. Mốc kiểm là thứ Tư 20:41 - đúng ví dụ trong plan.
+// 2026-08-31 is a Monday. The check time is Wednesday 20:41 - the plan's own example.
 const MON = '2026-08-31';
 const WED_2041 = at('2026-09-02', '20:41');
 
-/** n giờ Work vào ngày `date`, bắt đầu 09:00. */
+/** n hours of Work on `date`, starting at 09:00. */
 function block(date: string, category: Activity['category'], hours: number): Activity {
   const start = at(date, '09:00');
   return act({ category, startAt: start, endAt: start + hours * H, id: `${date}-${category}` });
 }
 
-// --- Chỗ dễ sai nhất: pro-rate theo lịch ------------------------------
+// --- The easiest thing to get wrong: pro-rating by calendar ------------------------------
 
-test('expectedHours pro-rate THEO LỊCH, không phải weekly × ngày/7', () => {
+test('expectedHours pro-rates BY CALENDAR, not weekly × days/7', () => {
   const byCalendar = expectedHours(WEEKLY, WED_2041);
-  const naive = (WEEKLY.work * 3) / 7; // cách sai: chia đều 7 ngày
+  const naive = (WEEKLY.work * 3) / 7; // the wrong way: split evenly over 7 days
 
   assert.ok(
     Math.abs(byCalendar.work - naive) > 3,
-    `phải lệch nhiều: lịch ${byCalendar.work.toFixed(1)}h vs chia đều ${naive.toFixed(1)}h`
+    `must differ a lot: calendar ${byCalendar.work.toFixed(1)}h vs even split ${naive.toFixed(1)}h`
   );
-  assert.ok(byCalendar.work > naive, 'ngày trong tuần nặng Work hơn mức trung bình');
+  assert.ok(byCalendar.work > naive, 'weekdays carry more Work than the average');
 });
 
-// --- Ẩn banner --------------------------------------------------------
+// --- Hiding the banner --------------------------------------------------------
 
-test('không có target → ẩn hẳn banner', () => {
+test('no target → the banner is hidden', () => {
   assert.equal(pickBalance([], null, WED_2041), null);
 });
 
 /**
- * Một tuần đúng y kế hoạch tính tới `now`, rồi cộng/trừ ở một category.
- * Cần nền này vì nếu bỏ trống, mọi category đều lệch và test sẽ đo nhầm
- * category không liên quan.
+ * A week exactly on plan up to `now`, then plus/minus in one category.
+ * This base is needed because if left empty every category is off and the
+ * test would measure an unrelated category.
  */
 function onPlan(now: number, tweak: Partial<Record<Activity['category'], number>> = {}) {
   const exp = expectedHours(WEEKLY, now);
@@ -49,35 +49,35 @@ function onPlan(now: number, tweak: Partial<Record<Activity['category'], number>
   );
 }
 
-test('đi đúng kế hoạch → ẩn hẳn, KHÔNG hiện "on track"', () => {
+test('on plan → hidden entirely, NO "on track"', () => {
   assert.equal(pickBalance(onPlan(WED_2041), WEEKLY, WED_2041), null);
 });
 
-test('lệch nhỏ nằm trong vùng chết → vẫn ẩn', () => {
-  // Leisure lệch 42 phút: quá 25% nhưng chưa tới 2h → không báo.
-  // Thiếu điều kiện 2h này thì app kêu mỗi ngày và bị tắt sau 3 hôm.
+test('a small gap inside the deadband → still hidden', () => {
+  // Leisure 42 minutes off: over 25% but under 2h → no alert.
+  // Without the 2h condition the app nags daily and gets turned off within 3 days.
   const line = pickBalance(onPlan(WED_2041, { leisure: 0.7 }), WEEKLY, WED_2041);
   assert.equal(line, null);
 });
 
-// --- Chọn đúng một dòng ----------------------------------------------
+// --- Picking exactly one line ----------------------------------------------
 
-test('chỉ trả về MỘT dòng, dù nhiều category cùng lệch', () => {
+test('returns only ONE line, even when several categories are off', () => {
   const acts = onPlan(WED_2041, { work: 12, learn: -9, fitness: -5 });
   const line = pickBalance(acts, WEEKLY, WED_2041);
   assert.ok(line);
   assert.equal(typeof line.text, 'string');
-  assert.ok(!line.text.includes('\n'), 'một dòng, không xuống dòng');
+  assert.ok(!line.text.includes('\n'), 'one line, no line breaks');
 });
 
-test('lấy deviation có |deltaHours| lớn nhất', () => {
-  const acts = onPlan(WED_2041, { work: 4, learn: 11 }); // Learn lệch to hơn
+test('takes the deviation with the largest |deltaHours|', () => {
+  const acts = onPlan(WED_2041, { work: 4, learn: 11 }); // Learn is further off
   const line = pickBalance(acts, WEEKLY, WED_2041);
   assert.equal(line?.category, 'learn');
   assert.equal(line?.kind, 'over');
 });
 
-test('vượt → over, thiếu → under (không có nhánh nào khác)', () => {
+test('over → over, short → under (no other branch)', () => {
   const over = pickBalance(onPlan(WED_2041, { work: 10 }), WEEKLY, WED_2041);
   assert.equal(over?.kind, 'over');
   assert.equal(over?.category, 'work');
@@ -89,25 +89,25 @@ test('vượt → over, thiếu → under (không có nhánh nào khác)', () =>
   assert.ok(under!.deltaHours < 0);
 });
 
-test('không ghi gì cả → nói thiếu dữ liệu, KHÔNG bắn -99%', () => {
-  // Tuần trống thì category nào cũng -99%. Nói ra chẳng giúp được gì, chỉ làm
-  // người dùng nản. Trước Stage 4.6 chỗ này trả 'under'/'work'.
+test('nothing logged → says there is not enough data, NO -99%', () => {
+  // In an empty week every category is -99%. Saying so helps nothing and only
+  // discourages. Before Stage 4.6 this returned 'under'/'work'.
   const line = pickBalance([], WEEKLY, WED_2041);
   assert.equal(line?.kind, 'sparse');
   assert.equal(line?.category, null);
   assert.equal(line?.text, 'Not enough logged this week to compare.');
 });
 
-test('coverage < 20% → sparse, dù lệch to tới đâu', () => {
+test('coverage < 20% → sparse, however big the gap', () => {
   const exp = expectedHours(WEEKLY, WED_2041);
   const total = CATEGORIES.reduce((a, c) => a + exp[c], 0);
-  // Log đúng 10% lượng lẽ ra phải có.
+  // Log exactly 10% of what should exist.
   const line = pickBalance([block(MON, 'work', total * 0.1)], WEEKLY, WED_2041);
   assert.ok(loggedRatio([block(MON, 'work', total * 0.1)], WEEKLY, WED_2041) < MIN_LOGGED_RATIO);
   assert.equal(line?.kind, 'sparse');
 });
 
-test('logged ratio >= 20% → quay lại so sánh bình thường', () => {
+test('logged ratio >= 20% → back to normal comparison', () => {
   const exp = expectedHours(WEEKLY, WED_2041);
   const total = CATEGORIES.reduce((a, c) => a + exp[c], 0);
   const acts = [block(MON, 'work', total * 0.5)];
@@ -115,40 +115,40 @@ test('logged ratio >= 20% → quay lại so sánh bình thường', () => {
   assert.notEqual(pickBalance(acts, WEEKLY, WED_2041)?.kind, 'sparse');
 });
 
-// --- Xung đột cuối tuần thắng ----------------------------------------
+// --- Weekend conflict wins ----------------------------------------
 
-test('xung đột cuối tuần thắng mọi deviation', () => {
+test('the weekend conflict beats every deviation', () => {
   const SUN_2000 = at('2026-09-06', '20:00');
-  assert.equal(logicalWeekday(at('2026-09-05', '09:00')), 6, 'phải là thứ Bảy');
+  assert.equal(logicalWeekday(at('2026-09-05', '09:00')), 6, 'must be a Saturday');
 
   const acts = [
-    block('2026-09-05', 'work', 8), // OT thứ Bảy
+    block('2026-09-05', 'work', 8), // Saturday OT
     block(MON, 'work', 40),
   ];
   const line = pickBalance(acts, WEEKLY, SUN_2000);
   assert.equal(line?.kind, 'conflict');
   assert.equal(line?.category, null);
-  assert.ok(line!.text.includes('Learn'), 'phải nối OT với Learn còn thiếu');
+  assert.ok(line!.text.includes('Learn'), 'must link OT with the Learn shortfall');
 });
 
-// --- Câu chữ ----------------------------------------------------------
+// --- Wording ----------------------------------------------------------
 
-test('nêu số, không dạy đời', () => {
+test('states numbers, does not lecture', () => {
   const line = pickBalance(onPlan(WED_2041, { work: 10 }), WEEKLY, WED_2041);
   assert.match(line!.text, /^Work \d+\.\d+h · \d+\.\d+h expected by now this week \([+-]?\d+%\)$/);
 });
 
-test('con số expected KHÔNG đứng cạnh dấu / như thể là target tuần', () => {
-  // Bug cũ: `Work: 0.4h / 31.0h (-99%)` đọc lên tưởng target Work là 31h,
-  // trong khi màn Targets ghi 40h.
+test('the expected number does NOT sit next to a / like a weekly target', () => {
+  // Old bug: `Work: 0.4h / 31.0h (-99%)` read as if Work's target were 31h,
+  // while the Targets screen said 40h.
   const line = pickBalance(onPlan(WED_2041, { work: 10 }), WEEKLY, WED_2041);
-  assert.ok(!line!.text.includes('/'), `còn dấu gạch chéo: ${line!.text}`);
+  assert.ok(!line!.text.includes('/'), `a slash remains: ${line!.text}`);
   assert.ok(line!.text.includes('expected by now'));
 });
 
-// --- Banner khớp với deviations() gọi trực tiếp -----------------------
+// --- The banner matches deviations() called directly -----------------------
 
-test('số trên banner khớp với deviations() gọi trực tiếp', () => {
+test('the banner numbers match deviations() called directly', () => {
   const acts = [
     block(MON, 'work', 14),
     block('2026-09-01', 'work', 12),

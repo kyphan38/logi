@@ -1,12 +1,12 @@
 // ---------------------------------------------------------------------------
-// logi - Bảng dẫn xuất màu category (Stage 4.6 Task 1).
+// logi - Derived category colors (Stage 4.6 Task 1).
 //
-// Màu GỐC vẫn là CATEGORY_COLOR trong logi.ts - file này không sửa nó, chỉ trỏ
-// sang các CSS variable dẫn xuất khai báo trong globals.css:
-//   tint - nền block timeline (alpha ~0.12, tự đảo ở dark mode)
-//   ink  - chữ trên nền tint (tương phản >= 4.5 với chính tint đó)
+// The BASE colors are still CATEGORY_COLOR in logi.ts - this file does not
+// change them, it only points to derived CSS variables in globals.css:
+//   tint - timeline block fill (alpha ~0.12, inverts in dark mode)
+//   ink  - text on tint (contrast >= 4.5 against that tint)
 //
-// Trả về var() chứ không trả hex, để dark mode tự đổi mà không cần JS.
+// Returns var(), not hex, so dark mode switches without JS.
 // ---------------------------------------------------------------------------
 import type { Category } from '@/types/logi';
 

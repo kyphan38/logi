@@ -12,64 +12,64 @@ import {
 } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
-// Ngân sách zero-sum sau khi bỏ Sleep (AMENDMENT-remove-sleep mục 2 + 12).
+// The zero-sum budget after removing Sleep (AMENDMENT-remove-sleep sections 2 + 12).
 // ---------------------------------------------------------------------------
 
 const total = (w: Record<Category, number>) => CATEGORIES.reduce((s, c) => s + w[c], 0);
 
 const PRESET_IDS = ['normal', 'crunch', 'deep_learn', 'recovery'] as const;
 
-test('TOTAL_BUDGET = 89h, không còn 135.5h', () => {
+test('TOTAL_BUDGET = 89h, no longer 135.5h', () => {
   assert.equal(TOTAL_BUDGET, 89);
   assert.equal(total(BASELINE_WEEKLY), 89);
 });
 
-test('bốn category, không có sleep', () => {
+test('four categories, no sleep', () => {
   assert.deepEqual([...CATEGORIES].sort(), ['fitness', 'learn', 'leisure', 'work']);
   assert.equal('sleep' in BASELINE_WEEKLY, false);
 });
 
-test('cả 4 preset cộng đúng 89h', () => {
+test('all 4 presets add up to exactly 89h', () => {
   for (const id of PRESET_IDS) {
     const w = PRESETS[id].weekly;
     assert.equal(total(w), TOTAL_BUDGET, `${id} = ${total(w)}h`);
-    assert.equal('sleep' in w, false, `${id} vẫn còn sleep`);
+    assert.equal('sleep' in w, false, `${id} still has sleep`);
   }
 });
 
-test('rebalance: kéo một category lên thì 3 category kia cùng gánh', () => {
+test('rebalance: raising one category makes the other 3 share the cost', () => {
   const base = PRESETS.normal.weekly;
   const out = rebalance(base, 'learn', base.learn + 6);
 
   assert.equal(out.learn, base.learn + 6);
-  assert.ok(Math.abs(total(out) - TOTAL_BUDGET) < 0.11, `tổng = ${total(out)}`);
+  assert.ok(Math.abs(total(out) - TOTAL_BUDGET) < 0.11, `total = ${total(out)}`);
 
-  // Chia đều: không ai bị bỏ qua, không ai gánh hết.
+  // Even split: nobody is skipped, nobody carries it all.
   for (const c of CATEGORIES) {
     if (c === 'learn') continue;
-    assert.ok(out[c] < base[c], `${c} phải giảm`);
+    assert.ok(out[c] < base[c], `${c} must go down`);
   }
 });
 
-test('rebalance: sàn Fitness 4.5h không bao giờ bị phá', () => {
+test('rebalance: the 4.5h Fitness floor is never broken', () => {
   const base = PRESETS.normal.weekly;
   const floor = HARD_FLOOR.fitness ?? 0;
   assert.equal(floor, 4.5);
 
-  // Kéo Work lên rất cao - phần bù phải dừng ở sàn, không âm.
+  // Raise Work very high - the balancing part must stop at the floor, never negative.
   const out = rebalance(base, 'work', 80);
   assert.ok(out.fitness >= floor, `fitness = ${out.fitness}`);
-  for (const c of CATEGORIES) assert.ok(out[c] >= 0, `${c} âm`);
+  for (const c of CATEGORIES) assert.ok(out[c] >= 0, `${c} is negative`);
 });
 
-test('rebalance: kéo xuống thì 3 category kia nhận lại, tổng vẫn 89h', () => {
+test('rebalance: lowering gives back to the other 3, total still 89h', () => {
   const base = PRESETS.normal.weekly;
   const out = rebalance(base, 'work', base.work - 9);
 
   assert.equal(out.work, base.work - 9);
-  assert.ok(Math.abs(total(out) - TOTAL_BUDGET) < 0.11, `tổng = ${total(out)}`);
+  assert.ok(Math.abs(total(out) - TOTAL_BUDGET) < 0.11, `total = ${total(out)}`);
   for (const c of CATEGORIES) {
     if (c === 'work') continue;
-    assert.ok(out[c] > base[c], `${c} phải tăng`);
+    assert.ok(out[c] > base[c], `${c} must go up`);
   }
 });

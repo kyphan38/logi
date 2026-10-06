@@ -21,9 +21,9 @@ const EMPTY: Activity[] = [];
 const EMPTY_META: SnapMeta = { hasPendingWrites: false, fromCache: false, pendingIds: NO_PENDING };
 
 /**
- * Offline, promise của write Firestore chỉ resolve khi server nhận được - có thể
- * chờ hàng giờ. Cache local đã cập nhật ngay, nên UI chỉ khoá tối đa `ms` rồi mở.
- * Lỗi đến muộn vẫn được báo qua `onLateError`.
+ * Offline, a Firestore write promise only resolves once the server gets it -
+ * possibly hours later. The local cache updates at once, so the UI only locks
+ * for at most `ms`, then unlocks. A late error is still reported via `onLateError`.
  */
 export function capWait(
   p: Promise<unknown>,
@@ -48,7 +48,7 @@ export function capWait(
 }
 
 // ------------------------------------------------------------
-// Session đang chạy
+// Running sessions
 // ------------------------------------------------------------
 
 export function useActiveActivities() {
@@ -60,7 +60,7 @@ export function useActiveActivities() {
   const [meta, setMeta] = useState<SnapMeta>(EMPTY_META);
   const [error, setError] = useState<string | null>(null);
 
-  // Đổi user → reset ngay trong lúc render (tránh hiện dữ liệu của user cũ).
+  // User changed → reset during render (never show the old user's data).
   const [prevUid, setPrevUid] = useState(uid);
   if (prevUid !== uid) {
     setPrevUid(uid);
@@ -98,19 +98,19 @@ export function useActiveActivities() {
 }
 
 // ------------------------------------------------------------
-// Session đã hẹn giờ (Task 6)
+// Scheduled sessions (Task 6)
 // ------------------------------------------------------------
 
-/** Tới giờ rồi mà app đang đóng thì không ai promote. Nên kiểm lại mỗi 30 giây. */
+/** If the time comes while the app is closed, nobody promotes. So recheck every 30 seconds. */
 const PROMOTE_EVERY_MS = 30_000;
 
 /**
- * Các session `scheduled` chưa tới giờ, kèm luôn việc tự chuyển sang `active`.
+ * `scheduled` sessions not yet due, plus moving them to `active` automatically.
  *
- * Không dùng push notification: chỉ cần app mở là promote. Chạy khi mount, khi
- * app quay lại foreground, và mỗi 30 giây lúc có record tới hạn. `startAt` giữ
- * nguyên giá trị đã hẹn, nên mở app muộn thì timer đã đếm sẵn - đúng nghĩa
- * "bắt đầu lúc 22:05".
+ * No push notification: the app being open is enough to promote. Runs on
+ * mount, when the app returns to the foreground, and every 30 seconds while a
+ * record is due. `startAt` keeps its scheduled value, so opening the app late
+ * shows a timer already counting - truly "started at 22:05".
  */
 export function useScheduledActivities() {
   const { user } = useAuth();
@@ -134,32 +134,32 @@ export function useScheduledActivities() {
     return unsub;
   }, [uid]);
 
-  // Hai lần promote chồng nhau sẽ ghi đè lẫn nhau. Cho chạy một lần một thôi.
+  // Two overlapping promotions would overwrite each other. Only one at a time.
   const running = useRef(false);
   const promote = useCallback(async () => {
     if (!uid || running.current) return;
     running.current = true;
     try {
-      // Dọn trước, promote sau: buổi hẹn mười ngày trước phải thành
-      // 'abandoned', không được biến thành session đang chạy 240 tiếng.
+      // Clean up first, then promote: a booking from ten days ago must become
+      // 'abandoned', never a session running for 240 hours.
       await abandonStaleScheduled(uid);
       await promoteScheduled(uid);
     } catch {
-      // Mất mạng thì lần sau promote. Không có gì để báo người dùng.
+      // Offline: promote next time. Nothing to tell the user.
     } finally {
       running.current = false;
     }
   }, [uid]);
 
-  // Mount (và mỗi lần đổi user).
+  // Mount (and every user change).
   useEffect(() => {
     void promote();
   }, [promote]);
 
-  // Quay lại foreground - hay gặp nhất: hẹn 22:05, mở app lúc 22:30.
+  // Back to the foreground - the most common case: booked 22:05, app opened at 22:30.
   useOnForeground(() => void promote());
 
-  // Đang mở app mà tới giờ. Chỉ query khi thật sự có record quá hạn.
+  // The time comes while the app is open. Only query when a record is really due.
   const due = activities.length > 0 ? activities[0].startAt : null;
   useEffect(() => {
     if (due === null) return;
@@ -173,7 +173,7 @@ export function useScheduledActivities() {
 }
 
 // ------------------------------------------------------------
-// Một ngày logic
+// One logical day
 // ------------------------------------------------------------
 
 export function useDayActivities(logicalDate: string | null) {
@@ -185,7 +185,7 @@ export function useDayActivities(logicalDate: string | null) {
   const [meta, setMeta] = useState<SnapMeta>(EMPTY_META);
   const [error, setError] = useState<string | null>(null);
 
-  // Đổi user hoặc đổi ngày → reset ngay trong lúc render.
+  // User or day changed → reset during render.
   const key = uid && logicalDate ? `${uid}|${logicalDate}` : null;
   const [prevKey, setPrevKey] = useState(key);
   if (prevKey !== key) {
@@ -214,7 +214,7 @@ export function useDayActivities(logicalDate: string | null) {
     return unsub;
   }, [uid, logicalDate]);
 
-  // Session đang chạy được tính tới "bây giờ" → nhịp lại mỗi phút cho tổng đúng.
+  // Running sessions count up to "now" → re-tick every minute so totals stay right.
   const now = useTick(60_000, activities.some((a) => a.endAt === null));
 
   const totals = useMemo(
@@ -235,7 +235,7 @@ export function useDayActivities(logicalDate: string | null) {
 }
 
 // ------------------------------------------------------------
-// Những ngày logic có dữ liệu - cho chấm nhỏ dưới dải ngày
+// Logical days with data - for the small dots under the day strip
 // ------------------------------------------------------------
 
 const NO_DATES: ReadonlySet<string> = new Set();
@@ -245,7 +245,7 @@ export function useRecentDates(sinceDate: string): ReadonlySet<string> {
   const uid = user?.uid ?? null;
   const [dates, setDates] = useState<ReadonlySet<string>>(NO_DATES);
 
-  // Đổi user → xoá ngay trong lúc render, không chờ effect.
+  // User changed → clear during render, do not wait for an effect.
   const [prevUid, setPrevUid] = useState(uid);
   if (prevUid !== uid) {
     setPrevUid(uid);
@@ -265,9 +265,9 @@ export function useRecentDates(sinceDate: string): ReadonlySet<string> {
 // ------------------------------------------------------------
 
 /**
- * Nhịp re-render. KHÔNG cộng dồn: chỉ đẩy Date.now() mới vào state.
- * iOS throttle rất mạnh timer chạy nền, nên phải sync lại khi tab quay lại
- * foreground - thiếu bước này thì mở app lên timer đứng ở giá trị cũ.
+ * Re-render tick. NO accumulation: only pushes a fresh Date.now() into state.
+ * iOS throttles background timers hard, so resync when the tab returns to the
+ * foreground - without it the timer shows a stale value when the app opens.
  */
 export function useTick(intervalMs = 1000, enabled = true): number {
   const [now, setNow] = useState(() => Date.now());
@@ -297,14 +297,14 @@ export function useTick(intervalMs = 1000, enabled = true): number {
   return now;
 }
 
-/** Số GIÂY đã trôi qua. Luôn = now - startAt, không bao giờ là counter. */
+/** SECONDS elapsed. Always = now - startAt, never a counter. */
 export function useElapsed(startAt: number): number {
   const now = useTick(1000, true);
   return Math.max(0, Math.floor((now - startAt) / 1000));
 }
 
 // ------------------------------------------------------------
-// Một tuần logic - cho balance banner
+// One logical week - for the balance banner
 // ------------------------------------------------------------
 
 export function useWeekActivities(logicalWeek: string | null) {
@@ -331,8 +331,8 @@ export function useWeekActivities(logicalWeek: string | null) {
         setActivities(list);
         setLoading(false);
       },
-      // Banner là thứ phụ. Query hỏng thì im lặng biến mất, đừng chen vào
-      // màn hình Now bằng một thông báo lỗi không ai làm gì được.
+      // The banner is secondary. If the query fails it quietly disappears, never
+      // pushing an error onto Now that nobody can act on.
       () => setLoading(false)
     );
   }, [uid, logicalWeek]);
@@ -341,7 +341,7 @@ export function useWeekActivities(logicalWeek: string | null) {
 }
 
 // ------------------------------------------------------------
-// Foreground: chạy lại việc gì đó mỗi khi app quay lại
+// Foreground: rerun something whenever the app comes back
 // ------------------------------------------------------------
 
 export function useOnForeground(fn: () => void) {
@@ -365,7 +365,7 @@ export function useOnForeground(fn: () => void) {
 }
 
 // ------------------------------------------------------------
-// Trạng thái mạng
+// Network status
 // ------------------------------------------------------------
 
 export function useOnline(): boolean {
@@ -386,7 +386,7 @@ export function useOnline(): boolean {
 }
 
 // ------------------------------------------------------------
-// Toast nhỏ dùng chung
+// Small shared toast
 // ------------------------------------------------------------
 
 export interface Toast {

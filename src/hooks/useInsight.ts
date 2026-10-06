@@ -1,13 +1,13 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Chạy AI insight cho một khoảng (Stage 7 Task 5 + 6)
+// logi - Running the AI insight for a range (Stage 7 Task 5 + 6)
 //
-// Thứ tự bắt buộc:
-//   1. Tính chỉ số bằng code (`computeSignals`)
-//   2. Cổng chặn (`canAnalyze`) - không đạt thì KHÔNG gọi API
-//   3. Có bản cache cùng `digestHash` → dùng lại, cũng không gọi API
-//   4. Còn lại mới gọi `/api/insight`, kết quả trả về đã sanitize
+// Required order:
+//   1. Compute stats in code (`computeSignals`)
+//   2. The gate (`canAnalyze`) - if it fails, do NOT call the API
+//   3. A cached result with the same `digestHash` → reuse it, no API call
+//   4. Only then call `/api/insight`; the result comes back sanitized
 // ---------------------------------------------------------------------------
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -25,11 +25,11 @@ export type InsightState = 'idle' | 'loading' | 'ready' | 'error';
 
 export interface UseInsight {
   state: InsightState;
-  /** Cổng chặn tính từ dữ liệu hiện có - biết trước khi bấm. */
+  /** The gate, computed from current data - known before tapping. */
   gate: Gate;
   signals: Signals;
   result: InsightResult | null;
-  /** Digest đã dùng, để tra số gốc khi tap vào `metric`. */
+  /** The digest used, to look up raw numbers when `metric` is tapped. */
   digest: Digest | null;
   generatedAt: number | null;
   fromCache: boolean;
@@ -42,7 +42,7 @@ export interface InsightInput {
   range: Range;
   weekTargets: Map<string, Record<Category, number>>;
   now: number;
-  /** Weekly Review mở ra là chạy luôn; màn Analytics đợi người dùng bấm. */
+  /** Weekly Review runs on open; Analytics waits for a tap. */
   auto?: boolean;
 }
 
@@ -58,8 +58,8 @@ export function useInsight(input: InsightInput): UseInsight {
   const [fromCache, setFromCache] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // `now` nhích mỗi phút; nếu để nó vào deps thì digest đổi liên tục và cache
-  // không bao giờ trúng. Chốt lại một mốc theo khoảng đang xem.
+  // `now` moves every minute; in the deps the digest would keep changing and the
+  // cache would never hit. Pin one time per viewed range.
   const [stamp, setStamp] = useState(now);
   const key = `${uid}|${range.from}|${range.to}`;
   const [prevKey, setPrevKey] = useState(key);
@@ -74,7 +74,7 @@ export function useInsight(input: InsightInput): UseInsight {
     setError(null);
   }
 
-  // Chỉ số của kỳ này. Chưa có kỳ trước - phần so sánh chỉ thêm vào lúc chạy.
+  // Stats for this period. No previous period yet - the comparison is added at run time.
   const signals = useMemo(
     () =>
       computeSignals(
@@ -90,7 +90,7 @@ export function useInsight(input: InsightInput): UseInsight {
 
   const gate = useMemo(() => canAnalyze(signals), [signals]);
 
-  // Mỗi lần chạy có số riêng: đổi khoảng giữa chừng thì kết quả cũ bị bỏ.
+  // Each run gets its own number: changing range midway drops the old result.
   const runId = useRef(0);
   const busy = useRef(false);
 
@@ -108,8 +108,9 @@ export function useInsight(input: InsightInput): UseInsight {
         try {
           const at = stamp;
           const prev = previousRange(range);
-          // Kỳ trước đã đóng, đọc một lần là đủ. Lỗi mạng ở đây không nên
-          // giết cả lần phân tích - thiếu so sánh vẫn còn 6 nhóm chỉ số.
+          // The previous period is closed; one read is enough. A network error
+          // here should not kill the whole analysis - without the comparison
+          // there are still 6 stat groups.
           let prevActivities: Activity[] = [];
           try {
             prevActivities = await listByRange(uid, prev);
@@ -169,7 +170,7 @@ export function useInsight(input: InsightInput): UseInsight {
           setFromCache(false);
           setState('ready');
 
-          // Lưu hỏng thì lần sau chạy lại, không phải lỗi người dùng cần thấy.
+          // A failed save just reruns next time; not an error the user needs to see.
           void saveInsight(uid, { from: range.from, to: range.to, digestHash: hash, result: clean }, madeAt).catch(
             () => {}
           );
@@ -185,7 +186,7 @@ export function useInsight(input: InsightInput): UseInsight {
     [uid, activities, range, weekTargets, signals, stamp]
   );
 
-  // Tự chạy (Weekly Review). Chỉ một lần cho mỗi khoảng.
+  // Auto-run (Weekly Review). Only once per range.
   const autoDone = useRef('');
   useEffect(() => {
     if (!auto || !uid || state !== 'idle' || !gate.ok) return;

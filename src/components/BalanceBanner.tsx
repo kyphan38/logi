@@ -1,10 +1,10 @@
 'use client';
 
 // ============================================================
-// logi - Một dòng cân bằng tuần, đặt ở màn hình Now.
+// logi - One weekly balance line, on the Now screen.
 //
-// Chỉ xám (DESIGN.md): chữ trong dòng đã nói vượt hay thiếu.
-// Vượt / xung đột thì chữ đậm hơn một chút. App này không phán xét.
+// Gray only (DESIGN.md): the words already say over or short.
+// Over / conflict is a bit bolder. This app does not judge.
 // ============================================================
 
 import Link from 'next/link';
@@ -15,12 +15,12 @@ const TONE: Record<BannerLine['kind'], string> = {
   conflict: 'border-line-strong bg-surface-1 font-medium text-ink',
   over: 'border-line-strong bg-surface-1 font-medium text-ink',
   under: 'border-line-strong bg-surface-1 text-ink',
-  // Chưa đủ dữ liệu: dòng nhạt, không khung màu - nó là ghi chú, không phải cảnh báo.
+  // Not enough data: a faint line, no colored frame - it is a note, not a warning.
   sparse: 'border-transparent bg-surface-1 text-ink-muted',
 };
 
 export default function BalanceBanner({ line }: { line: BannerLine | null }) {
-  if (!line) return null; // Không có gì để nói thì không nói gì.
+  if (!line) return null; // Nothing to say, say nothing.
 
   return (
     <Link

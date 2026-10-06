@@ -1,11 +1,11 @@
 // ============================================================
-// logi - Số học tuần ISO ("2026-W35")
-// File thuần: không React, không Firestore. Test bằng `node --test`.
+// logi - ISO week math ("2026-W35")
+// Pure file: no React, no Firestore. Tested with `node --test`.
 //
-// `logicalWeek()` trong balance.ts đi một chiều: ts → "2026-W35".
-// Stage 4 cần chiều ngược lại (tuần → mốc thời gian) để lùi/tiến tuần
-// và để biết lúc nào là 21:00 Chủ nhật. File này làm việc đó, và luôn
-// quay về `logicalWeek()` để đặt tên tuần - không tự đặt tên song song.
+// `logicalWeek()` in balance.ts goes one way: ts → "2026-W35". Stage 4 needs
+// the reverse (week → time) to step weeks back/forward and to know when
+// 21:00 Sunday is. This file does that, and always goes back through
+// `logicalWeek()` to name weeks - never naming them in parallel.
 // ============================================================
 
 import { logicalWeek, logicalWeekday } from '@/lib/balance';
@@ -20,10 +20,10 @@ export function isWeekId(week: string): boolean {
 }
 
 /**
- * Mốc 12:00 trưa thứ Hai (giờ địa phương) của tuần.
+ * 12:00 noon Monday (local time) of the week.
  *
- * Cố ý dùng 12:00 chứ không phải 00:00: ngày logic cắt lúc 04:00, nên
- * 00:00 thứ Hai vẫn thuộc về Chủ nhật - lệch nguyên một tuần.
+ * 12:00 on purpose, not 00:00: the logical day cuts at 04:00, so 00:00 Monday
+ * still belongs to Sunday - a whole week off.
  */
 export function weekStart(week: string): number {
   const m = WEEK_RE.exec(week);
@@ -31,7 +31,7 @@ export function weekStart(week: string): number {
   const year = Number(m[1]);
   const n = Number(m[2]);
 
-  // Quy ước ISO: ngày 4 tháng 1 luôn nằm trong tuần 1.
+  // ISO rule: 4 January is always in week 1.
   const jan4 = new Date(Date.UTC(year, 0, 4));
   const dow = jan4.getUTCDay() || 7; // CN = 7
   const mondayW1 = Date.UTC(year, 0, 4 - (dow - 1));
@@ -45,21 +45,21 @@ export function weekStart(week: string): number {
   ).getTime();
 }
 
-/** "2026-W35" + 1 → "2026-W36". Qua năm vẫn đúng vì đi qua logicalWeek(). */
+/** "2026-W35" + 1 → "2026-W36". Correct across years since it goes through logicalWeek(). */
 export function addWeeks(week: string, n: number): string {
   const d = new Date(weekStart(week));
   d.setDate(d.getDate() + n * 7);
   return logicalWeek(d.getTime());
 }
 
-/** Số tuần từ `from` tới `to`. Âm nghĩa là `to` ở trước. */
+/** Weeks from `from` to `to`. Negative means `to` comes first. */
 export function weekDiff(from: string, to: string): number {
   return Math.round((weekStart(to) - weekStart(from)) / WEEK_MS);
 }
 
 /**
- * 21:00 Chủ nhật của tuần - mốc đóng sổ.
- * Chủ nhật là ngày logic thứ 7 của tuần, tức thứ Hai + 6 ngày.
+ * 21:00 Sunday of the week - the closing mark.
+ * Sunday is the week's 7th logical day, i.e. Monday + 6 days.
  */
 export function weekLockAt(week: string): number {
   const d = new Date(weekStart(week));
@@ -68,21 +68,21 @@ export function weekLockAt(week: string): number {
   return d.getTime();
 }
 
-/** Tuần đã qua mốc 21:00 CN chưa. Dùng cho khoá lười lúc mở app. */
+/** Whether the week has passed 21:00 Sunday. For the lazy lock on app open. */
 export function isWeekClosed(week: string, now: number = Date.now()): boolean {
   return now >= weekLockAt(week);
 }
 
 /**
- * Sửa target vào thứ Sáu / thứ Bảy / Chủ nhật → lateChange.
- * Đổi kế hoạch khi tuần đã gần hết thì đó là viết lại lịch sử, không phải lập kế hoạch.
+ * Editing the target on Friday / Saturday / Sunday → lateChange.
+ * Changing the plan when the week is nearly over is rewriting history, not planning.
  */
 export function isLateChange(now: number = Date.now()): boolean {
   const dow = logicalWeekday(now); // 0 = CN ... 6 = T7
   return dow === 5 || dow === 6 || dow === 0;
 }
 
-/** "2026-W35" → "W35". Nhãn ngắn cho card. */
+/** "2026-W35" → "W35". A short label for cards. */
 export function weekLabel(week: string): string {
   const m = WEEK_RE.exec(week);
   return m ? `W${m[2]}` : week;

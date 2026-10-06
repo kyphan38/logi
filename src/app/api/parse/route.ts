@@ -3,7 +3,7 @@ import 'server-only';
 // ============================================================
 // POST /api/parse
 // Body: { audio?: base64, mimeType?: string, text?: string, requestId: string }
-// Trả:  ParsedCommand (đã sanitize, mốc thời gian là epoch ms)
+// Returns: ParsedCommand (sanitized, times as epoch ms)
 // ============================================================
 
 import { buildSystemPrompt, parseAudio, parseTextCorrection } from '@/lib/gemini-parse';
@@ -12,19 +12,19 @@ import { requireSessionUser } from '@/lib/server-auth';
 import { listActiveForPrompt, listRecentForPrompt } from '@/lib/server-activities';
 import { TIMEZONE } from '@/types/logi';
 
-export const runtime = 'nodejs'; // firebase-admin không chạy được trên edge
+export const runtime = 'nodejs'; // firebase-admin does not run on the edge
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
 
-/** 6MB base64 ≈ 4.5MB audio. Nút mic tự cắt ở 30s nên bình thường chỉ vài trăm KB. */
+/** 6MB base64 ≈ 4.5MB audio. The mic button cuts at 30s, so usually only a few hundred KB. */
 const MAX_AUDIO_B64 = 6 * 1024 * 1024;
 const MAX_TEXT_LEN = 1000;
-/** Bỏ cuộc trước mốc maxDuration 30s, để còn kịp trả lỗi tử tế. */
+/** Give up before the 30s maxDuration, to still return a proper error. */
 const GEMINI_TIMEOUT_MS = 25_000;
 
 // --- Rate limit ---------------------------------------------------
-// Map trong module scope: đủ cho app một người. Serverless reset thì thôi,
-// mục đích chỉ là chặn vòng lặp lỗi làm cháy quota Gemini.
+// A module-scope Map: enough for a one-user app. A serverless reset is fine;
+// the goal is only to stop an error loop from burning the Gemini quota.
 const RL_WINDOW_MS = 5 * 60_000;
 const RL_MAX = 30;
 const hits = new Map<string, number[]>();
@@ -44,7 +44,7 @@ function json(status: number, body: unknown): Response {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
-/** VN không có DST nên offset luôn là +07:00. */
+/** Vietnam has no DST, so the offset is always +07:00. */
 function nowISOInTz(now: number): string {
   return new Date(now + 7 * 3_600_000).toISOString().replace('Z', '+07:00');
 }
@@ -106,8 +106,8 @@ export async function POST(req: Request): Promise<Response> {
     return json(500, { error: 'Voice is not configured.' });
   }
 
-  // Context giúp Gemini hiểu "stop that" / "same as before".
-  // Firestore lỗi thì vẫn parse tiếp với context rỗng - đừng làm mất câu nói.
+  // Context helps Gemini understand "stop that" / "same as before".
+  // If Firestore fails, parse anyway with empty context - never lose what was said.
   let active: Awaited<ReturnType<typeof listActiveForPrompt>> = [];
   let recent: Awaited<ReturnType<typeof listRecentForPrompt>> = [];
   try {

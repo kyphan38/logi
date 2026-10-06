@@ -1,15 +1,15 @@
 import 'server-only';
 
 // ============================================================
-// logi - Đọc activity bằng Admin SDK, chỉ để dựng context cho prompt.
-// CHỈ ĐỌC. Mọi đường ghi vẫn đi qua src/lib/activities.ts ở client,
-// nơi có validateTimes / derive / assertCategory.
+// logi - Reads activities with the Admin SDK, only to build prompt context.
+// READ ONLY. Every write still goes through src/lib/activities.ts on the
+// client, where validateTimes / derive / assertCategory live.
 // ============================================================
 
 import { adminDb } from '@/lib/firebase-admin';
 import type { Activity } from '@/types/logi';
 
-/** Đủ dùng cho buildSystemPrompt, không kéo cả document cho tốn. */
+/** Enough for buildSystemPrompt, without pulling whole documents. */
 export type PromptActivity = Pick<Activity, 'id' | 'category' | 'label' | 'startAt' | 'endAt'>;
 
 function col(uid: string) {
@@ -29,13 +29,13 @@ function toPromptActivity(
   };
 }
 
-/** Session đang chạy. */
+/** Running sessions. */
 export async function listActiveForPrompt(uid: string): Promise<PromptActivity[]> {
   const snap = await col(uid).where('status', '==', 'active').orderBy('startAt', 'asc').get();
   return snap.docs.map(toPromptActivity);
 }
 
-/** Vài record gần nhất - để Gemini hiểu "the same as before", "that one". */
+/** A few recent records - so Gemini understands "the same as before", "that one". */
 export async function listRecentForPrompt(uid: string, n = 5): Promise<PromptActivity[]> {
   const snap = await col(uid)
     .where('status', 'in', ['done', 'active'])

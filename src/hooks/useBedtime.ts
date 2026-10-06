@@ -8,10 +8,10 @@ import { EMPTY_LOG, setBedtime as saveBedtime, subscribeDayLog } from '@/lib/bed
 import type { DayLog } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
-// logi - Mốc bedtime của một ngày logic (Stage 8)
+// logi - The bedtime mark of one logical day (Stage 8)
 //
-// Bedtime là MỘT MỐC trong dayLogs, không phải activity: không target, không
-// vào ngân sách 89h, không hiện ở Balance / By day / When.
+// Bedtime is ONE MARK in dayLogs, not an activity: no target, not in the 89h
+// budget, not shown in Balance / By day / When.
 // ---------------------------------------------------------------------------
 
 export function useDayLog(date: string | null) {
@@ -40,18 +40,18 @@ export function useDayLog(date: string | null) {
   return { log, loading };
 }
 
-/** '2026-09-05' → '2026-09-04'. Lấy trưa hôm trước cho khỏi đụng mốc cắt 04:00. */
+/** '2026-09-05' → '2026-09-04'. Uses the previous noon to stay clear of the 04:00 cut. */
 function prevDate(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
   return logicalDate(new Date(y, m - 1, d - 1, 12).getTime());
 }
 
 /**
- * Mốc của đêm nay và đêm qua.
+ * Marks for tonight and last night.
  *
- * Luật "giờ gần nhất trong quá khứ" không bao giờ với xa hơn 24 tiếng, nên mọi
- * mốc ghi được từ sheet đều rơi vào đúng một trong hai đêm này - đủ để vừa hiện
- * trạng thái vừa biết giá trị cũ trước khi ghi đè.
+ * The "latest time in the past" rule never reaches beyond 24 hours, so every
+ * mark the sheet can save lands on exactly one of these two nights - enough to
+ * show the state and know the old value before overwriting.
  */
 export function useRecentBedtime(date: string | null) {
   const tonight = useDayLog(date);
@@ -63,12 +63,12 @@ export function useRecentBedtime(date: string | null) {
   };
 }
 
-/** Ghi "đi ngủ lúc này". Trả về ngày logic mà mốc rơi vào (qua 00:00 thì là hôm trước). */
+/** Logs "going to bed now". Returns the logical day of the mark (past 00:00 it is the day before). */
 export async function logBedtime(uid: string, at: number): Promise<string> {
   return saveBedtime(uid, at);
 }
 
-/** Ngày logic của mốc bedtime - để toast nói rõ ghi vào đêm nào. */
+/** The logical day of a bedtime mark - so the toast says which night it went to. */
 export function bedtimeDate(at: number): string {
   return logicalDate(at);
 }

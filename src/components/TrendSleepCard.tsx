@@ -1,10 +1,10 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Giấc ngủ qua nhiều tuần (tab Trend)
+// logi - Sleep across weeks (Trend tab)
 //
-// Cùng hình với card Sleep bên tab Week nhưng khác câu hỏi: ở đây mỗi cột là
-// MỘT tuần ("mấy tháng nay tôi ngủ sớm lên chưa"), bên kia mỗi cột là một đêm.
+// Same shape as the Sleep card on the Week tab, different question: here each
+// column is ONE week ("have I gone to bed earlier lately"), there each is one night.
 // ---------------------------------------------------------------------------
 import { useMemo } from 'react';
 
@@ -21,7 +21,7 @@ export default function TrendSleepCard({
   buckets: TrendBucket[];
   dayLogs: DayLog[];
 }) {
-  // Cắt TRƯỚC khi vẽ: tuần chưa dùng app không phải tuần ngủ lúc 20:00.
+  // Trim BEFORE drawing: a week before using the app is not a week asleep at 20:00.
   const shown = useMemo(
     () =>
       trimLeadingEmpty(
@@ -44,7 +44,7 @@ export default function TrendSleepCard({
 
   const have = points.filter((p) => p.stats !== null);
 
-  // Dòng so sánh chỉ giữa các tuần CÓ dữ liệu và đã xong. Dưới 2 thì ẩn.
+  // The comparison only uses finished weeks WITH data. Under 2, hide it.
   const usable = points.filter((p, i) => p.stats !== null && !shown[i].partial);
   let read: string | null = null;
   if (usable.length >= 2 && have.length > 0) {
@@ -61,22 +61,16 @@ export default function TrendSleepCard({
 
   if (have.length === 0) {
     return (
-      <Card title="Sleep">
+      <Card title="Sleep" footnote="Dot = median, line = min-max.">
         <p className="py-8 text-center text-[13px] text-ink-muted">
           No bedtimes logged in this period. Tap &quot;bedtime&quot; in Now tonight.
-        </p>
-        <p className="mt-1 text-xs text-ink-muted">
-          Each week is the median bedtime, with the min–max range.
         </p>
       </Card>
     );
   }
 
   return (
-    <Card
-      title="Sleep"
-      footnote="Dots are weekly medians, lines are min–max. Weeks with no bedtimes stay empty; weeks before your first log are hidden."
-    >
+    <Card title="Sleep" footnote="Dot = median, line = min-max.">
       <BedtimeDots points={points} labelEvery={points.length > MAX_BARS ? 4 : 1} />
       {read ? (
         <p className="text-[13px] tabular-nums text-ink-soft">{read}</p>

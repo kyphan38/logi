@@ -1,12 +1,12 @@
 // ============================================================
-// logi - Backup & khôi phục (Stage 6 Task 3)
+// logi - Backup & restore (Stage 6 Task 3)
 //
-// Sau một năm đây là dữ liệu không thể tạo lại, mà Firestore free tier
-// KHÔNG có backup tự động. File này lo hai việc:
-//   1. Nhắc export đúng lúc, không nhắc dai
-//   2. Đọc file JSON đã export và dựng ra kế hoạch khôi phục CHỈ-THÊM
+// After a year this data cannot be recreated, and Firestore's free tier has
+// NO automatic backup. This file does two things:
+//   1. Remind to export at the right time, without nagging
+//   2. Read an exported JSON file and build an ADD-ONLY restore plan
 //
-// Thuần: không React, không Firestore. Test bằng `node --test`.
+// Pure: no React, no Firestore. Tested with `node --test`.
 // ============================================================
 
 import { logicalDate, logicalWeekday } from '@/lib/balance';
@@ -15,31 +15,31 @@ import { daysBetween } from '@/lib/range';
 import { CATEGORIES, type Activity, type Category } from '@/types/logi';
 
 // ------------------------------------------------------------
-// Nhắc export
+// Export reminder
 // ------------------------------------------------------------
 
-/** Chưa export lần nào mà đã có ngần này ngày dữ liệu thì nhắc ngay. */
+/** Never exported and already this many days of data → remind at once. */
 export const FIRST_NUDGE_DAYS = 30;
 
 export interface ExportNudge {
   show: boolean;
   text: string;
-  /** Số ngày kể từ lần export gần nhất; null = chưa bao giờ. */
+  /** Days since the last export; null = never. */
   daysAgo: number | null;
 }
 
 const NO_NUDGE: ExportNudge = { show: false, text: '', daysAgo: null };
 
 /**
- * Số ngày TRÔI QUA giữa hai ngày logic.
- * `daysBetween()` của range.ts đếm cả hai đầu (cùng ngày = 1), dùng cho
- * độ dài khoảng. Ở đây cần hiệu số, nên trừ đi một.
+ * Days ELAPSED between two logical days.
+ * range.ts's `daysBetween()` counts both ends (same day = 1), for range
+ * length. Here the difference is needed, so subtract one.
  */
 function daysAgoOf(from: string, to: string): number {
   return Math.max(0, daysBetween(from, to) - 1);
 }
 
-/** Chủ nhật đầu tiên của tháng. */
+/** The first Sunday of the month. */
 function isFirstSunday(now: number): boolean {
   if (logicalWeekday(now) !== 0) return false;
   const day = Number(logicalDate(now).slice(8, 10));
@@ -47,23 +47,23 @@ function isFirstSunday(now: number): boolean {
 }
 
 /**
- * Nhắc mỗi Chủ nhật đầu tháng, cộng thêm một lần cho người chưa export bao giờ
- * mà đã tích được hơn một tháng dữ liệu.
+ * Reminds on the first Sunday of each month, plus once for someone who has
+ * never exported but has over a month of data.
  *
- * Cố tình KHÔNG nhắc mỗi ngày: nhắc dai thì người dùng học cách bỏ qua,
- * và lần thật sự cần nhắc cũng bị bỏ qua luôn.
+ * Deliberately NOT daily: nagging teaches people to ignore it, and the time a
+ * reminder really matters gets ignored too.
  */
 export function exportNudge(input: {
   lastExport: number | null;
-  /** logicalDate của record cũ nhất, null nếu chưa có dữ liệu. */
+  /** logicalDate of the oldest record, null with no data. */
   firstRecord: string | null;
   now: number;
 }): ExportNudge {
   const { lastExport, firstRecord, now } = input;
   const today = logicalDate(now);
 
-  // Chưa export bao giờ mà đã có hơn một tháng dữ liệu → nhắc ngay,
-  // không đợi Chủ nhật đầu tháng. Đây là nhóm rủi ro nhất.
+  // Never exported but over a month of data → remind now, without waiting
+  // for the first Sunday. This is the riskiest group.
   if (lastExport === null) {
     if (!firstRecord) return NO_NUDGE;
     if (daysAgoOf(firstRecord, today) < FIRST_NUDGE_DAYS) return NO_NUDGE;
@@ -80,11 +80,11 @@ export function exportNudge(input: {
 }
 
 // ------------------------------------------------------------
-// Đọc file backup
+// Reading the backup file
 // ------------------------------------------------------------
 
 export interface BackupFile extends JsonExport {
-  /** Sổ nợ lúc export. Có thể thiếu ở file cũ. */
+  /** The debt ledger at export time. May be missing in old files. */
   debt?: Partial<Record<Category, number>>;
 }
 
@@ -106,8 +106,8 @@ function isActivity(v: unknown): v is Activity {
 }
 
 /**
- * Kén chọn có chủ đích. File này sẽ được ghi thẳng vào database,
- * nên thà từ chối một file lạ còn hơn nhận vào rác không sửa được.
+ * Picky on purpose. This file goes straight into the database,
+ * so rejecting an odd file beats accepting junk that cannot be fixed.
  */
 export function parseBackup(text: string): ParseResult {
   let raw: unknown;
@@ -147,7 +147,7 @@ export function parseBackup(text: string): ParseResult {
 }
 
 // ------------------------------------------------------------
-// Kế hoạch khôi phục
+// Restore plan
 // ------------------------------------------------------------
 
 export interface RestorePreview {
@@ -171,23 +171,24 @@ export function previewBackup(file: BackupFile): RestorePreview {
 }
 
 export interface RestorePlan {
-  /** Record sẽ được thêm. */
+  /** Records to be added. */
   add: Activity[];
-  /** Đã có sẵn - bỏ qua, KHÔNG ghi đè. */
+  /** Already present - skipped, NEVER overwritten. */
   skip: number;
   /**
-   * Record thuộc category đã ngưng dùng - bỏ qua.
-   * File export cũ vẫn còn 'sleep'. Không lọc thì Restore sẽ dựng lại đúng
-   * thứ vừa xoá, mà Firestore rules cũng chặn, người dùng chỉ thấy lỗi câm.
+   * Records in a retired category - skipped.
+   * Old export files still hold 'sleep'. Without this filter Restore would
+   * rebuild exactly what was deleted, the Firestore rules would block it, and
+   * the user would only see a silent error.
    */
   retired: number;
 }
 
 /**
- * Chỉ thêm, không bao giờ ghi đè hay xoá.
+ * Add only, never overwrite or delete.
  *
- * Import là thao tác của người đang hoảng vì mất dữ liệu. Ghi đè ở đây
- * nghĩa là một lần bấm nhầm sẽ đổi dữ liệu đang đúng thành dữ liệu cũ hơn.
+ * Import is done by someone panicking over lost data. Overwriting here means
+ * one mistap turns correct data into older data.
  */
 export function planRestore(file: BackupFile, existingIds: ReadonlySet<string>): RestorePlan {
   const add: Activity[] = [];
@@ -210,5 +211,5 @@ export function planRestore(file: BackupFile, existingIds: ReadonlySet<string>):
   return { add, skip, retired };
 }
 
-/** Gõ đúng chữ này mới cho chạy. */
+/** Only runs when this exact word is typed. */
 export const RESTORE_WORD = 'RESTORE';

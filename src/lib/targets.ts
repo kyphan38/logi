@@ -1,12 +1,12 @@
 // ============================================================
 // logi - Week target & debt repository
-// MỌI thao tác Firestore với target/nợ đi qua file này.
+// EVERY Firestore operation on targets/debt goes through this file.
 // Path:
-//   users/{uid}/weekTargets/{week}   VD "2026-W35"
+//   users/{uid}/weekTargets/{week}   e.g. "2026-W35"
 //   users/{uid}/meta/debt
 //   users/{uid}/meta/rollover
 //
-// Logic thuần nằm ở `rollover.ts`. File này chỉ đọc vào và ghi ra.
+// Pure logic lives in `rollover.ts`. This file only reads in and writes out.
 // ============================================================
 
 import {
@@ -65,11 +65,12 @@ const debtRef = (uid: string) => doc(db, 'users', uid, 'meta', 'debt');
 const rolloverRef = (uid: string) => doc(db, 'users', uid, 'meta', 'rollover');
 
 /**
- * Cờ "đã review tuần này": `{ "2026-W35": <epoch> }`.
+ * The "reviewed this week" flag: `{ "2026-W35": <epoch> }`.
  *
- * Để riêng chứ không nhét vào `weekTargets/{week}` vì rules chặn update khi
- * `lockedAt != null` - mà tuần khoá lúc 21:00 CN, còn review mở từ 19:00 CN
- * và còn hạn tới hết thứ Ba. Nhét chung là mất cờ đúng lúc cần nó nhất.
+ * Kept separate from `weekTargets/{week}` because the rules block updates when
+ * `lockedAt != null` - the week locks at 21:00 Sunday, while review opens at
+ * 19:00 Sunday and stays open until the end of Tuesday. Sharing the doc loses
+ * the flag exactly when it matters most.
  */
 const reviewsRef = (uid: string) => doc(db, 'users', uid, 'meta', 'reviews');
 
@@ -113,7 +114,7 @@ function seedDoc(wt: WeekTarget): DocumentData {
 }
 
 // ------------------------------------------------------------
-// Đọc
+// Read
 // ------------------------------------------------------------
 
 export async function getWeekTarget(uid: string, week: string): Promise<WeekTarget | null> {
@@ -128,13 +129,13 @@ export async function getDebt(uid: string): Promise<DebtLedger> {
 }
 
 /**
- * Target của nhiều tuần liền nhau, cho Analytics (Stage 5).
+ * Targets of several consecutive weeks, for Analytics (Stage 5).
  *
- * Id của doc chính là tuần ("2026-W35") và sắp xếp chuỗi trùng với thứ tự thời
- * gian, kể cả khi qua năm ("2025-W52" < "2026-W01"). Nên một query khoảng trên
- * documentId() là đủ - không cần `in`, không đụng giới hạn 30 phần tử.
+ * The doc id is the week ("2026-W35"), and string order matches time order,
+ * even across years ("2025-W52" < "2026-W01"). So one range query on
+ * documentId() is enough - no `in`, no 30-item limit.
  *
- * Tuần nào chưa có doc thì vắng mặt trong Map; nơi gọi tự lùi về PRESETS.normal.
+ * Weeks without a doc are absent from the Map; callers fall back to PRESETS.normal.
  */
 export async function listWeekTargets(
   uid: string,
@@ -158,7 +159,7 @@ export async function listWeekTargets(
   return out;
 }
 
-/** N tuần gần nhất, theo thứ tự tăng dần - `crunchStreak()` đọc từ cuối lên. */
+/** The last N weeks, ascending - `crunchStreak()` reads from the end. */
 export async function listRecentWeekTargets(uid: string, n = 6): Promise<WeekTarget[]> {
   const q = query(weekCol(uid), orderBy('week', 'desc'), fsLimit(n));
   const snap = await getDocs(q);
@@ -179,7 +180,7 @@ export function subscribeWeekTarget(
 }
 
 /**
- * Lắng nghe target của nhiều tuần liền nhau theo thời gian thực (cho Analytics).
+ * Listens to targets of several consecutive weeks in realtime (for Analytics).
  */
 export function subscribeWeekTargets(
   uid: string,
@@ -230,8 +231,8 @@ export function subscribeDebt(
 // ------------------------------------------------------------
 
 /**
- * Tạo target cho tuần nếu chưa có. Chạy trong transaction vì nó tiêu nợ:
- * hai tab cùng mở màn hình Targets mà không có transaction là trừ nợ hai lần.
+ * Creates the week's target if missing. Runs in a transaction because it
+ * spends debt: two tabs on Targets without a transaction would spend it twice.
  */
 export async function ensureWeekTarget(uid: string, week: string): Promise<WeekTarget> {
   return runTransaction(db, async (tx) => {
@@ -263,9 +264,9 @@ export async function ensureWeekTarget(uid: string, week: string): Promise<WeekT
 
 
 /**
- * Đổi preset. Nợ của tuần này đã bị tiêu một lần lúc tạo doc, nên ở đây
- * chỉ cộng lại đúng phần `debtApplied` đã ghi - không tiêu thêm từ `meta/debt`.
- * Không vậy thì đổi preset năm lần là nợ bay hơi.
+ * Changes the preset. This week's debt was spent once when the doc was created,
+ * so here only the recorded `debtApplied` is added back - nothing more from
+ * `meta/debt`. Otherwise five preset changes make the debt evaporate.
  */
 export async function setPreset(
   uid: string,
@@ -300,7 +301,7 @@ export async function setPreset(
   });
 }
 
-/** Ghi target tự chỉnh. Slider đã gọi `rebalance()` nên tổng phải sẵn đúng 89h. */
+/** Saves a custom target. The slider already called `rebalance()`, so the total must be exactly 89h. */
 export async function setCustomTargets(
   uid: string,
   week: string,
@@ -332,7 +333,7 @@ export async function setCustomTargets(
   });
 }
 
-/** Đóng sổ. Đã khoá rồi thì thôi - rules chặn update khi `lockedAt != null`. */
+/** Closes the week. Already locked → nothing to do; rules block updates when `lockedAt != null`. */
 export async function lockWeek(uid: string, week: string, at: number = Date.now()): Promise<void> {
   const current = await getWeekTarget(uid, week);
   if (!current || current.lockedAt !== null) return;
@@ -340,8 +341,8 @@ export async function lockWeek(uid: string, week: string, at: number = Date.now(
 }
 
 /**
- * Khoá lười: mở app sau 21:00 CN thì tuần đó đóng sổ.
- * Không có cron nên đây là cách duy nhất.
+ * Lazy lock: opening the app after 21:00 Sunday closes that week.
+ * There is no cron, so this is the only way.
  */
 export async function lockIfClosed(
   uid: string,
@@ -356,9 +357,9 @@ export async function lockIfClosed(
 }
 
 /**
- * "Reset baseline" - 4/6 tuần crunch thì crunch không còn là ngoại lệ.
- * Đặt tuần này thành Crunch và XOÁ phần nợ do chính kiểu cắt đó sinh ra.
- * Không sửa `BASELINE_DAILY` trong logi.ts (Stage 4 chưa làm tới đó).
+ * "Reset baseline" - with crunch in 4 of 6 weeks, crunch is no longer an exception.
+ * Sets this week to Crunch and CLEARS the debt that kind of cut created.
+ * Does not change `BASELINE_DAILY` in logi.ts.
  */
 export async function resetBaseline(
   uid: string,
@@ -375,7 +376,7 @@ export async function resetBaseline(
       throw new TargetError('locked', WEEK_CLOSED);
     }
 
-    // Chỉ tha nợ ở category mà Crunch cắt xuống. Nợ khác vẫn phải trả.
+    // Only forgive debt in categories that Crunch cuts. Other debt still has to be paid.
     const debt = toDebt(dSnap.data()?.balance as DocumentData | undefined);
     const next: DebtBalance = {};
     for (const c of CATEGORIES) {
@@ -409,14 +410,15 @@ export interface RolloverResult {
 }
 
 /**
- * Chuyển tuần. Gọi lúc màn hình Now mount và lúc app quay lại foreground.
+ * Week rollover. Called when Now mounts and when the app returns to the foreground.
  *
- * Toàn bộ chạy trong `runTransaction`: đọc cột mốc, đọc target các tuần, đọc nợ,
- * rồi ghi tất cả cùng lúc. Bạn dùng cả điện thoại lẫn laptop - không có
- * transaction thì mở app trên hai máy gần nhau là chạy rollover hai lần.
+ * Everything runs in `runTransaction`: read the marker, read the weeks'
+ * targets, read the debt, then write it all at once. You use both a phone and
+ * a laptop - without a transaction, opening the app on both around the same
+ * time runs rollover twice.
  *
- * Firestore tự chạy lại transaction khi có tranh chấp; lần chạy lại đọc được
- * `lastProcessedWeek` mới nên kế hoạch thành rỗng. Đó là chốt chặn idempotent.
+ * Firestore reruns a transaction on contention; the rerun reads the new
+ * `lastProcessedWeek`, so the plan is empty. That is the idempotence guard.
  */
 export async function runRollover(
   uid: string,
@@ -425,7 +427,7 @@ export async function runRollover(
   const currentWeek = logicalWeek(now);
 
   return runTransaction(db, async (tx) => {
-    // ---- READS (Firestore bắt mọi read đứng trước mọi write) ----
+    // ---- READS (Firestore requires every read before every write) ----
     const rollSnap = await tx.get(rolloverRef(uid));
     const last = (rollSnap.data()?.lastProcessedWeek as string | undefined) ?? null;
 
@@ -438,7 +440,7 @@ export async function runRollover(
     const debtSnap = await tx.get(debtRef(uid));
     const debt = toDebt(debtSnap.data()?.balance as DocumentData | undefined);
 
-    // ---- PLAN (thuần, test được) ----
+    // ---- PLAN (pure, testable) ----
     const plan = planRollover({ currentWeek, lastProcessedWeek: last, debt, targets, now });
 
     // ---- WRITES ----
@@ -500,7 +502,7 @@ export function subscribeReviews(
   );
 }
 
-/** Dùng cho nút Skip - chỉ đóng banner, không đụng target tuần sau. */
+/** For the Skip button - only closes the banner, never touches next week's target. */
 export async function markReviewed(
   uid: string,
   week: string,
@@ -510,12 +512,12 @@ export async function markReviewed(
 }
 
 /**
- * Màn 3 của review: chốt preset cho tuần KẾ TIẾP, tạo trước khi rollover chạy.
+ * Review screen 3: fix the preset for the NEXT week, created before rollover runs.
  *
- * Một transaction cho cả ba việc: ghi target, trừ nợ, đánh dấu đã review.
- * Nếu doc tuần sau đã tồn tại (chạy review hai lần, hoặc rollover đã chạy trước)
- * thì KHÔNG tạo lại và KHÔNG tiêu nợ lần nữa - chỉ đổi preset trên phần
- * `debtApplied` đã ghi, đúng như `setPreset()` làm. Đó là chốt idempotent.
+ * One transaction for all three: write the target, spend debt, mark reviewed.
+ * If next week's doc already exists (review run twice, or rollover ran first),
+ * do NOT recreate it and do NOT spend debt again - only change the preset on
+ * the recorded `debtApplied`, exactly like `setPreset()`. That is the idempotence guard.
  */
 export async function setupNextWeek(
   uid: string,
@@ -537,7 +539,7 @@ export async function setupNextWeek(
     let wt: WeekTarget;
 
     if (existing) {
-      // Nợ của tuần này đã tiêu lúc tạo doc. Cộng lại đúng phần đã ghi.
+      // This week's debt was spent when the doc was created. Add back exactly what was recorded.
       const weekly = roundToBudget(reapplyDebt(PRESETS[presetId].weekly, existing.debtApplied));
       assertValid(weekly);
       wt = { ...existing, preset: presetId, weekly, changedAt: now };
@@ -553,7 +555,7 @@ export async function setupNextWeek(
         weekly,
         debtApplied: applied,
         changedAt: now,
-        // Tuần sau chưa bắt đầu - đặt trước không phải là "sửa muộn".
+        // Next week has not started - setting it ahead is not a "late change".
         lateChange: false,
         lockedAt: null,
       };
@@ -569,10 +571,10 @@ export async function setupNextWeek(
 }
 
 // ------------------------------------------------------------
-// Tiện ích cho UI
+// UI helpers
 // ------------------------------------------------------------
 
-// Luật thuần sống ở `target-rules.ts` để test được mà không cần Firestore.
+// Pure rules live in `target-rules.ts` so they can be tested without Firestore.
 export { TargetError, WEEK_CLOSED, previewSwitch, totalDebt } from '@/lib/target-rules';
 
 // ------------------------------------------------------------
@@ -588,12 +590,12 @@ export async function getLastExport(uid: string): Promise<number | null> {
   return typeof v === 'number' ? v : null;
 }
 
-/** Ghi sau khi file đã tải xong, không phải lúc bấm nút. */
+/** Written after the file has downloaded, not when the button is tapped. */
 export async function markExported(uid: string, at: number = Date.now()): Promise<void> {
   await setDoc(backupRef(uid), { lastExport: at }, { merge: true });
 }
 
-/** Mọi tuần đã có target - cho bản export "All time". */
+/** Every week with a target - for the "All time" export. */
 export async function listAllWeekTargets(uid: string): Promise<WeekTarget[]> {
   const snap = await getDocs(query(weekCol(uid), orderBy(documentId())));
   return snap.docs.map((d) => toWeekTarget(d.id, d.data()));

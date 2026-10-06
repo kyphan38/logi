@@ -1,10 +1,10 @@
 // ---------------------------------------------------------------------------
-// logi - Firestore cho Routine (Stage 10)
+// logi - Firestore for Routine (Stage 10)
 //
-// Logic nằm ở `@/lib/routine`. Ở đây chỉ có đường đọc/ghi.
+// The logic lives in `@/lib/routine`. This file only reads and writes.
 //
-//   - routines/{groupId}: template. Xoá nhóm = `archivedAt`, giống events.
-//   - routineChecks/{logicalDate}: tick của một ngày. Ngày mới = doc mới.
+//   - routines/{groupId}: the template. Deleting a group = `archivedAt`, like events.
+//   - routineChecks/{logicalDate}: one day's ticks. A new day = a new doc.
 // ---------------------------------------------------------------------------
 import {
   addDoc,
@@ -44,7 +44,7 @@ const checkRef = (uid: string, date: string) => doc(db, 'users', uid, 'routineCh
 // Map
 // ---------------------------------------------------------------------------
 
-/** Mục hỏng (thiếu field sau một lần ghi lỗi) bị bỏ, không làm sập cả nhóm. */
+/** Broken items (missing fields after a bad write) are dropped without crashing the group. */
 function toItem(d: DocumentData): RoutineItem | null {
   if (typeof d?.id !== 'string' || typeof d?.text !== 'string') return null;
   return { id: d.id, text: d.text, days: Array.isArray(d.days) ? cleanDays(d.days) : [] };
@@ -80,10 +80,10 @@ function toChecks(date: string, d: DocumentData | undefined): RoutineChecks {
 export const EMPTY_CHECKS = (date: string): RoutineChecks => ({ date, checked: {} });
 
 // ---------------------------------------------------------------------------
-// Nhóm
+// Groups
 // ---------------------------------------------------------------------------
 
-/** Nhóm còn dùng, theo thứ tự. Nhóm đã archive KHÔNG nằm ở đây. */
+/** Groups in use, in order. Archived groups are NOT here. */
 export function subscribeRoutines(
   uid: string,
   cb: (groups: RoutineGroup[]) => void,
@@ -126,7 +126,7 @@ export async function renameGroup(uid: string, id: string, title: string): Promi
   await updateDoc(groupRef(uid, id), { title: cleanTitle(title), updatedAt: Date.now() });
 }
 
-/** Ghi đè cả mảng mục. Một lần ghi, không có trạng thái nửa vời. */
+/** Overwrites the whole item array. One write, no half state. */
 export async function saveItems(uid: string, id: string, items: RoutineItem[]): Promise<void> {
   const clean = items
     .map((i) => ({ id: i.id, text: cleanText(i.text), days: cleanDays(i.days) }))
@@ -134,7 +134,7 @@ export async function saveItems(uid: string, id: string, items: RoutineItem[]): 
   await updateDoc(groupRef(uid, id), { items: clean, updatedAt: Date.now() });
 }
 
-/** Đổi chỗ hai nhóm: ghi lại `order` của cả hai. */
+/** Swaps two groups: rewrites both `order` values. */
 export async function swapGroups(uid: string, a: RoutineGroup, b: RoutineGroup): Promise<void> {
   const now = Date.now();
   await Promise.all([
@@ -154,7 +154,7 @@ export async function restoreGroup(uid: string, id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Tick theo ngày
+// Ticks per day
 // ---------------------------------------------------------------------------
 
 export function subscribeChecks(
@@ -171,8 +171,8 @@ export function subscribeChecks(
 }
 
 /**
- * Tick / bỏ tick một mục. Merge theo key, nên hai lần chạm nhanh vào hai mục
- * khác nhau không ghi đè lên nhau.
+ * Ticks / unticks one item. Merged by key, so two quick taps on two different
+ * items never overwrite each other.
  */
 export async function setChecked(
   uid: string,

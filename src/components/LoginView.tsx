@@ -8,19 +8,19 @@ export default function LoginView() {
   const { user, loading, signingIn, sessionReady, error, signIn } = useAuth();
   const router = useRouter();
 
-  // Đã đăng nhập rồi mà vẫn mở /login thì đi thẳng vào app. Chờ cookie server
-  // xong mới đi: đi sớm hơn thì layout (main) chưa thấy session và đá ngược
-  // về đây.
+  // Already signed in but on /login → go straight into the app. Wait for the
+  // server cookie first: leaving earlier, the (main) layout sees no session
+  // and bounces back here.
   useEffect(() => {
     if (!loading && user && sessionReady) router.replace('/now');
   }, [loading, user, sessionReady, router]);
 
-  // Cùng một màn login cho mọi app trong ws/app (theo hodi): icon, tên,
-  // một dòng mô tả, một nút viền "Continue with Google". Không logo Google.
+  // The same login screen for every app in ws/app (after hodi): icon, name,
+  // one line of description, one outlined "Continue with Google" button. No Google logo.
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-1 flex-col items-center justify-center gap-8 px-5 pb-[12dvh] text-center">
       <div className="flex flex-col items-center gap-4">
-        {/* eslint-disable-next-line @next/next/no-img-element -- SVG tĩnh, không cần tối ưu ảnh */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- static SVG, no image optimization needed */}
         <img src="/branding/logi-icon.svg" alt="" width={40} height={40} />
         <div>
           <h1 className="text-xl font-medium tracking-tight text-ink">logi</h1>

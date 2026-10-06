@@ -15,121 +15,121 @@ function codeOf(fn: () => void): string {
   try {
     fn();
   } catch (e) {
-    assert.ok(e instanceof ActivityError, `phải là ActivityError, nhận ${e}`);
+    assert.ok(e instanceof ActivityError, `must be an ActivityError, got ${e}`);
     return (e as ActivityError).code;
   }
-  assert.fail('phải ném lỗi');
+  assert.fail('must throw');
 }
 
-test('derive: durationMin làm tròn phút, null khi đang chạy', () => {
+test('derive: durationMin rounds to minutes, null while running', () => {
   const start = at('2026-08-26', '09:00');
   assert.equal(derive(start, start + 90 * 60_000).durationMin, 90);
   assert.equal(derive(start, null).durationMin, null);
 });
 
-test('derive: logicalDate / logicalWeek luôn lấy theo startAt', () => {
-  const start = at('2026-08-27', '02:00'); // sau nửa đêm → vẫn là ngày 26
+test('derive: logicalDate / logicalWeek always come from startAt', () => {
+  const start = at('2026-08-27', '02:00'); // after midnight → still the 26th
   const d = derive(start, at('2026-08-27', '06:00'));
   assert.equal(d.logicalDate, '2026-08-26');
   assert.equal(d.logicalWeek, '2026-W35');
 });
 
-test('validateTimes: giờ hợp lệ thì không ném lỗi', () => {
+test('validateTimes: valid times do not throw', () => {
   const now = at('2026-08-26', '12:00');
   assert.doesNotThrow(() => validateTimes(now - 2 * H, now - H, 'done', now));
   assert.doesNotThrow(() => validateTimes(now - 2 * H, null, 'active', now));
 });
 
-test('validateTimes: end trước start → end-before-start', () => {
+test('validateTimes: end before start → end-before-start', () => {
   const now = at('2026-08-26', '12:00');
   assert.equal(codeOf(() => validateTimes(now - H, now - 2 * H, 'done', now)), 'end-before-start');
 });
 
-test('validateTimes: end trùng start cũng bị chặn', () => {
+test('validateTimes: end equal to start is blocked too', () => {
   const now = at('2026-08-26', '12:00');
   assert.equal(codeOf(() => validateTimes(now - H, now - H, 'done', now)), 'end-before-start');
 });
 
-test('validateTimes: session dài quá 15h → too-long', () => {
+test('validateTimes: a session over 15h → too-long', () => {
   const now = at('2026-08-26', '12:00');
   assert.equal(codeOf(() => validateTimes(now - 16 * H, now, 'done', now)), 'too-long');
   assert.doesNotThrow(() => validateTimes(now - 14 * H, now, 'done', now));
 });
 
-test('validateTimes: lùi quá 7 ngày → too-old', () => {
+test('validateTimes: more than 7 days back → too-old', () => {
   const now = at('2026-08-26', '12:00');
   assert.equal(codeOf(() => validateTimes(now - 8 * 24 * H, now - 8 * 24 * H + H, 'done', now)), 'too-old');
 });
 
-test('validateTimes: giờ bắt đầu ở tương lai → future', () => {
+test('validateTimes: a start time in the future → future', () => {
   const now = at('2026-08-26', '12:00');
   assert.equal(codeOf(() => validateTimes(now + 2 * H, null, 'active', now)), 'future');
 });
 
-test('validateTimes: record scheduled được phép ở tương lai', () => {
+test('validateTimes: a scheduled record may be in the future', () => {
   const now = at('2026-08-26', '12:00');
   assert.doesNotThrow(() => validateTimes(now + 2 * H, now + 3 * H, 'scheduled', now));
 });
 
-test('validateTimes: startAt không phải số → end-before-start (invalid)', () => {
+test('validateTimes: a non-number startAt → end-before-start (invalid)', () => {
   const now = at('2026-08-26', '12:00');
   assert.throws(() => validateTimes(NaN, now, 'done', now), ActivityError);
 });
 
 // ------------------------------------------------------------
-// endAt và status luôn đi cùng nhau
+// endAt and status always go together
 // ------------------------------------------------------------
 
-test('statusForTimes: điền endAt cho session đang chạy → done', () => {
+test('statusForTimes: endAt on a running session → done', () => {
   assert.equal(statusForTimes(at('2026-08-29', '00:00'), 'active'), 'done');
 });
 
-test('statusForTimes: hẹn giờ mà có endAt → done', () => {
+test('statusForTimes: scheduled with an endAt → done', () => {
   assert.equal(statusForTimes(at('2026-08-29', '00:00'), 'scheduled'), 'done');
 });
 
-test('statusForTimes: xoá endAt của record done → chạy lại (Undo)', () => {
+test('statusForTimes: clearing endAt of a done record → running again (Undo)', () => {
   assert.equal(statusForTimes(null, 'done'), 'active');
 });
 
-test('statusForTimes: abandoned giữ nguyên, có giờ kết thúc hay không', () => {
+test('statusForTimes: abandoned stays, end time or not', () => {
   assert.equal(statusForTimes(at('2026-08-29', '00:00'), 'abandoned'), 'abandoned');
   assert.equal(statusForTimes(null, 'abandoned'), 'abandoned');
 });
 
-test('statusForTimes: đang chạy và chưa có endAt thì không đổi gì', () => {
+test('statusForTimes: running with no endAt changes nothing', () => {
   assert.equal(statusForTimes(null, 'active'), 'active');
 });
 
-test('assertCategory chặn category lạ', () => {
+test('assertCategory blocks unknown categories', () => {
   assert.doesNotThrow(() => assertCategory('work'));
   assert.equal(codeOf(() => assertCategory('cooking')), 'bad-category');
 });
 
 // ------------------------------------------------------------
-// Hẹn giờ quá hạn (Stage 6 Task 5)
+// Overdue bookings (Stage 6 Task 5)
 // ------------------------------------------------------------
 
 const NOW = at('2026-08-26', '10:00');
 const scheduled = (startAt: number) => act({ id: 's', startAt, endAt: null, status: 'scheduled' });
 
-test('hẹn giờ quá 7 ngày → coi như đã bỏ', () => {
+test('a booking over 7 days old → counts as dropped', () => {
   assert.equal(isStaleScheduled(scheduled(NOW - SCHEDULED_MAX_AGE_MS - 1), NOW), true);
 });
 
-test('vừa đúng 7 ngày thì chưa bỏ - biên phải rõ ràng', () => {
+test('exactly 7 days is not dropped yet - the boundary must be clear', () => {
   assert.equal(isStaleScheduled(scheduled(NOW - SCHEDULED_MAX_AGE_MS), NOW), false);
 });
 
-test('hẹn giờ hôm qua chưa promote vẫn giữ nguyên', () => {
+test('yesterday\'s booking not yet promoted is kept', () => {
   assert.equal(isStaleScheduled(scheduled(NOW - 24 * H), NOW), false);
 });
 
-test('hẹn cho tuần sau không bị dọn', () => {
+test('a booking for next week is not cleaned up', () => {
   assert.equal(isStaleScheduled(scheduled(NOW + 6 * 24 * H), NOW), false);
 });
 
-test('chỉ dọn record scheduled - session đã done không đụng tới', () => {
+test('only scheduled records are cleaned - done sessions are untouched', () => {
   const old = act({ id: 'd', startAt: NOW - 30 * 24 * H, endAt: NOW - 29 * 24 * H });
   assert.equal(isStaleScheduled(old, NOW), false);
 });

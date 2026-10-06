@@ -1,34 +1,34 @@
 // ---------------------------------------------------------------------------
-// logi - Layout cho Timeline (History)
-// Hàm thuần, không đụng React. Mọi tính toán vị trí block nằm ở đây.
+// logi - Timeline layout (History)
+// Pure functions, no React. All block position math lives here.
 // ---------------------------------------------------------------------------
 import { clockTime } from '@/lib/datetime';
 import { DAY_CUTOFF_HOUR, type Activity } from '@/types/logi';
 
-/** Chiều cao 1 giờ (px) → 1 ngày = 1440px. */
+/** Height of 1 hour (px) → 1 day = 1440px. */
 export const HOUR_PX = 60;
 export const DAY_MS = 24 * 3_600_000;
 
-/** Block ngắn vẫn phải cao tối thiểu 24px ⇒ chiếm chỗ tương đương 24 phút. */
+/** A short block is still at least 24px tall ⇒ it takes the space of 24 minutes. */
 export const MIN_BLOCK_PX = 24;
 const MIN_BLOCK_MS = (MIN_BLOCK_PX / HOUR_PX) * 3_600_000;
 
-/** Khoảng trống ngắn hơn mức này thì bỏ qua. */
+/** Gaps shorter than this are ignored. */
 export const MIN_GAP_MS = 30 * 60_000;
 
 export interface DayWindow {
-  start: number; // 04:00 ngày logic
-  end: number; // 04:00 hôm sau
+  start: number; // 04:00 of the logical day
+  end: number; // 04:00 the next day
 }
 
-/** "2026-08-26" → mốc 04:00 → 04:00 hôm sau (giờ địa phương). */
+/** "2026-08-26" → 04:00 → 04:00 the next day (local time). */
 export function dayWindow(date: string): DayWindow {
   const [y, m, d] = date.split('-').map(Number);
   const start = new Date(y, m - 1, d, DAY_CUTOFF_HOUR, 0, 0, 0).getTime();
   return { start, end: start + DAY_MS };
 }
 
-/** "2026-08-26" + n ngày → "2026-08-27". */
+/** "2026-08-26" + n days → "2026-08-27". */
 export function addDays(date: string, n: number): string {
   const [y, m, d] = date.split('-').map(Number);
   const dt = new Date(y, m - 1, d + n);
@@ -39,14 +39,14 @@ export function addDays(date: string, n: number): string {
 export interface Segment {
   activity: Activity;
   start: number;
-  /** Giờ kết thúc THẬT, không cắt ở 04:00 hôm sau (xem AMENDMENT sleep). */
+  /** The REAL end time, not cut at 04:00 the next day (see AMENDMENT sleep). */
   end: number;
   lane: number;
-  /** Giờ kết thúc rơi sang ngày lịch khác giờ bắt đầu → nhãn "→ next day". */
+  /** The end falls on a different calendar day than the start → "→ next day" label. */
   crossesMidnight: boolean;
 }
 
-/** Ngày lịch (không phải ngày logic) của một mốc thời gian. */
+/** The calendar day (not logical day) of a time. */
 function calendarDay(ts: number): string {
   const d = new Date(ts);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -58,24 +58,24 @@ export interface Layout {
 }
 
 /**
- * Xếp lane cho các block chồng nhau.
+ * Assigns lanes to overlapping blocks.
  *
- *   1. Sắp xếp theo startAt tăng dần
- *   2. Tìm lane đầu tiên có lastEnd <= startAt
- *   3. Không có → mở lane mới
+ *   1. Sort by startAt ascending
+ *   2. Find the first lane with lastEnd <= startAt
+ *   3. None → open a new lane
  *
- * `lastEnd` dùng chiều cao *hiển thị* (tối thiểu 24px), nếu không hai session
- * 5 phút liền nhau sẽ đè lên nhau trên màn hình dù giờ giấc không chồng.
+ * `lastEnd` uses the *displayed* height (at least 24px), or two back-to-back
+ * 5-minute sessions would overlap on screen though their times do not.
  */
 export function layoutDay(activities: Activity[], win: DayWindow, now: number): Layout {
   const segments: Segment[] = [];
-  const lanes: number[] = []; // lastEnd của từng lane
+  const lanes: number[] = []; // lastEnd of each lane
 
   const sorted = [...activities].sort((a, b) => a.startAt - b.startAt);
 
   for (const a of sorted) {
-    // Session chưa xong thì kéo tới bây giờ; đã xong thì giữ NGUYÊN giờ kết
-    // thúc thật, kể cả khi nó vượt 04:00 hôm sau. Một giấc ngủ là một hàng.
+    // An unfinished session extends to now; a finished one keeps its REAL end
+    // time, even past 04:00 the next day. One sleep is one row.
     const end = a.endAt ?? Math.min(now, win.end);
     const start = Math.max(a.startAt, win.start);
     if (end <= start) continue;
@@ -102,27 +102,27 @@ export interface Gap {
 }
 
 export interface DayGaps {
-  /** Giờ thực sự có log (đã gộp phần chồng nhau). */
+  /** Hours actually logged (overlap merged). */
   trackedH: number;
-  /** Giờ trống NẰM GIỮA activity đầu và cuối. */
+  /** Empty hours BETWEEN the first and last activity. */
   gapH: number;
   gaps: Gap[];
-  /** Mép trái của timeline: activity sớm nhất. null = ngày trống. */
+  /** The timeline's left edge: the earliest activity. null = empty day. */
   from: number | null;
-  /** Mép phải: activity muộn nhất, hoặc `now` nếu là hôm nay. */
+  /** The right edge: the latest activity, or `now` if today. */
   to: number | null;
 }
 
 const EMPTY_DAY: DayGaps = { trackedH: 0, gapH: 0, gaps: [], from: null, to: null };
 
 /**
- * Khoảng trống CHỈ tính giữa activity đầu tiên và activity cuối cùng
- * (AMENDMENT-remove-sleep mục 6).
+ * Gaps ONLY count between the first and last activity
+ * (AMENDMENT-remove-sleep section 6).
  *
- * Bỏ Sleep thì mỗi ngày có một khoảng 22:00 -> 04:30 không còn ai log. Tính nó
- * là "chưa log" thì ngày nào cũng hiện `6h 30m untracked`, trông như quên log
- * trong khi thực ra không có gì để log. Phần trước cái đầu tiên và sau cái cuối
- * cùng không hiển thị, không tính.
+ * With Sleep gone, every day has a 22:00 -> 04:30 stretch nobody logs.
+ * Counting it as "not logged" would show `6h 30m untracked` every day, looking
+ * like forgotten logging when there was nothing to log. Time before the first
+ * and after the last is neither shown nor counted.
  */
 export function dayGaps(segments: Segment[], win: DayWindow, now: number): DayGaps {
   const limit = Math.min(win.end, Math.max(now, win.start));
@@ -137,9 +137,9 @@ export function dayGaps(segments: Segment[], win: DayWindow, now: number): DayGa
 
   inWin.sort((a, b) => a.start - b.start);
 
-  // Mép trái = activity sớm nhất. Mép phải = activity muộn nhất - trừ ngày hôm
-  // nay: khoảng từ record cuối tới `now` đúng là khoảng chưa log.
-  // Ngày đã qua thì dừng ở record cuối, không kéo tới 04:00 hôm sau.
+  // Left edge = earliest activity. Right edge = latest activity - except today:
+  // the time from the last record to `now` really is unlogged time.
+  // Past days stop at the last record, never extending to 04:00 the next day.
   const from = inWin[0].start;
   const lastEnd = Math.max(...inWin.map((g) => g.end));
   const isToday = now < win.end;
@@ -172,24 +172,23 @@ export function dayGaps(segments: Segment[], win: DayWindow, now: number): DayGa
 }
 
 // ---------------------------------------------------------------------------
-// Bố cục co giãn (Stage 4.5)
+// Elastic layout (Stage 4.5)
 //
-// Tỉ lệ tuyến tính 24h = 1440px để vẽ 5–8 record: phần lớn màn hình là
-// khoảng trống. Ở đây khối có dữ liệu giữ chiều cao đọc được, còn khoảng
-// trống thu về một dòng.
+// A linear 24h = 1440px scale for 5–8 records leaves most of the screen empty.
+// Here blocks with data keep a readable height, and gaps shrink to one row.
 // ---------------------------------------------------------------------------
 
-/** Chạm được bằng ngón tay theo chuẩn iOS, kể cả session 5 phút. */
+/** Finger-tappable per iOS guidelines, even for a 5-minute session. */
 export const ELASTIC_MIN_PX = 44;
-/** Một buổi học 6h liền không được chiếm hết màn hình. */
+/** A 6-hour study block must not fill the whole screen. */
 export const ELASTIC_MAX_PX = 132;
 export const ELASTIC_SLOPE = 0.22;
-/** Dòng "untracked" - cao vừa đủ đọc, không hơn. */
+/** The "untracked" row - just tall enough to read, no more. */
 export const GAP_ROW_PX = 32;
 
 /**
- * Bán tỉ lệ, chặn hai đầu. Mất tính tỉ lệ chính xác, nhưng thời lượng luôn
- * được viết bằng chữ trên block nên thông tin không mất.
+ * Semi-proportional, clamped at both ends. Exact proportion is lost, but the
+ * duration is always written on the block, so no information is lost.
  */
 export function blockHeight(durationMs: number): number {
   const min = durationMs / 60_000;
@@ -202,7 +201,7 @@ export interface BlockRow {
   key: string;
   start: number;
   height: number;
-  /** Cùng khung giờ → nằm cạnh nhau, chia đều bề ngang. */
+  /** Same time window → side by side, sharing the width evenly. */
   blocks: Segment[];
 }
 
@@ -216,11 +215,11 @@ export interface GapRow {
 export type Row = BlockRow | GapRow;
 
 /**
- * Gom segment chồng giờ thành cụm, rồi trộn với các khoảng trống theo thứ tự
- * thời gian. Không dùng `position: absolute` nữa - block dưới sẽ bấm được.
+ * Groups overlapping segments into clusters, then merges them with gaps in
+ * time order. No more `position: absolute` - lower blocks stay tappable.
  *
- * `gaps` lấy thẳng từ `dayGaps()` nên đã bỏ sẵn phần tương lai của ngày hôm
- * nay, các khoảng ngắn hơn 30 phút, và hai đầu ngày không có log.
+ * `gaps` comes straight from `dayGaps()`, so it already drops today's future
+ * part, gaps under 30 minutes, and both unlogged ends of the day.
  */
 export function elasticRows(segments: Segment[], gaps: Gap[]): Row[] {
   const sorted = [...segments].sort((a, b) => a.start - b.start || a.lane - b.lane);
@@ -237,7 +236,7 @@ export function elasticRows(segments: Segment[], gaps: Gap[]): Row[] {
     kind: 'blocks',
     key: `b${blocks[0].start}-${blocks[0].activity.id}`,
     start: blocks[0].start,
-    // Chiều cao hàng = block cao nhất trong nhóm.
+    // Row height = the tallest block in the group.
     height: Math.max(...blocks.map((b) => blockHeight(b.end - b.start))),
     blocks: [...blocks].sort((a, b) => a.lane - b.lane),
   }));
@@ -252,12 +251,12 @@ export function elasticRows(segments: Segment[], gaps: Gap[]): Row[] {
   return [...blockRows, ...gapRows].sort((a, b) => a.start - b.start);
 }
 
-/** Mốc thời gian → toạ độ px trong khung 1440px. */
+/** Time → px coordinate in the 1440px frame. */
 export function toPx(ts: number, win: DayWindow): number {
   return ((ts - win.start) / 3_600_000) * HOUR_PX;
 }
 
-/** "10:00 PM – 4:30 AM". Nhãn "→ next day" và thời lượng vẽ riêng ở Timeline. */
+/** "10:00 PM – 4:30 AM". The "→ next day" label and duration are drawn separately in Timeline. */
 export function formatClockRange(start: number, end: number): string {
   return `${clockTime(start)} – ${clockTime(end)}`;
 }

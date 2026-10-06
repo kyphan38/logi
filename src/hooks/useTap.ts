@@ -5,16 +5,16 @@ import { isRealTap, type Press } from '@/lib/tap-guard';
 
 /*
  * -----------------------------------------------------------------------------
- * // logi - Biến một khối div thành nút bấm được, mà không bắt nhầm cú vuốt
+ * // logi - Make a div tappable without catching swipes by mistake
  * -----------------------------------------------------------------------------
  *
- * Trên iOS, cuộn danh sách rồi nhả tay vẫn sinh ra `click`. Với nút thật thì
- * hiếm khi phiền, nhưng card session chiếm gần hết bề ngang màn Now - vuốt
- * trúng nó là chuyện thường. `isRealTap()` (src/lib/tap-guard.ts) loại các ca
- * đó; file này chỉ lo phần React và DOM.
+ * On iOS, scrolling a list and lifting the finger still fires `click`. Rarely
+ * a problem for real buttons, but session cards span almost the whole width of
+ * Now - swiping across one is common. `isRealTap()` (src/lib/tap-guard.ts)
+ * filters those cases; this file only handles React and the DOM.
  *
- * Cuộn là việc của cả trang, không phải của từng card. Nên chỉ một listener,
- * đếm số card đang dùng để biết lúc nào gỡ.
+ * Scrolling belongs to the whole page, not each card. So there is one
+ * listener, with a count of cards using it to know when to remove it.
  */
 
 let lastScrollAt: number | null = null;
@@ -24,7 +24,7 @@ function trackScroll(e: Event) {
   lastScrollAt = e.timeStamp;
 }
 
-/** `capture: true` để bắt cả cuộn trong container con, không riêng window. */
+/** `capture: true` to catch scrolls in child containers too, not just window. */
 function subscribe(): () => void {
   users += 1;
   if (users === 1) {
@@ -50,8 +50,8 @@ export interface TapHandlers {
 }
 
 /**
- * Trả về props để rải vào một `<div>`. `undefined` khi không có `onTap` - để
- * chỗ gọi cứ rải thẳng mà khối vẫn trơ như cũ.
+ * Returns props to spread onto a `<div>`. `undefined` without `onTap` - so
+ * callers can spread it directly and the block stays inert as before.
  */
 export function useTap(onTap: (() => void) | undefined): TapHandlers | undefined {
   const down = useRef<{ x: number; y: number; at: number } | null>(null);
@@ -86,7 +86,7 @@ export function useTap(onTap: (() => void) | undefined): TapHandlers | undefined
     [onTap],
   );
 
-  // Bàn phím không vuốt được, nên không phải lọc gì.
+  // A keyboard cannot swipe, so nothing to filter.
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (!onTap) return;

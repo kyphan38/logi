@@ -1,11 +1,11 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Trend giờ của MỘT category qua nhiều tuần
+// logi - Hours trend of ONE category across weeks
 //
-// Bar trả lời "nhiều hay ít so với target", line trả lời "đang lên hay xuống".
-// Đổi giữa hai kiểu bởi SỐ CỘT chứ không bởi span: span đã bị cắt đầu nên
-// không đoán được số cột từ tên span.
+// Bars answer "more or less than target", a line answers "going up or down".
+// The switch depends on the COLUMN COUNT, not the span: the span is trimmed
+// at the start, so its name does not tell the column count.
 // ---------------------------------------------------------------------------
 import { useMemo, useState } from 'react';
 import {
@@ -26,7 +26,6 @@ import Card, { CardSelect } from '@/components/Card';
 import { actualForRange, expectedForRange } from '@/lib/range-target';
 import {
   chartKind,
-  elapsedFraction,
   hasLogged,
   labelInterval,
   onTrackPct,
@@ -41,7 +40,7 @@ const h1 = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
 interface HoursRow extends Record<string, unknown> {
   key: string;
   label: string;
-  /** null = tuần chưa có dữ liệu: KHÔNG vẽ cột, không phải cột 0. */
+  /** null = no data that week: draw NO bar, not a 0 bar. */
   hours: number | null;
   target: number;
   partial: boolean;
@@ -51,7 +50,7 @@ interface HoursRow extends Record<string, unknown> {
 interface PctRow extends Record<string, unknown> {
   key: string;
   label: string;
-  /** null = tuần chưa có dữ liệu hoặc không đặt target: làm ĐỨT đường. */
+  /** null = no data that week or no target: BREAK the line. */
   pct: number | null;
   partial: boolean;
 }
@@ -78,8 +77,8 @@ export default function TrendHoursCard({
     />
   );
 
-  // Cắt TRƯỚC khi tính rows: standard, donePct và dòng so sánh đều phải tính
-  // trên cửa sổ đã cắt, không phải trên 26 tuần đầy chỗ trống.
+  // Trim BEFORE computing rows: standard and the comparison line must
+  // use the trimmed window, not 26 weeks full of gaps.
   const shown = useMemo(
     () => trimLeadingEmpty(buckets, (b) => hasLogged(activities, b.range)),
     [buckets, activities]
@@ -88,13 +87,13 @@ export default function TrendHoursCard({
   const rows: HoursRow[] = useMemo(
     () =>
       shown.map((b) => {
-        // Kỳ có ít nhất một session (không tính abandoned/scheduled) mới là
-        // "có dữ liệu". Chưa dùng app thì cột trống, không phải 0 giờ.
+        // A period counts as "has data" only with at least one session (not
+        // abandoned/scheduled). Before using the app, the bar is empty, not 0 hours.
         const hasData = hasLogged(activities, b.range);
         return {
           key: b.key,
-          // Kỳ đang chạy được đánh dấu ngay trên trục: người đọc thấy cột thấp
-          // trước khi kịp đọc chú thích ở đáy khung.
+          // The running period is marked right on the axis: readers see the low
+          // bar before they reach the footnote at the bottom.
           label: b.partial ? `${b.label}*` : b.label,
           hours: hasData ? actualForRange(activities, b.range, now)[category] : null,
           target: expectedForRange(b.range, weekTargets, now)[category],
@@ -120,19 +119,17 @@ export default function TrendHoursCard({
     );
   }
 
-  // Đường chuẩn lấy từ các kỳ ĐÃ XONG. Gộp cả kỳ dở dang vào thì đường tự tụt
-  // xuống mỗi sáng thứ Hai, và cột nào cũng "đạt".
+  // The standard line comes from FINISHED periods. Including the unfinished one
+  // drags the line down every Monday morning, and every bar "hits" it.
   const closed = rows.filter((r) => !r.partial && r.target > 0);
   const standard = closed.length
     ? closed.reduce((a, r) => a + r.target, 0) / closed.length
     : 0;
 
   const color = CATEGORY_COLOR[category];
-  const last = shown[shown.length - 1];
-  const donePct = Math.round(elapsedFraction(last, now) * 100);
 
-  // Span dài vẽ TỈ LỆ chứ không vẽ giờ: qua 26 tuần target đổi nhiều lần, đường
-  // chuẩn theo giờ sẽ nhấp nhô khó đọc, còn mốc 100% thì luôn nằm một chỗ.
+  // Long spans plot RATIOS, not hours: over 26 weeks the target changes many
+  // times, an hours line would wobble, while the 100% mark stays put.
   const pctRows: PctRow[] = rows.map((r) => ({
     key: r.key,
     label: r.label,
@@ -142,17 +139,17 @@ export default function TrendHoursCard({
 
   const footnote =
     kind === 'line'
-      ? `Each point is hours logged ÷ target for that week. 100% = on target. * = this week is only ${donePct}% through.`
+      ? `Hours ÷ target. * = week in progress.`
       : standard > 0
-        ? `Bars are hours logged for ${CATEGORY_LABEL[category]}. Dashed line is the usual week: ${h1(standard)}h. * = this week is only ${donePct}% through.`
-        : `Bars are hours logged for ${CATEGORY_LABEL[category]}. * = this week is only ${donePct}% through.`;
+        ? `Dashed = usual week (${h1(standard)}h). * = week in progress.`
+        : `Hours for ${CATEGORY_LABEL[category]}. * = week in progress.`;
 
   return (
     <Card title="Hours" action={controls} footnote={footnote}>
       {kind === 'bars' ? (
         <>
-          {/* Chiều cao cố định: ResponsiveContainer cần cha có chiều cao thật,
-              để nó tự co thì trên iOS chart ra 0px và biến mất. */}
+          {/* Fixed height: ResponsiveContainer needs a parent with a real height;
+              left to shrink, the chart becomes 0px on iOS and disappears. */}
           <div className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
@@ -185,8 +182,8 @@ export default function TrendHoursCard({
                     if (v === null || v === undefined || r?.hasData === false) {
                       return ['no data', CATEGORY_LABEL[category]];
                     }
-                    // Tooltip gọn cho mobile: "23.3h of 6.0h". Bỏ chữ "target" -
-                    // footnote dưới chart đã nói đường đứt là target tuần.
+                    // A compact mobile tooltip: "23.3h of 6.0h". No "target" -
+                    // the footnote already says the dashed line is the weekly target.
                     const tgt = r && r.target > 0 ? ` of ${h1(r.target)}h` : '';
                     return [`${h1(Number(v))}h${tgt}`, CATEGORY_LABEL[category]];
                   }}
@@ -203,8 +200,8 @@ export default function TrendHoursCard({
 
                 <Bar dataKey="hours" radius={[4, 4, 0, 0]} maxBarSize={44} isAnimationActive={false}>
                   {rows.map((r) => (
-                    // Kỳ dở dang nhạt hơn: cùng một màu nên vẫn là cùng một
-                    // thứ, nhưng mắt không so nó ngang hàng với các cột đã đủ.
+                    // The unfinished period is lighter: same color, so the same
+                    // thing, but the eye does not compare it with the full bars.
                     <Cell key={r.key} fill={color} fillOpacity={r.partial ? 0.35 : 1} />
                   ))}
                 </Bar>
@@ -212,8 +209,8 @@ export default function TrendHoursCard({
             </ResponsiveContainer>
           </div>
 
-          {/* Nhãn trực tiếp cho hai đầu: không ai đọc được "cột này 12h hay
-              14h" từ trục Y, mà đó lại là câu hỏi duy nhất của ô này. */}
+          {/* Direct labels for both ends: nobody can read "12h or 14h" from the
+              Y axis, and that is the only question this box answers. */}
           <TrendRead rows={rows} />
         </>
       ) : (
@@ -257,8 +254,8 @@ export default function TrendHoursCard({
                   strokeDasharray="4 4"
                   ifOverflow="extendDomain"
                 />
-                {/* connectNulls mặc định false - tuần trống phải làm ĐỨT đường, nối qua
-                    chỗ trống là vẽ ra một tuần chưa từng xảy ra. */}
+                {/* connectNulls defaults to false - an empty week must BREAK the
+                    line; joining across it draws a week that never happened. */}
                 <Line
                   type="monotone"
                   dataKey="pct"
@@ -280,13 +277,13 @@ export default function TrendHoursCard({
 }
 
 /**
- * Một dòng chữ nói thẳng xu hướng. Chart cho thấy hình dạng; dòng này cho
- * con số, để không phải đoán từ chiều cao cột. Chỉ so giữa các kỳ CÓ dữ liệu:
- * tuần trống không phải là 0.
+ * One line stating the trend plainly. The chart shows the shape; this line
+ * gives the number, so nobody guesses from bar heights. Only compares periods
+ * WITH data: an empty week is not 0.
  */
 function TrendRead({ rows }: { rows: HoursRow[] }) {
-  // Kỳ dở dang loại ra như cũ; thêm điều kiện có dữ liệu - thiếu một trong hai
-  // thì dòng so sánh là bịa. Quy tắc nằm trong `trend.ts` để test được.
+  // The unfinished period is excluded as before; plus the has-data rule - miss
+  // either and the comparison is made up. The rule lives in `trend.ts` to be tested.
   const cmp = trendCompare(rows);
   if (!cmp) return null;
 
@@ -304,7 +301,7 @@ function TrendRead({ rows }: { rows: HoursRow[] }) {
   );
 }
 
-/** Như `TrendRead` nhưng cho chế độ line: đơn vị là điểm phần trăm. */
+/** Like `TrendRead` but for line mode: the unit is percentage points. */
 function TrendReadPct({ rows }: { rows: PctRow[] }) {
   const cmp = trendCompare(
     rows.map((r) => ({ label: r.label, hours: r.pct, partial: r.partial })),

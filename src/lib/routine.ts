@@ -1,14 +1,14 @@
 // ---------------------------------------------------------------------------
-// logi - Routine: checklist hằng ngày (Stage 10)
+// logi - Routine: a daily checklist (Stage 10)
 //
-// Khác task Stage 8: không thời lượng, không Start/Stop, không category. Chỉ
-// tick. Template lặp lại theo thứ trong tuần cho tới khi người dùng sửa.
+// Unlike Stage 8 tasks: no duration, no Start/Stop, no category. Ticks only.
+// The template repeats by weekday until the user edits it.
 //
-// File thuần: không React, không Firestore - test bằng `node --test`.
+// Pure file: no React, no Firestore - tested with `node --test`.
 // ---------------------------------------------------------------------------
 import { ROUTINE_ITEM_MAX, type RoutineGroup, type RoutineItem } from '@/types/logi';
 
-/** Thứ Hai → Chủ nhật. Giá trị theo `Date.getDay()` (0 = CN). */
+/** Monday → Sunday. Values per `Date.getDay()` (0 = Sun). */
 export const GRID_DOWS: readonly number[] = [1, 2, 3, 4, 5, 6, 0];
 
 const SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -21,17 +21,16 @@ export interface RoutineDayGroup {
   done: number;
 }
 
-/** Mục của một thứ, giữ đúng thứ tự trong nhóm. */
+/** Items for one weekday, kept in group order. */
 export function itemsForDay(group: RoutineGroup, dow: number): RoutineItem[] {
   return group.items.filter((i) => i.days.includes(dow));
 }
 
 /**
- * Checklist của một ngày cho màn Now.
+ * One day's checklist for Now.
  *
- * Nhóm hôm nay trống thì bỏ hẳn (VD ngày nghỉ tập). Tick của mục đã bị xoá
- * khỏi template vẫn nằm trong doc ngày, nhưng không được đếm - chỉ đếm mục
- * đang hiện.
+ * A group empty today is dropped (e.g. a rest day). Ticks of items removed
+ * from the template stay in the day doc but are not counted - only shown items count.
  */
 export function routineForDay(
   groups: RoutineGroup[],
@@ -48,7 +47,7 @@ export function routineForDay(
   return out;
 }
 
-/** Thứ không hợp lệ bị bỏ, trùng bị gộp, xếp T2 → CN cho dễ đọc. */
+/** Invalid weekdays dropped, duplicates merged, sorted Mon → Sun for reading. */
 export function cleanDays(days: number[]): number[] {
   const set = new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6));
   return GRID_DOWS.filter((d) => set.has(d));
@@ -58,7 +57,7 @@ export function cleanText(text: string): string {
   return text.trim().replace(/\s+/g, ' ').slice(0, ROUTINE_ITEM_MAX);
 }
 
-/** Thêm hoặc sửa một mục. Mục không còn ngày nào vẫn được giữ, chỉ không hiện. */
+/** Adds or edits an item. An item with no days left is kept, just not shown. */
 export function upsertItem(items: RoutineItem[], next: RoutineItem): RoutineItem[] {
   const item = { id: next.id, text: cleanText(next.text), days: cleanDays(next.days) };
   const i = items.findIndex((x) => x.id === item.id);
@@ -73,10 +72,10 @@ export function removeItem(items: RoutineItem[], id: string): RoutineItem[] {
 }
 
 /**
- * Đổi chỗ một mục với mục kề nó TRONG CÙNG NGÀY đang xem.
+ * Swaps an item with its neighbor ON THE SAME DAY being viewed.
  *
- * Mục của ngày khác nằm xen giữa thì được bỏ qua: người dùng chỉ thấy danh
- * sách của một ngày, nên "lên một dòng" phải là dòng họ đang thấy.
+ * Items of other days in between are skipped: the user only sees one day's
+ * list, so "up one row" must be the row they see.
  */
 export function moveItem(
   items: RoutineItem[],
@@ -95,7 +94,7 @@ export function moveItem(
   return out;
 }
 
-/** "Mon, Wed, Fri" / "Every day" / "Weekdays" - cho chế độ xem All. */
+/** "Mon, Wed, Fri" / "Every day" / "Weekdays" - for the All view. */
 export function daysLabel(days: number[]): string {
   const d = cleanDays(days);
   if (d.length === 0) return 'No day';

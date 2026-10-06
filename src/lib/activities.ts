@@ -1,7 +1,7 @@
 // ============================================================
 // logi - Activity repository
-// MỌI thao tác Firestore với activity đi qua file này.
-// Không component nào được gọi thẳng addDoc / updateDoc / deleteDoc.
+// EVERY Firestore operation on activities goes through this file.
+// No component may call addDoc / updateDoc / deleteDoc directly.
 // Path: users/{uid}/activities/{id}
 // ============================================================
 
@@ -39,13 +39,13 @@ import {
 } from '@/types/logi';
 
 // ------------------------------------------------------------
-// Hằng số ràng buộc
+// Constraint constants
 // ------------------------------------------------------------
 
 const MS_MIN = 60_000;
 const MAX_SESSION_MS = MAX_SESSION_MIN * MS_MIN; // 15h
-const MAX_BACKDATE_MS = 7 * 24 * 60 * MS_MIN;    // 7 ngày
-/** Cho phép lệch đồng hồ nhẹ khi so với "tương lai". */
+const MAX_BACKDATE_MS = 7 * 24 * 60 * MS_MIN;    // 7 days
+/** Allows slight clock skew when comparing with "the future". */
 const CLOCK_SKEW_MS = 60_000;
 
 export type ActivityErrorCode =
@@ -57,7 +57,7 @@ export type ActivityErrorCode =
   | 'bad-category'
   | 'not-found';
 
-/** Lỗi có mã để UI phân biệt (VD 'duplicate' → toast, không phải crash). */
+/** Errors with a code so the UI can tell them apart (e.g. 'duplicate' → toast, not a crash). */
 export class ActivityError extends Error {
   code: ActivityErrorCode;
   constructor(code: ActivityErrorCode, message: string) {
@@ -68,9 +68,9 @@ export class ActivityError extends Error {
 }
 
 // ------------------------------------------------------------
-// Field dẫn xuất - HÀM DUY NHẤT
-// Mọi đường ghi bắt buộc đi qua đây.
-// logicalDate / logicalWeek LUÔN tính từ startAt, không bao giờ từ endAt.
+// Derived fields - the ONLY function
+// Every write path must go through here.
+// logicalDate / logicalWeek ALWAYS come from startAt, never from endAt.
 // ------------------------------------------------------------
 
 export function derive(startAt: number, endAt: number | null) {
@@ -82,8 +82,8 @@ export function derive(startAt: number, endAt: number | null) {
 }
 
 // ------------------------------------------------------------
-// Validation phía client - báo lỗi dễ hiểu trước khi rules ném
-// permission-denied khó hiểu.
+// Client-side validation - a clear error before the rules throw an
+// unclear permission-denied.
 // ------------------------------------------------------------
 
 export function assertCategory(c: string): asserts c is Category {
@@ -118,11 +118,11 @@ export function validateTimes(
 }
 
 /**
- * Có endAt = đã xong. Không có endAt = đang chạy. HAI THỨ NÀY ĐI CÙNG NHAU.
+ * With endAt = finished. Without endAt = running. THESE TWO GO TOGETHER.
  *
- * Điền endAt mà quên đổi status là lỗi câm: History vẽ record đã kết thúc,
- * còn màn Now vẫn đếm tiếp vì nó query theo `status == 'active'`.
- * 'abandoned' giữ nguyên - bỏ dở vẫn là bỏ dở, dù có giờ kết thúc hay không.
+ * Setting endAt but forgetting status is a silent bug: History draws a
+ * finished record while Now keeps counting, since it queries `status == 'active'`.
+ * 'abandoned' stays - abandoned is abandoned, end time or not.
  */
 export function statusForTimes(endAt: number | null, status: ActivityStatus): ActivityStatus {
   if (endAt !== null && (status === 'active' || status === 'scheduled')) return 'done';
@@ -131,7 +131,7 @@ export function statusForTimes(endAt: number | null, status: ActivityStatus): Ac
 }
 
 // ------------------------------------------------------------
-// Đọc / ghi thấp tầng
+// Low-level read / write
 // ------------------------------------------------------------
 
 function col(uid: string) {
@@ -162,12 +162,12 @@ function toActivity(id: string, d: DocumentData): Activity {
 }
 
 /**
- * Bộ lọc phòng thủ - AMENDMENT-remove-sleep mục 4.2.
+ * Defensive filter - AMENDMENT-remove-sleep section 4.2.
  *
- * Record 'sleep' đã bị xoá khỏi Firestore, nhưng bản cache offline trên máy
- * có thể còn, hoặc có record đang chờ sync lúc script xoá chạy. Lọc ở client
- * sau khi nhận snapshot: thêm điều kiện `where` vào query sẽ cần index mới
- * mà không được gì.
+ * 'sleep' records were deleted from Firestore, but the device's offline cache
+ * may still hold some, or a record may have been waiting to sync when the
+ * delete script ran. Filter on the client after the snapshot: a `where` in the
+ * query would need a new index for no gain.
  */
 const RETIRED_CATEGORIES: readonly string[] = ['sleep'];
 
@@ -175,7 +175,7 @@ function isRetired(d: DocumentData): boolean {
   return RETIRED_CATEGORIES.includes(d.category as string);
 }
 
-/** Map snapshot → Activity[], bỏ mọi category đã ngưng dùng. */
+/** Map snapshot → Activity[], dropping every retired category. */
 export function mapDocs(docs: QueryDocumentSnapshot[]): Activity[] {
   const out: Activity[] = [];
   for (const d of docs) {
@@ -186,14 +186,14 @@ export function mapDocs(docs: QueryDocumentSnapshot[]): Activity[] {
 }
 
 /**
- * Mất mạng thì đọc thẳng cache: getDoc/getDocs phải chờ hết timeout mạng
- * trước khi tự rơi về cache, làm Start/Stop offline chậm hẳn.
+ * Offline, read the cache directly: getDoc/getDocs wait for the network
+ * timeout before falling back to cache, making offline Start/Stop slow.
  */
 function isOffline(): boolean {
   return typeof navigator !== 'undefined' && navigator.onLine === false;
 }
 
-/** Đọc 1 activity. Dùng nội bộ khi cần startAt/endAt hiện tại để re-derive. */
+/** Reads 1 activity. Used internally when the current startAt/endAt are needed to re-derive. */
 export async function getActivity(uid: string, id: string): Promise<Activity> {
   const r = ref(uid, id);
   const snap = isOffline() ? await getDocFromCache(r) : await getDoc(r);
@@ -206,8 +206,8 @@ export async function getActivity(uid: string, id: string): Promise<Activity> {
 // ------------------------------------------------------------
 
 /**
- * Nguồn gốc record. Voice ghi kèm để sau còn tra lại khi Gemini parse sai:
- * `rawText` giữ nguyên câu nói, `confidence` cho biết máy tự tin tới đâu.
+ * Where a record came from. Voice saves it for checking when Gemini parses
+ * wrong: `rawText` keeps the sentence, `confidence` says how sure the parser was.
  */
 export interface Provenance {
   source?: ActivitySource;
@@ -219,14 +219,14 @@ export interface StartInput extends Provenance {
   category: Category;
   label?: string | null;
   startAt?: number;
-  /** 'scheduled' = hẹn giờ trước (delayed start). Mặc định là 'active'. */
+  /** 'scheduled' = booked ahead (delayed start). Default is 'active'. */
   status?: Extract<ActivityStatus, 'active' | 'scheduled'>;
 }
 
 /**
- * Tạo session đang chạy, hoặc hẹn giờ trước với `status: 'scheduled'`.
- * Chặn tạo trùng: đã có session `active` cùng category → throw 'duplicate'.
- * KHÔNG auto-stop session khác - chạy song song là hợp lệ.
+ * Creates a running session, or books one ahead with `status: 'scheduled'`.
+ * Blocks duplicates: an `active` session in the same category → throw 'duplicate'.
+ * Does NOT auto-stop other sessions - running in parallel is valid.
  */
 export async function startActivity(uid: string, input: StartInput): Promise<string> {
   assertCategory(input.category);
@@ -235,7 +235,7 @@ export async function startActivity(uid: string, input: StartInput): Promise<str
   const status = input.status ?? 'active';
   validateTimes(startAt, null, status, now);
 
-  // Chỉ session đang chạy mới sợ trùng. Hẹn giờ trước thì không.
+  // Only running sessions can duplicate. Scheduled ones cannot.
   if (status === 'active') {
     const running = await listActive(uid);
     if (running.some((a) => a.category === input.category)) {
@@ -259,7 +259,7 @@ export async function startActivity(uid: string, input: StartInput): Promise<str
   return created.id;
 }
 
-/** Dừng session. endAt mặc định là bây giờ. */
+/** Stops a session. endAt defaults to now. */
 export async function stopActivity(uid: string, id: string, endAt?: number): Promise<void> {
   const current = await getActivity(uid, id);
   const end = endAt ?? Date.now();
@@ -274,9 +274,9 @@ export async function stopActivity(uid: string, id: string, endAt?: number): Pro
 }
 
 /**
- * Sửa activity.
- * LUÔN chạy lại derive() khi patch đụng tới startAt / endAt - quên bước này là
- * lỗi âm thầm: record vẫn hiện ở History nhưng biến mất khỏi thống kê tuần.
+ * Edits an activity.
+ * ALWAYS reruns derive() when the patch touches startAt / endAt - forgetting is
+ * a silent bug: the record still shows in History but vanishes from weekly stats.
  */
 export async function updateActivity(
   uid: string,
@@ -300,7 +300,7 @@ export async function updateActivity(
   if (touchesTime) {
     const startAt = patch.startAt ?? current.startAt;
     const endAt = patch.endAt !== undefined ? patch.endAt : current.endAt;
-    // Giờ đổi thì status phải theo. Người gọi không cần nhớ luật này.
+    // When times change, status must follow. Callers need not remember this rule.
     const status = statusForTimes(endAt, (patch.status ?? current.status) as ActivityStatus);
     validateTimes(startAt, endAt, status);
 
@@ -323,11 +323,11 @@ export interface PastInput extends Provenance {
   label?: string | null;
   startAt: number;
   endAt: number;
-  /** Cho Undo: dựng lại record vừa xoá y nguyên. */
+  /** For Undo: rebuild the just-deleted record exactly. */
   status?: ActivityStatus;
 }
 
-/** Thêm record đã kết thúc (nhập tay, hoặc Undo sau khi xoá). */
+/** Adds a finished record (manual entry, or Undo after a delete). */
 export async function createPastActivity(uid: string, input: PastInput): Promise<string> {
   assertCategory(input.category);
   const status = input.status ?? 'done';
@@ -351,13 +351,13 @@ export async function createPastActivity(uid: string, input: PastInput): Promise
 }
 
 // ------------------------------------------------------------
-// Đọc realtime
+// Realtime reads
 // ------------------------------------------------------------
 
 export interface SnapMeta {
   hasPendingWrites: boolean;
   fromCache: boolean;
-  /** Id của các record còn nằm trong hàng đợi ghi - để chấm pending trên card. */
+  /** Ids of records still in the write queue - for the pending dot on cards. */
   pendingIds: ReadonlySet<string>;
 }
 
@@ -377,8 +377,8 @@ function metaOf(snap: {
 const byStartAsc = (a: Activity, b: Activity) => a.startAt - b.startAt;
 
 /**
- * Session đang chạy. Không orderBy để chỉ cần single-field index;
- * sắp xếp ở client (số lượng luôn rất nhỏ).
+ * Running sessions. No orderBy, so a single-field index is enough;
+ * sorted on the client (always a tiny count).
  */
 export function subscribeActive(
   uid: string,
@@ -398,14 +398,14 @@ export function subscribeActive(
 }
 
 /**
- * Mọi activity của một ngày logic ("2026-08-26").
+ * Every activity of one logical day ("2026-08-26").
  *
- * Query đúng MỘT ngày. Trước đây còn lấy thêm ngày liền trước để vẽ dòng
- * "Asleep until 7:30 AM"; bỏ Sleep rồi thì không còn ai cần
- * (AMENDMENT-remove-sleep mục 6 + mục 9).
+ * Queries exactly ONE day. It used to fetch the day before too, to draw
+ * "Asleep until 7:30 AM"; with Sleep gone nobody needs it
+ * (AMENDMENT-remove-sleep sections 6 + 9).
  *
- * Session vắt qua nửa đêm (VD Leisure 22:00 -> 01:00) thuộc ngày logic của
- * `startAt`, và được vẽ nguyên khối trên chính ngày đó - không cắt.
+ * A session crossing midnight (e.g. Leisure 22:00 -> 01:00) belongs to the
+ * logical day of `startAt`, and is drawn whole on that day - not cut.
  */
 export function subscribeByDate(
   uid: string,
@@ -425,8 +425,8 @@ export function subscribeByDate(
 }
 
 /**
- * Nghe cả một tuần logic. Dùng cho balance banner.
- * Index `logicalWeek ASC + startAt ASC` đã có từ Stage 1.
+ * Listens to a whole logical week. For the balance banner.
+ * The `logicalWeek ASC + startAt ASC` index exists since Stage 1.
  */
 export function subscribeByWeek(
   uid: string,
@@ -439,7 +439,7 @@ export function subscribeByWeek(
     q,
     { includeMetadataChanges: true },
     (snap) => {
-      // Bỏ record 'scheduled': đó là dự định, chưa phải giờ đã sống.
+      // Drop 'scheduled' records: a plan, not hours lived.
       const list = mapDocs(snap.docs)
         .filter((a) => a.status !== 'scheduled');
       cb(list, metaOf(snap));
@@ -449,14 +449,14 @@ export function subscribeByWeek(
 }
 
 /**
- * Nghe cả một KHOẢNG cho Analytics (Stage 5).
+ * Listens to a whole RANGE for Analytics (Stage 5).
  *
- * MỘT query cho cả khoảng - không bao giờ query từng ngày. `queryPlan()` chọn
- * cách rẻ hơn:
- *   ≤ 4 tuần → `logicalWeek in [...]`, trùng cache với History/Now
- *   dài hơn  → range trên `logicalDate` (index `logicalDate ASC + startAt ASC`)
+ * ONE query for the whole range - never per day. `queryPlan()` picks the
+ * cheaper way:
+ *   ≤ 4 weeks → `logicalWeek in [...]`, sharing cache with History/Now
+ *   longer    → a range on `logicalDate` (index `logicalDate ASC + startAt ASC`)
  *
- * Query theo tuần lấy dư ở hai đầu nên phải lọc lại bằng `inRange()`.
+ * Week queries over-fetch at both ends, so `inRange()` filters again.
  */
 export function subscribeByRange(
   uid: string,
@@ -481,7 +481,7 @@ export function subscribeByRange(
     { includeMetadataChanges: true },
     (snap) => {
       const list = mapDocs(snap.docs)
-        // 'scheduled' là dự định, chưa phải giờ đã sống → không vào chart.
+        // 'scheduled' is a plan, not hours lived → not in the chart.
         .filter((a) => a.status !== 'scheduled' && inRange(a.logicalDate, range))
         .sort(byStartAsc);
       cb(list, metaOf(snap));
@@ -491,9 +491,9 @@ export function subscribeByRange(
 }
 
 /**
- * Đọc một lần cả một khoảng (Stage 7): AI insight cần kỳ TRƯỚC để so sánh,
- * mà kỳ trước thì không đổi nữa nên không đáng mở thêm listener.
- * Dùng lại đúng `queryPlan()` của `subscribeByRange`.
+ * One-time read of a whole range (Stage 7): AI insight needs the PREVIOUS
+ * period to compare, and that period never changes, so no extra listener.
+ * Reuses `subscribeByRange`'s exact `queryPlan()`.
  */
 export async function listByRange(
   uid: string,
@@ -517,7 +517,7 @@ export async function listByRange(
     .sort(byStartAsc);
 }
 
-/** Đọc một lần các session đang chạy. */
+/** One-time read of running sessions. */
 export async function listActive(uid: string): Promise<Activity[]> {
   const q = query(col(uid), where('status', '==', 'active'));
   const snap = isOffline() ? await getDocsFromCache(q) : await getDocs(q);
@@ -525,9 +525,9 @@ export async function listActive(uid: string): Promise<Activity[]> {
 }
 
 /**
- * Đang chạy = chưa có endAt. Record `active` mà đã có endAt là dữ liệu hỏng
- * (đường voice edit cũ điền endAt mà quên status) - lọc ra khỏi màn Now, rồi
- * vá luôn dưới Firestore. Ghi xong nó tự rời query nên không lặp.
+ * Running = no endAt. An `active` record with an endAt is broken data (the old
+ * voice edit path set endAt but forgot status) - filter it out of Now, then
+ * fix it in Firestore. Once written it leaves the query, so no loop.
  */
 function onlyRunning(uid: string, list: Activity[]): Activity[] {
   const running = list.filter((a) => a.endAt === null);
@@ -544,14 +544,14 @@ function onlyRunning(uid: string, list: Activity[]): Activity[] {
   return running;
 }
 
-/** Session active quá 15h → cần hỏi lại giờ kết thúc. KHÔNG tự xoá. */
+/** An active session over 15h → ask for the end time again. Never auto-deleted. */
 export async function listStale(uid: string): Promise<Activity[]> {
   return findStale(await listActive(uid));
 }
 
 /**
- * N record gần nhất - dùng làm context cho prompt Gemini.
- * Bỏ qua 'scheduled' (chưa xảy ra) và 'abandoned' (rác, dễ làm model đoán sai).
+ * The last N records - context for the Gemini prompt.
+ * Skips 'scheduled' (not happened) and 'abandoned' (junk that misleads the model).
  * Index: status ASC + startAt DESC.
  */
 export async function listRecent(uid: string, n = 5): Promise<Activity[]> {
@@ -566,25 +566,25 @@ export async function listRecent(uid: string, n = 5): Promise<Activity[]> {
 }
 
 /**
- * Hẹn giờ rồi không bao giờ xảy ra. Quá hạn này thì coi như đã bỏ.
- * Bảy ngày: đủ dài để một buổi hẹn tuần sau vẫn còn nguyên, đủ ngắn để
- * không tích thành một danh sách rác.
+ * Booked but never happened. Past this age, count it as dropped.
+ * Seven days: long enough for a booking next week to stay intact, short
+ * enough not to pile into a junk list.
  */
 export const SCHEDULED_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** `scheduled` mà đã quá hạn - chỉ là phép so sánh, tách ra để test được. */
+/** A `scheduled` record past due - just the comparison, separate so it can be tested. */
 export function isStaleScheduled(a: Activity, now: number = Date.now()): boolean {
   return a.status === 'scheduled' && now - a.startAt > SCHEDULED_MAX_AGE_MS;
 }
 
 /**
- * Dọn các buổi đã hẹn nhưng không bao giờ diễn ra: 'scheduled' → 'abandoned'.
+ * Cleans up bookings that never happened: 'scheduled' → 'abandoned'.
  *
- * PHẢI chạy trước `promoteScheduled`. Không có nó, một buổi hẹn từ mười ngày
- * trước sẽ được promote thành 'active' với startAt cũ mèm, rồi hiện ra như một
- * session đang chạy 240 tiếng.
+ * MUST run before `promoteScheduled`. Without it, a booking from ten days ago
+ * would be promoted to 'active' with an ancient startAt, then show as a
+ * session running for 240 hours.
  *
- * Không xoá: record vẫn còn đó để xem lại, chỉ là không tính vào giờ.
+ * No delete: the record stays for review, it just does not count as hours.
  */
 export async function abandonStaleScheduled(uid: string, now: number = Date.now()): Promise<number> {
   const q = query(
@@ -604,12 +604,12 @@ export async function abandonStaleScheduled(uid: string, now: number = Date.now(
 }
 
 /**
- * Delayed start: tới giờ thì 'scheduled' → 'active'. Trả về số record đã chuyển.
- * startAt giữ nguyên (giờ đã hẹn), nên timer vẫn là derived state đúng.
+ * Delayed start: when the time comes, 'scheduled' → 'active'. Returns how many moved.
+ * startAt is kept (the booked time), so the timer stays correct derived state.
  *
- * Cố ý KHÔNG chặn trùng category như startActivity: app cho phép nhiều session
- * chạy song song, và một record đã hẹn giờ thì phải tới đúng giờ, không im lặng
- * bỏ qua. Nếu thành hai session cùng category, người dùng tự Stop bớt.
+ * Deliberately does NOT block same-category duplicates like startActivity: the
+ * app allows parallel sessions, and a booked record must start on time, not be
+ * silently skipped. If two sessions share a category, the user stops one.
  *
  * Index: status ASC + startAt ASC.
  */
@@ -633,7 +633,7 @@ export async function promoteScheduled(uid: string, now: number = Date.now()): P
   return snap.docs.length;
 }
 
-/** Các session đã hẹn giờ, chưa tới lúc chạy - để hiện đếm ngược "starts in 4:32". */
+/** Booked sessions not yet started - for the "starts in 4:32" countdown. */
 export function subscribeScheduled(
   uid: string,
   cb: (activities: Activity[], meta: SnapMeta) => void,
@@ -655,7 +655,7 @@ export function subscribeScheduled(
   );
 }
 
-/** Các ngày logic gần đây có dữ liệu - để chấm nhỏ dưới dải chọn ngày. */
+/** Recent logical days with data - for the small dots under the day picker. */
 export function subscribeRecentDates(
   uid: string,
   sinceDate: string,
@@ -678,14 +678,14 @@ export function subscribeRecentDates(
 }
 
 // ------------------------------------------------------------
-// Backup & khôi phục (Stage 6 Task 3)
+// Backup & restore (Stage 6 Task 3)
 // ------------------------------------------------------------
 
 /**
- * Toàn bộ record, cho bản export "All time".
+ * Every record, for the "All time" export.
  *
- * Đọc một lần, không listener. Tốn đúng N read - sau một năm khoảng 2–3 nghìn,
- * vẫn dưới hạn 50k/ngày của free tier, và người dùng chỉ bấm export mỗi tháng.
+ * One read, no listener. Costs exactly N reads - after a year about 2–3
+ * thousand, still under the free tier's 50k/day, and export is monthly.
  */
 export async function listAll(uid: string): Promise<Activity[]> {
   const q = query(col(uid), orderBy('startAt', 'asc'));
@@ -693,28 +693,28 @@ export async function listAll(uid: string): Promise<Activity[]> {
   return mapDocs(snap.docs);
 }
 
-/** Record cũ nhất - để biết dữ liệu đã tích được bao lâu. Đọc đúng 1 doc. */
+/** The oldest record - to know how long data has been collected. Reads exactly 1 doc. */
 export async function firstActivityDate(uid: string): Promise<string | null> {
   const q = query(col(uid), orderBy('startAt', 'asc'), fsLimit(1));
   const snap = await getDocs(q);
   return snap.empty ? null : (snap.docs[0].data().logicalDate as string);
 }
 
-/** Chỉ id, để biết record nào đã có trước khi khôi phục. */
+/** Ids only, to know which records exist before restoring. */
 export async function listAllIds(uid: string): Promise<Set<string>> {
   const snap = await getDocs(query(col(uid)));
   return new Set(snap.docs.map((d) => d.id));
 }
 
-/** Firestore cho tối đa 500 thao tác một batch; chừa chỗ cho an toàn. */
+/** Firestore allows up to 500 operations per batch; leave a safety margin. */
 const BATCH_SIZE = 400;
 
 /**
- * Ghi lại các record trong file backup. CHỈ THÊM.
+ * Writes the records from a backup file. ADD ONLY.
  *
- * Đọc id đang có NGAY TRƯỚC khi ghi rồi lọc lại lần nữa, dù nơi gọi đã lọc:
- * giữa lúc xem preview và lúc bấm nút có thể đã trôi qua vài phút, và mỗi giây
- * đó là một cơ hội ghi đè record mới bằng bản cũ hơn.
+ * Reads existing ids RIGHT BEFORE writing and filters again, even though the
+ * caller already did: minutes may pass between the preview and the tap, and
+ * every second is a chance to overwrite a new record with an older copy.
  */
 export async function restoreActivities(uid: string, add: Activity[]): Promise<number> {
   if (add.length === 0) return 0;
@@ -735,10 +735,11 @@ export async function restoreActivities(uid: string, add: Activity[]): Promise<n
 }
 
 /**
- * Dựng lại doc từ record trong file.
+ * Rebuilds a doc from a file record.
  *
- * Tự tính lại field dẫn xuất thay vì tin file: file có thể do bản app cũ xuất
- * ra, hoặc bị người ta sửa tay. `startAt` là sự thật gốc, phần còn lại suy ra.
+ * Recomputes derived fields instead of trusting the file: it may come from an
+ * older app version, or be edited by hand. `startAt` is the ground truth, the
+ * rest is derived.
  */
 function restoreDoc(a: Activity) {
   const endAt = a.endAt ?? null;

@@ -7,16 +7,16 @@ import { PRESETS } from '@/lib/balance';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, HARD_FLOOR } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
-// AMENDMENT-remove-sleep mục 4.2 + 12: sleep phải biến mất hoàn toàn,
-// và record cũ còn sót trong cache offline phải bị lọc ở client.
+// Sleep must be gone entirely, and old records left in the offline cache
+// must be filtered on the client.
 // ---------------------------------------------------------------------------
 
-test('CATEGORIES không chứa sleep', () => {
+test('CATEGORIES has no sleep', () => {
   assert.equal((CATEGORIES as readonly string[]).includes('sleep'), false);
   assert.equal(CATEGORIES.length, 4);
 });
 
-test('nhãn, màu, sàn cứng và mọi preset đều không còn khoá sleep', () => {
+test('labels, colors, hard floors and every preset have no sleep key', () => {
   assert.equal('sleep' in CATEGORY_LABEL, false);
   assert.equal('sleep' in CATEGORY_COLOR, false);
   assert.equal('sleep' in HARD_FLOOR, false);
@@ -25,9 +25,9 @@ test('nhãn, màu, sàn cứng và mọi preset đều không còn khoá sleep',
   }
 });
 
-// --- Bộ lọc phòng thủ ở tầng đọc -------------------------------------------
+// --- Defensive filter on read ----------------------------------------------
 
-/** Snapshot giả: `mapDocs` chỉ đụng tới `id` và `data()`. */
+/** Fake snapshot: `mapDocs` only touches `id` and `data()`. */
 function snap(id: string, category: string): QueryDocumentSnapshot {
   return {
     id,
@@ -42,7 +42,7 @@ function snap(id: string, category: string): QueryDocumentSnapshot {
   } as unknown as QueryDocumentSnapshot;
 }
 
-test('record sleep sót lại trong cache bị lọc khỏi kết quả đọc', () => {
+test('leftover sleep records in the cache are filtered from reads', () => {
   const out = mapDocs([
     snap('a', 'work'),
     snap('b', 'sleep'),
@@ -60,11 +60,11 @@ test('record sleep sót lại trong cache bị lọc khỏi kết quả đọc',
   );
 });
 
-test('không có record sleep thì không mất gì', () => {
+test('with no sleep records nothing is lost', () => {
   const out = mapDocs([snap('a', 'work'), snap('b', 'fitness'), snap('c', 'leisure')]);
   assert.equal(out.length, 3);
 });
 
-test('toàn bộ là sleep → trả về mảng rỗng, không ném lỗi', () => {
+test('all sleep → returns an empty array, no throw', () => {
   assert.deepEqual(mapDocs([snap('a', 'sleep'), snap('b', 'sleep')]), []);
 });

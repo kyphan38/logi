@@ -3,8 +3,8 @@
 // ---------------------------------------------------------------------------
 // logi - Settings (Stage 6 Task 2)
 //
-// Bật push, chọn theme, và đường vào trang khôi phục. Không phải màn hình
-// dùng hằng ngày nên không có trong thanh điều hướng.
+// Turn on push, pick a theme, and the way into the restore page. Not a daily
+// screen, so it is not in the nav bar.
 // ---------------------------------------------------------------------------
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
@@ -71,15 +71,13 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-[13px] text-ink-muted">Notifications and data.</p>
       </header>
 
       <section className="flex flex-col gap-3 rounded-md border border-line-strong bg-surface-1 p-4">
         <div className="flex flex-col gap-1">
           <h2 className="text-sm font-medium text-ink">Reminders on the lock screen</h2>
           <p className="text-[13px] text-ink-muted">
-            06:15 and 20:45 study checks, plus the Sunday wrap-up - even when the
-            app is closed. In-app reminders keep working either way.
+            06:15 and 20:45 checks, plus Sunday wrap-up.
           </p>
         </div>
 
@@ -88,13 +86,12 @@ export default function SettingsPage() {
         ) : state === 'unsupported' ? (
           <p className="text-[13px] text-ink-soft">
             {isIOS() && !isStandalone()
-              ? 'On iPhone this only works after you add logi to the Home Screen. Open it in Safari, tap Share, then "Add to Home Screen", and come back here from that icon.'
+              ? 'iPhone: first add logi to Home Screen (Share → Add to Home Screen).'
               : 'This browser cannot show push notifications.'}
           </p>
         ) : state === 'denied' ? (
           <p className="text-[13px] text-ink-soft">
-            Notifications are blocked for this app. Turn them back on in your
-            device settings, then reload.
+            Blocked. Allow in device settings, then reload.
           </p>
         ) : enabled ? (
           <div className="flex items-center gap-3">
@@ -130,7 +127,7 @@ export default function SettingsPage() {
 
       <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
         <h2 className="text-sm font-medium text-ink">Theme</h2>
-        {/* Lựa chọn hiện tại là chữ đậm, còn lại là chữ mờ bấm được. */}
+        {/* The current choice is bold, the others are faint and clickable. */}
         <div className="flex gap-4 text-sm" role="radiogroup" aria-label="Theme">
           {THEMES.map((t) => (
             <button
@@ -150,15 +147,15 @@ export default function SettingsPage() {
       <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
         <h2 className="text-sm font-medium text-ink">Your data</h2>
         <p className="text-[13px] text-ink-muted">
-          Export lives on the Analytics screen. Pick “All time” for a full backup.
+          Export is on Analytics. Pick “All time” for a full backup.
         </p>
         <Link href="/settings/restore" className="text-[13px] text-ink-soft underline">
           Restore from a backup file
         </Link>
       </section>
 
-      {/* Nút Sign out dọn từ màn Now sang đây (AMENDMENT-remove-sleep 6b):
-          header của Now chỉ còn ngày và số giờ đã ghi. */}
+      {/* Sign out moved here from Now (AMENDMENT-remove-sleep 6b): the Now
+          header only keeps the date and logged hours. */}
       <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
         <h2 className="text-sm font-medium text-ink">Account</h2>
         <p className="text-[13px] text-ink-muted">{user?.email ?? 'Signed in'}</p>
@@ -175,10 +172,10 @@ export default function SettingsPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Nhận xét AI đã lưu (Stage 7 Task 8)
+// Saved AI notes (Stage 7 Task 8)
 //
-// Insight là suy diễn về đời sống riêng, nên phải xoá được - và xoá thật,
-// không phải ẩn đi. Record gốc không đụng tới.
+// Insights are inferences about private life, so they must be deletable - and
+// really deleted, not hidden. The original records are untouched.
 // ---------------------------------------------------------------------------
 
 function InsightData({ uid }: { uid: string | null }) {
@@ -213,8 +210,7 @@ function InsightData({ uid }: { uid: string | null }) {
     <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
       <h2 className="text-sm font-medium text-ink">Saved insights</h2>
       <p className="text-[13px] text-ink-muted">
-        Notes written by the analysis on the Analytics screen. Your records stay
-        untouched - only the notes go.
+        Deletes AI notes only. Records stay.
       </p>
 
       {count === null ? (

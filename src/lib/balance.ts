@@ -3,7 +3,7 @@
 // ============================================================
 
 import {
-  CATEGORIES, BASELINE_DAILY, BASELINE_WEEKLY,
+  CATEGORIES, BASELINE_DAILY, BASELINE_WEEKLY, CATEGORY_LABEL,
   DAY_CUTOFF_HOUR, HARD_FLOOR, TOTAL_BUDGET, PRESETS,
   DEBT_CARRYOVER_RATE, DEBT_CARRYOVER_CAP,
   type Activity, type Category, type PresetId,
@@ -14,9 +14,9 @@ import {
 // ------------------------------------------------------------
 
 /**
- * Ngày logic: mốc cắt 04:00 thay vì nửa đêm.
- * Ngủ 22:00 T2 → "T2". Nap 02:00 T3 → cũng "T2".
- * Toàn bộ analytics phải đi qua hàm này, không bao giờ dùng ngày lịch thô.
+ * Logical day: cut at 04:00 instead of midnight.
+ * Sleep at 22:00 Mon → "Mon". A nap at 02:00 Tue → also "Mon".
+ * All analytics must go through this, never raw calendar dates.
  */
 export function logicalDate(ts: number): string {
   const d = new Date(ts);
@@ -24,24 +24,24 @@ export function logicalDate(ts: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Thứ trong tuần của ngày logic. 0 = CN ... 6 = T7 */
+/** Weekday of the logical day. 0 = Sun ... 6 = Sat */
 export function logicalWeekday(ts: number): number {
   const [y, m, d] = logicalDate(ts).split('-').map(Number);
   return new Date(y, m - 1, d).getDay();
 }
 
-/** Tuần ISO, VD "2026-W35". Tuần bắt đầu thứ Hai. */
+/** ISO week, e.g. "2026-W35". Weeks start on Monday. */
 export function logicalWeek(ts: number): string {
   const [y, m, d] = logicalDate(ts).split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   const dayNum = dt.getUTCDay() || 7;          // CN = 7
-  dt.setUTCDate(dt.getUTCDate() + 4 - dayNum); // dời tới thứ Năm
+  dt.setUTCDate(dt.getUTCDate() + 4 - dayNum); // move to Thursday
   const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
   const week = Math.ceil(((dt.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
   return `${dt.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
-/** Phần của ngày logic đã trôi qua, 0..1. Dùng để pro-rate target hôm nay. */
+/** Share of the logical day that has passed, 0..1. Used to pro-rate today's target. */
 export function dayProgress(now: number = Date.now()): number {
   const d = new Date(now);
   let h = d.getHours() - DAY_CUTOFF_HOUR;
@@ -50,12 +50,12 @@ export function dayProgress(now: number = Date.now()): number {
 }
 
 // ------------------------------------------------------------
-// 2. Cộng dồn thời lượng thực tế
+// 2. Summing actual duration
 // ------------------------------------------------------------
 
 /**
- * Session đang chạy được tính tới thời điểm now - timer là derived state,
- * không bao giờ là counter cộng dồn.
+ * Running sessions count up to now - the timer is derived state, never an
+ * accumulating counter.
  */
 export function actualHours(
   activities: Activity[],
@@ -72,9 +72,9 @@ export function actualHours(
 }
 
 /**
- * Tổng thời gian bị double-count do log song song (VD vừa Work vừa Learn).
- * Phải hiển thị chỉ số này - nếu không, tổng giờ/ngày vượt 24h mà không ai biết.
- * Vì lý do đó mọi chart dùng GIỜ TUYỆT ĐỐI, không dùng % của 24h.
+ * Total time double-counted by parallel logs (e.g. Work and Learn at once).
+ * This number must be shown - otherwise daily totals exceed 24h unnoticed.
+ * That is why every chart uses ABSOLUTE HOURS, not % of 24h.
  */
 export function overlapHours(activities: Activity[], now: number = Date.now()): number {
   const iv = activities
@@ -93,13 +93,13 @@ export function overlapHours(activities: Activity[], now: number = Date.now()): 
 }
 
 // ------------------------------------------------------------
-// 3. Expected - pro-rate theo LỊCH, không chia đều
+// 3. Expected - pro-rated by CALENDAR, not split evenly
 // ------------------------------------------------------------
 
 /**
- * Giữa tuần, expected của Work KHÔNG phải 43 × 3/7.
- * Phải cộng dồn target của từng ngày đã trôi qua, cộng phần lẻ hôm nay.
- * Không có bước này thì thứ Ba nào app cũng báo bạn "thiếu Work".
+ * Mid-week, Work's expected is NOT 43 × 3/7.
+ * Sum each past day's target, plus today's fraction.
+ * Without this the app would tell you "short on Work" every Tuesday.
  */
 export function expectedHours(
   weeklyTarget: Record<Category, number>,
@@ -107,7 +107,7 @@ export function expectedHours(
 ): Record<Category, number> {
   const todayDow = logicalWeekday(now);
   const elapsedDows: number[] = [];
-  for (let i = 1; i < 8; i++) {         // tuần bắt đầu thứ Hai
+  for (let i = 1; i < 8; i++) {         // the week starts on Monday
     const dow = i % 7;
     if (dow === todayDow) break;
     elapsedDows.push(dow);
@@ -117,7 +117,7 @@ export function expectedHours(
   const out = {} as Record<Category, number>;
   for (const c of CATEGORIES) {
     const shape = BASELINE_DAILY[c];
-    const scale = weeklyTarget[c] / BASELINE_WEEKLY[c]; // giữ nguyên hình dạng tuần
+    const scale = weeklyTarget[c] / BASELINE_WEEKLY[c]; // keep the week's shape
     let h = 0;
     for (const dow of elapsedDows) h += shape[dow] * scale;
     h += shape[todayDow] * scale * frac;
@@ -127,11 +127,11 @@ export function expectedHours(
 }
 
 // ------------------------------------------------------------
-// 4. Deviation - deadband kép
+// 4. Deviation - double deadband
 // ------------------------------------------------------------
 
 export const DEV_PCT_THRESHOLD = 0.25; // 25%
-export const DEV_ABS_THRESHOLD = 2;    // 2 giờ
+export const DEV_ABS_THRESHOLD = 2;    // 2 hours
 
 export interface Deviation {
   category: Category;
@@ -144,9 +144,9 @@ export interface Deviation {
 }
 
 /**
- * Chỉ báo động khi lệch >25% VÀ >=2h.
- * Điều kiện thứ hai then chốt: thiếu nó, Leisure lệch 40 phút đã bắn cảnh báo
- * và bạn sẽ tắt app sau 3 ngày.
+ * Only alert when off by >25% AND >=2h.
+ * The second condition is key: without it, Leisure 40 minutes off would fire
+ * a warning, and you would quit the app within 3 days.
  */
 export function deviations(
   activities: Activity[],
@@ -173,8 +173,8 @@ export function deviations(
 }
 
 /**
- * Câu chữ: NÊU SỐ, KHÔNG DẠY ĐỜI.
- * "Bạn dành cho X nhiều hơn mức cân bằng rồi" nghe khó chịu sau vài lần.
+ * Wording: STATE NUMBERS, DO NOT LECTURE.
+ * "You spent more on X than balance allows" grates after a few times.
  */
 export function formatDeviation(d: Deviation): string {
   const sign = d.deltaHours > 0 ? '+' : '';
@@ -182,8 +182,8 @@ export function formatDeviation(d: Deviation): string {
 }
 
 /**
- * Rule riêng cho pain point: OT cuối tuần nuốt mất Learn.
- * Giá trị hơn mọi deviation chung vì nó nối hai category lại với nhau.
+ * A rule for the pain point: weekend OT eating Learn.
+ * Worth more than any general deviation because it links two categories.
  */
 export function weekendConflict(
   activities: Activity[],
@@ -199,11 +199,11 @@ export function weekendConflict(
   const gap = learnTarget - learnActual;
   if (gap < DEV_ABS_THRESHOLD) return null;
 
-  return `OT cuối tuần: ${w.work.toFixed(1)}h. Learn còn thiếu ${gap.toFixed(1)}h so với mục tiêu ${learnTarget}h.`;
+  return `Weekend OT: ${w.work.toFixed(1)}h. Learn is ${gap.toFixed(1)}h short of the ${learnTarget}h target.`;
 }
 
 // ------------------------------------------------------------
-// 5. Zero-sum budget - chống overset
+// 5. Zero-sum budget - no overbooking
 // ------------------------------------------------------------
 
 export interface BudgetCheck {
@@ -214,8 +214,8 @@ export interface BudgetCheck {
 }
 
 /**
- * Không thêm được thời gian vào một tuần - chỉ đổi chỗ nó.
- * Kéo Work lên +8h thì UI BẮT BUỘC lấy 8h đó từ category khác.
+ * Time cannot be added to a week - only moved around.
+ * Raising Work by +8h means the UI MUST take those 8h from another category.
  */
 export function validateTargets(weekly: Record<Category, number>): BudgetCheck {
   const errors: string[] = [];
@@ -225,33 +225,33 @@ export function validateTargets(weekly: Record<Category, number>): BudgetCheck {
     const diff = total - TOTAL_BUDGET;
     errors.push(
       diff > 0
-        ? `Vượt ngân sách ${diff.toFixed(1)}h - hãy giảm ở category khác.`
-        : `Còn thừa ${(-diff).toFixed(1)}h chưa phân bổ.`
+        ? `Over by ${diff.toFixed(1)}h - reduce another category`
+        : `${(-diff).toFixed(1)}h unallocated`
     );
   }
   for (const [c, floor] of Object.entries(HARD_FLOOR)) {
     if (weekly[c as Category] < floor!) {
-      errors.push(`${c} không được dưới ${floor}h/tuần.`);
+      errors.push(`${CATEGORY_LABEL[c as Category]} can’t go below ${floor}h/week`);
     }
   }
   return { ok: errors.length === 0, total, budget: TOTAL_BUDGET, errors };
 }
 
 /**
- * Category bị GHIM: người dùng đã chốt con số, không ai được lấy giờ của nó.
+ * PINNED categories: the user fixed the number, nobody may take their hours.
  *
- * Ghim tối đa 3. Ghim cái thứ tư thì không còn ai bù được, mà tổng vẫn phải
- * đúng 89h - lúc đó màn hình chỉ còn là bốn ô số phải tự cộng cho khớp, đó là
- * việc của máy tính chứ không phải của một cái slider.
+ * At most 3 pinned. Pin a fourth and nobody is left to balance, while the
+ * total must still be exactly 89h - the screen becomes four number boxes to
+ * add up by hand, which is a calculator's job, not a slider's.
  */
 export const MAX_PINNED = 3;
 
 /**
- * Giới hạn kéo được của MỘT category, khi các category khác đang bị ghim.
+ * The drag limits of ONE category while others are pinned.
  *
- * `max` không phải là 89h: phần bị ghim đã tiêu mất, và mỗi category còn lại
- * vẫn phải giữ đủ sàn của nó. Thiếu chặn này thì kéo quá tay là tổng vượt 89h
- * mà không có ai gánh - nút Save tắt, người dùng không hiểu vì sao.
+ * `max` is not 89h: the pinned share is spent, and every remaining category
+ * must keep its floor. Without this limit, overdragging pushes the total over
+ * 89h with nobody to absorb it - Save turns off and the user does not know why.
  */
 export function dragBounds(
   weekly: Record<Category, number>,
@@ -270,10 +270,10 @@ export function dragBounds(
 }
 
 /**
- * Khi kéo một category, tự trừ/bù đều ở các category CÒN LẠI VÀ CHƯA GHIM.
+ * Dragging one category spreads the change evenly over the REMAINING, UNPINNED ones.
  *
- * Không còn ai để bù (ghim hết 3 cái kia) → trả nguyên trạng: giá trị của
- * category thứ tư là hệ quả của ba cái kia, không kéo được.
+ * Nobody left to balance (the other 3 pinned) → return unchanged: the fourth
+ * category's value follows from the other three and cannot be dragged.
  */
 export function rebalance(
   weekly: Record<Category, number>,
@@ -286,9 +286,9 @@ export function rebalance(
   const others = CATEGORIES.filter((c) => c !== changed && !locked.has(c));
   if (others.length === 0) return { ...weekly };
 
-  // KHÔNG kẹp `newValue` ở đây: `rebalance` nhận đúng số được truyền vào, sàn
-  // và trần do slider chặn trước bằng `dragBounds()`. Kẹp cả hai chỗ thì lúc
-  // sai không biết chỗ nào đang nói dối.
+  // Do NOT clamp `newValue` here: `rebalance` takes exactly what it is given,
+  // and the slider enforces floor and cap first via `dragBounds()`. Clamping
+  // in both places hides which one is lying when something goes wrong.
   const next = { ...weekly, [changed]: newValue };
   let delta = Object.values(next).reduce((a, b) => a + b, 0) - TOTAL_BUDGET;
 
@@ -305,10 +305,10 @@ export function rebalance(
 }
 
 // ------------------------------------------------------------
-// 6. Debt - làm cho việc cắt giảm có giá
+// 6. Debt - making cuts cost something
 // ------------------------------------------------------------
 
-/** Cuối tuần: chênh lệch so với baseline được ghi thành nợ. */
+/** End of week: the gap from baseline is recorded as debt. */
 export function accrueDebt(
   weekly: Record<Category, number>,
   current: Partial<Record<Category, number>>
@@ -321,7 +321,7 @@ export function accrueDebt(
   return next;
 }
 
-/** Đầu tuần: cộng 50% nợ vào target, trần 10h. Cắt giảm chỉ là hoãn lại. */
+/** Start of week: add 50% of debt to the target, capped at 10h. A cut is only a delay. */
 export function applyDebt(
   weekly: Record<Category, number>,
   debt: Partial<Record<Category, number>>
@@ -341,7 +341,7 @@ export function applyDebt(
   return { weekly: next, applied, remaining };
 }
 
-/** 4/6 tuần là Crunch thì đó không còn là crunch - đó là baseline thật. */
+/** Crunch 4 out of 6 weeks is no longer crunch - it is the real baseline. */
 export function crunchStreak(history: { preset: PresetId }[]): { count: number; of: number; shouldPrompt: boolean } {
   const recent = history.slice(-6);
   const count = recent.filter((w) => w.preset === 'crunch').length;
@@ -349,10 +349,10 @@ export function crunchStreak(history: { preset: PresetId }[]): { count: number; 
 }
 
 // ------------------------------------------------------------
-// 7. Session bỏ quên
+// 7. Forgotten sessions
 // ------------------------------------------------------------
 
-/** Quá 15h → abandoned, KHÔNG xoá. Hỏi lại giờ kết thúc khi mở app. */
+/** Over 15h → abandoned, NEVER deleted. Ask for the end time when the app opens. */
 export function findStale(activities: Activity[], now: number = Date.now()): Activity[] {
   return activities.filter(
     (a) => a.status === 'active' && now - a.startAt > 15 * 3_600_000

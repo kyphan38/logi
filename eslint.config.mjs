@@ -12,9 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // functions/ có tsconfig và vòng đời deploy riêng - lint ở đó bằng tsc.
+    // functions/ has its own tsconfig and deploy cycle, linted there with tsc.
     "functions/**",
-    // Service worker chạy ngoài bundle, không có TypeScript hay JSX.
+    // The service worker runs outside the bundle, no TypeScript or JSX.
     "public/sw.js",
   ]),
 ]);

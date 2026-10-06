@@ -1,10 +1,10 @@
 // ============================================================
-// logi - Chất lượng log (AMENDMENT-remove-sleep mục 3.2)
+// logi - Log quality (AMENDMENT-remove-sleep section 3.2)
 //
-// Không có mẫu số 24h, không giả định gì về giấc ngủ.
-// Chỉ đo khoảng trống GIỮA các hoạt động đã log.
+// No 24h denominator, no assumptions about sleep.
+// Only measures the gaps BETWEEN logged activities.
 //
-// File thuần: không React, không Firestore, không DOM.
+// Pure file: no React, no Firestore, no DOM.
 // ============================================================
 
 import { logicalDate } from '@/lib/balance';
@@ -12,27 +12,27 @@ import { daysOf } from '@/lib/range';
 import type { Activity } from '@/types/logi';
 
 export interface LogQuality {
-  /** Giờ đã log, đã trừ overlap. */
+  /** Hours logged, overlap removed. */
   trackedHours: number;
-  /** Khoảng trống GIỮA activity đầu và cuối của mỗi ngày. */
+  /** Gaps BETWEEN each day's first and last activity. */
   gapHours: number;
-  /** Tổng (cuối − đầu) của các ngày có log. */
+  /** Sum of (last − first) over days with logs. */
   activeSpanHours: number;
-  /** Số ngày có ít nhất 1 activity. */
+  /** Days with at least 1 activity. */
   loggedDays: number;
   totalDays: number;
-  /** gapHours / activeSpanHours. 0 khi chưa có ngày nào có log. */
+  /** gapHours / activeSpanHours. 0 when no day has logs yet. */
   gapRatio: number;
 }
 
-/** Chỉ những gì thật sự đã xảy ra. Lịch hẹn và session bỏ dở không tính. */
+/** Only what really happened. Bookings and abandoned sessions do not count. */
 function counted(activities: Activity[]): Activity[] {
   return activities.filter((a) => a.status === 'active' || a.status === 'done');
 }
 
 /**
- * Gộp các khoảng chồng nhau lại. Trả về giờ đã log và span đầu→cuối.
- * `end` là mốc kết thúc của ngày: hôm nay thì kéo tới `now`.
+ * Merges overlapping spans. Returns logged hours and the first→last span.
+ * `end` is the day's end mark: for today it extends to `now`.
  */
 function spanOf(
   acts: Activity[],
@@ -54,7 +54,7 @@ function spanOf(
   }
 
   const first = iv[0][0];
-  // Hôm nay chưa xong: khoảng từ activity cuối tới bây giờ vẫn là khoảng trống.
+  // Today is not over: the time from the last activity until now is still a gap.
   const last = isToday ? Math.max(maxEnd, now) : maxEnd;
   return { tracked, span: Math.max(0, last - first) };
 }
@@ -62,10 +62,10 @@ function spanOf(
 const H = 3_600_000;
 
 /**
- * Ba con số thô cho một khoảng ngày: "62h logged · 9h gaps · 5 of 7 days".
+ * Three raw numbers for a range of days: "62h logged · 9h gaps · 5 of 7 days".
  *
- * Thời gian TRƯỚC activity đầu tiên và SAU activity cuối cùng của mỗi ngày
- * không tính vào đâu cả - đó không phải giờ quên log, chỉ là không có gì để log.
+ * Time BEFORE each day's first activity and AFTER its last counts nowhere -
+ * that is not forgotten logging, just nothing to log.
  */
 export function logQuality(
   activities: Activity[],
@@ -89,7 +89,7 @@ export function logQuality(
 
   for (const day of days) {
     const acts = byDate.get(day);
-    if (!acts || acts.length === 0) continue; // không log → không đóng góp span
+    if (!acts || acts.length === 0) continue; // nothing logged → adds no span
     const { tracked, span } = spanOf(acts, now, day === today);
     if (tracked <= 0 && span <= 0) continue;
     trackedMs += tracked;
@@ -109,7 +109,7 @@ export function logQuality(
   };
 }
 
-/** Cùng định nghĩa, phạm vi một ngày logic. */
+/** Same definition, scoped to one logical day. */
 export function dayLogQuality(
   activities: Activity[],
   date: string,
@@ -119,18 +119,18 @@ export function dayLogQuality(
 }
 
 // ------------------------------------------------------------
-// Cảnh báo - cần CẢ HAI điều kiện mới đủ bịt lỗ hổng
+// Warnings - BOTH conditions are needed to close the gap
 // ------------------------------------------------------------
 
-/** Nhiều khoảng trống giữa các hoạt động. */
+/** Many gaps between activities. */
 export const GAP_RATIO_LIMIT = 0.25;
-/** Nhiều ngày không log gì. */
+/** Many days with no logs. */
 export const LOGGED_DAYS_LIMIT = 0.6;
 
 /**
- * `gapRatio` một mình có lỗ hổng: ngày chỉ log đúng một session 30 phút thì
- * span = 30 phút, gap = 0, trông hoàn hảo trong khi gần như không log gì.
- * `loggedDays` bịt lỗ đó.
+ * `gapRatio` alone has a hole: a day with a single 30-minute session has
+ * span = 30 minutes, gap = 0, looking perfect while almost nothing was logged.
+ * `loggedDays` closes that hole.
  */
 export function isThin(q: LogQuality): boolean {
   return (

@@ -30,12 +30,12 @@ import {
 import { DEFAULT_SPAN, trendBuckets, type TrendSpan } from '@/lib/trend';
 
 export default function AnalyticsPage() {
-  // Ngày logic đổi lúc 04:00 nên phút là đủ mịn; giây chỉ làm chart nháy.
+  // The logical day turns at 04:00, so minutes are fine enough; seconds only make the chart flicker.
   const now = useTick(60_000, true);
 
-  // Tab Week luôn là TUẦN NÀY. Bỏ "Last week" vì WeeklyReview đã lo việc nhìn
-  // lại tuần trước, và bỏ "Custom" vì nó chỉ thật sự cần cho Export - ExportSheet
-  // đã có sẵn lựa chọn "All time".
+  // The Week tab is always THIS WEEK. "Last week" is gone because WeeklyReview
+  // already covers looking back, and "Custom" is gone because only Export
+  // really needed it - ExportSheet already has "All time".
   const range = useMemo(() => buildRange('this_week', now), [now]);
   const [exporting, setExporting] = useState(false);
   const { activities, weekTargets, lateWeeks, loading, error, reload } = useRangeData(range);
@@ -44,9 +44,9 @@ export default function AnalyticsPage() {
   const [tab, setTab] = useState<'week' | 'trend'>('week');
   const [span, setSpan] = useState<TrendSpan>(DEFAULT_SPAN);
 
-  // Gọi vô điều kiện (luật của hook). Nó chỉ chạy khi có `uid`; ở tab Week nó
-  // vẫn fetch nền - chấp nhận, đổi lại bấm sang tab Trend là có ngay, và
-  // `useTrend` đã có cache theo phiên.
+  // Called unconditionally (hook rules). It only runs with a `uid`; on the Week
+  // tab it still fetches in the background - accepted, so the Trend tab is
+  // instant, and `useTrend` already caches per session.
   const buckets = useMemo(() => trendBuckets(span, now), [span, now]);
   const trend = useTrend(span, now);
 
@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
         </button>
       </header>
 
-      {/* Firestore free tier không tự backup. Nhắc mỗi Chủ nhật đầu tháng. */}
+      {/* Firestore free tier has no automatic backup. Remind on the first Sunday of each month. */}
       {nudge.show && (
         <div className="flex items-center justify-between gap-3 rounded-md border border-line-strong bg-surface-1 p-3">
           <p className="min-w-0 text-[13px] text-ink-soft">{nudge.text}</p>
@@ -138,8 +138,8 @@ export default function AnalyticsPage() {
             <EmptyState />
           ) : (
             <>
-              {/* Chất lượng log đứng TRƯỚC mọi chart: log thưa thì các con
-                  số bên dưới không nói lên điều gì, phải biết trước khi đọc. */}
+              {/* Log quality comes BEFORE every chart: with sparse logs the
+                  numbers below mean little, and you should know that first. */}
               <LogQualityNote quality={view.quality} overlap={view.overlap} />
 
               <Card
@@ -168,9 +168,9 @@ export default function AnalyticsPage() {
 
               <WeekSleepCard range={range} />
 
-              {/* Sau chart, không phải trước: chart trả lời "cái gì đã xảy ra",
-                  phần này chỉ chọn ra cái đáng để ý. Đọc ngược lại thì người dùng
-                  tin lời AI hơn tin số của chính mình. */}
+              {/* After the charts, not before: charts answer "what happened",
+                  this only picks what is worth noticing. The other order makes
+                  people trust the AI more than their own numbers. */}
               <InsightPanel
                 activities={activities}
                 range={range}

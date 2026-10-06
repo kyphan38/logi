@@ -1,26 +1,26 @@
 // ---------------------------------------------------------------------------
-// logi - Digest gửi cho model (Stage 7 Task 2)
+// logi - The digest sent to the model (Stage 7 Task 2)
 //
-// Digest là thứ DUY NHẤT rời khỏi máy người dùng. Không record thô, không nhãn
-// người dùng tự gõ, không id. Chỉ các con số đã tính sẵn ở `signals.ts`.
+// The digest is the ONLY thing that leaves the user's device. No raw records,
+// no user-typed labels, no ids. Only numbers already computed in `signals.ts`.
 //
-// Ba việc file này làm:
-//   1. Gói `Signals` thành JSON gọn, mọi số làm tròn 1 chữ số
-//   2. Bỏ chỉ số null và chỉ số liên hệ có sampleSize < 3
-//   3. Cổng chặn `canAnalyze()` - dữ liệu mỏng thì KHÔNG gọi API
+// This file does three things:
+//   1. Packs `Signals` into compact JSON, every number rounded to 1 decimal
+//   2. Drops null stats and correlations with sampleSize < 3
+//   3. The `canAnalyze()` gate - thin data means NO API call
 //
-// Thuần: dùng được cả ở client lẫn server. Test bằng `node --test`.
+// Pure: usable on both client and server. Tested with `node --test`.
 // ---------------------------------------------------------------------------
 import { isThin } from '@/lib/log-quality';
 import { MIN_SAMPLE, type Link, type Signals } from '@/lib/signals';
 import { CATEGORIES, type Category } from '@/types/logi';
 
-/** Digest là JSON tự do - model đọc key, không có schema cứng. */
+/** The digest is free-form JSON - the model reads the keys, no strict schema. */
 export type Digest = Record<string, unknown>;
 
-/** Ít hơn ngần này ngày thì chưa có gì để so sánh. */
+/** Fewer days than this leaves nothing to compare. */
 export const MIN_DAYS = 3;
-/** Mục tiêu của plan. Vượt là dấu hiệu digest đang phình ra dữ liệu thô. */
+/** The plan's target size. Going over is a sign the digest is bloating with raw data. */
 export const TOKEN_BUDGET = 1200;
 
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -28,26 +28,26 @@ const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const pct = (v: number) => Math.round(v * 100);
 
-/** Phút → "HH:MM". Trục đêm (>= 1440) được đưa về giờ trong ngày. */
+/** Minutes → "HH:MM". The night axis (>= 1440) is mapped back to a time of day. */
 export function hhmm(min: number): string {
   const m = ((Math.round(min) % 1440) + 1440) % 1440;
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
-/** Bỏ null/undefined ngay lúc dựng: digest không chứa key rỗng. */
+/** Drop null/undefined while building: the digest never has empty keys. */
 function put(o: Digest, key: string, v: number | string | Digest | null | undefined): void {
   if (v === null || v === undefined) return;
   o[key] = typeof v === 'number' ? r1(v) : v;
 }
 
 function linkOf(l: Link | null): Digest | null {
-  // Chốt chặn thứ hai: signals đã trả null dưới 3 mẫu, ở đây kiểm lại.
+  // Second guard: signals already returns null under 3 samples; check again here.
   if (!l || l.sampleSize < MIN_SAMPLE) return null;
   return { value: r1(l.value), n: l.sampleSize };
 }
 
 // ---------------------------------------------------------------------------
-// Dựng digest
+// Building the digest
 // ---------------------------------------------------------------------------
 
 export function buildDigest(s: Signals): Digest {
@@ -58,8 +58,8 @@ export function buildDigest(s: Signals): Digest {
     days: s.dayCount,
     loggedDays: s.elapsedDays,
     preset: s.preset ?? 'unknown',
-    // Ba con số thô thay cho một tỉ lệ trên nền 24h (mục 3.2). Model đọc được
-    // "log 62h, hở 9h" chứ không đọc được "68%" nghĩa là gì.
+    // Three raw numbers instead of a ratio against 24h (section 3.2). The model can
+    // read "logged 62h, gaps 9h" but not what "68%" means.
     trackedHours: r1(s.logQuality.trackedHours),
     gapHours: r1(s.logQuality.gapHours),
     daysWithLog: s.logQuality.loggedDays,
@@ -67,8 +67,8 @@ export function buildDigest(s: Signals): Digest {
     sessions: s.recordCount,
   };
 
-  // Đủ cả 4 category, kể cả category không có gì bất thường - model cần thấy
-  // toàn cảnh mới chọn đúng cái đáng nói.
+  // All 4 categories, even ones with nothing unusual - the model needs the full
+  // picture to pick what is worth saying.
   const totals: Digest = {};
   for (const c of CATEGORIES) {
     const st = s.byCategory[c];
@@ -85,9 +85,9 @@ export function buildDigest(s: Signals): Digest {
   }
   d.totals = totals;
 
-  // Không có dữ liệu ngủ (AMENDMENT-remove-sleep mục 10). Mọi key ở đây nói về
-  // GIỜ LOG, không phải giờ ngủ. Tên key phải nói rõ điều đó, nếu không model
-  // sẽ đọc `lastActivity` thành "giờ đi ngủ" rồi khuyên về giấc ngủ.
+  // No sleep data (AMENDMENT-remove-sleep section 10). Every key here is about
+  // LOGGED HOURS, not sleep. Key names must say so, or the model reads
+  // `lastActivity` as "bedtime" and gives sleep advice.
   const dayShape: Digest = {};
   put(dayShape, 'daysWithAnyLog', s.night.daysWithActivity);
   put(dayShape, 'daysWithActivityAfter23', s.night.lateNightActivityDays);
@@ -160,7 +160,7 @@ export function buildDigest(s: Signals): Digest {
   put(leisure, 'weekendHours', s.leisure.weekendLeisureHours);
   d.leisure = leisure;
 
-  // Nhóm liên hệ: chỉ mô tả, mỗi mục kèm `n`. Thiếu mẫu thì không có mặt.
+  // Correlations: description only, each with `n`. Missing samples means absent.
   const links: Digest = {};
   put(links, 'learnHoursOnDaysWorkOver9h', linkOf(s.links.learnOnHighWorkDays));
   put(links, 'learnHoursOnOtherDays', linkOf(s.links.learnOnNormalDays));
@@ -185,12 +185,12 @@ export function buildDigest(s: Signals): Digest {
 }
 
 // ---------------------------------------------------------------------------
-// Hash & kích thước
+// Hash & size
 // ---------------------------------------------------------------------------
 
 /**
- * FNV-1a 32-bit. Không cần chống va chạm có chủ đích - chỉ để biết
- * "dữ liệu có đổi không" giữa hai lần bấm Analyse.
+ * FNV-1a 32-bit. No need to resist deliberate collisions - only to know
+ * "did the data change" between two Analyse taps.
  */
 export function digestHash(d: Digest): string {
   const text = JSON.stringify(d);
@@ -202,25 +202,25 @@ export function digestHash(d: Digest): string {
   return (h >>> 0).toString(16).padStart(8, '0');
 }
 
-/** Ước lượng thô ~4 ký tự một token. Đủ để canh ngân sách prompt. */
+/** A rough estimate of ~4 characters per token. Enough to watch the prompt budget. */
 export function estimateTokens(d: Digest): number {
   return Math.ceil(JSON.stringify(d).length / 4);
 }
 
 // ---------------------------------------------------------------------------
-// Cổng chặn
+// The gate
 // ---------------------------------------------------------------------------
 
 export interface Gate {
   ok: boolean;
   reason?: string;
-  /** Câu gợi ý cách khắc phục, hiện dưới lý do. */
+  /** A hint on how to fix it, shown under the reason. */
   hint?: string;
 }
 
 /**
- * Không đạt → KHÔNG gọi API. Thà nói "chưa đủ dữ liệu" còn hơn đưa ra
- * nhận xét dựa trên 40% sự thật.
+ * Failing → NO API call. Better to say "not enough data" than give notes based
+ * on 40% of the truth.
  */
 export function canAnalyze(s: Signals): Gate {
   if (s.recordCount === 0) {
@@ -230,7 +230,7 @@ export function canAnalyze(s: Signals): Gate {
       hint: 'Pick a range where you have records.',
     };
   }
-  // Ngày chưa sống thì không tính: "This month" ngày mùng 2 chỉ có 2 ngày thật.
+  // Days not yet lived do not count: "This month" on the 2nd has only 2 real days.
   if (s.elapsedDays < MIN_DAYS) {
     return {
       ok: false,
@@ -238,7 +238,7 @@ export function canAnalyze(s: Signals): Gate {
       hint: 'Try a wider range.',
     };
   }
-  // Log quá thưa thì mọi kết luận đều dựa trên một phần nhỏ sự thật.
+  // With very sparse logs, every conclusion rests on a small part of the truth.
   if (isThin(s.logQuality)) {
     const q = s.logQuality;
     return {
@@ -251,10 +251,10 @@ export function canAnalyze(s: Signals): Gate {
 }
 
 // ---------------------------------------------------------------------------
-// Dữ liệu cực đoan (Task 8)
+// Extreme data (Task 8)
 // ---------------------------------------------------------------------------
 
-/** Work quy đổi ra một tuần, trên mức này thì nói thêm một câu. */
+/** Work scaled to a week; above this, add one sentence. */
 export const EXTREME_WORK_H_PER_WEEK = 70;
 
 function num(o: unknown, ...path: string[]): number | null {
@@ -267,17 +267,17 @@ function num(o: unknown, ...path: string[]): number | null {
 }
 
 /**
- * Một dòng trung tính cho dữ liệu cực đoan, do CODE viết chứ không phải AI.
+ * One neutral line for extreme data, written by CODE, not the AI.
  *
- * Cố ý nhạt: mốc so sánh là target do chính người dùng đặt, không phải
- * khuyến nghị y tế. Không chẩn đoán, không hoảng, không màu đỏ.
- * Trả null khi mọi thứ bình thường - im lặng là mặc định.
+ * Bland on purpose: the comparison is the user's own target, not medical
+ * advice. No diagnosis, no alarm, no red.
+ * Returns null when all is normal - silence is the default.
  */
 export function extremeNote(digest: Digest): string | null {
   const days = num(digest, 'period', 'days') ?? 0;
 
-  // Câu về giấc ngủ đã bỏ cùng category `sleep` (AMENDMENT-remove-sleep mục 10).
-  // App không đo giấc ngủ nữa nên không được nói gì về nó.
+  // The sleep sentence went with the `sleep` category (AMENDMENT-remove-sleep section 10).
+  // The app no longer tracks sleep, so it must say nothing about it.
   const work = num(digest, 'totals', 'work', 'hours');
   if (work !== null && days >= 1) {
     const perWeek = (work / days) * 7;
@@ -292,7 +292,7 @@ export function extremeNote(digest: Digest): string | null {
   return null;
 }
 
-/** Tên category viết hoa đầu - dùng lại ở UI khi hiện `metric`. */
+/** Capitalized category name - reused in the UI when showing `metric`. */
 export function categoryOf(key: string): Category | null {
   return (CATEGORIES as readonly string[]).includes(key) ? (key as Category) : null;
 }

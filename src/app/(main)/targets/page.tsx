@@ -1,10 +1,10 @@
 'use client';
 
 // ============================================================
-// logi - Màn hình Targets (Stage 4, Task 3)
+// logi - Targets screen (Stage 4, Task 3)
 //
-// Ngân sách zero-sum: một tuần có đúng 89h. Không thêm được giờ,
-// chỉ đổi chỗ. Mọi thứ trên màn hình này phải làm điều đó hiện rõ.
+// Zero-sum budget: a week has exactly 89h. Hours cannot be added, only moved.
+// Everything on this screen must make that obvious.
 // ============================================================
 
 import { Suspense, useCallback, useMemo, useState } from 'react';
@@ -49,12 +49,12 @@ import {
 const PRESET_ORDER: PresetId[] = ['normal', 'crunch', 'deep_learn', 'recovery'];
 
 /**
- * Custom là MODE THỨ NĂM, không phải một khối riêng nằm dưới.
+ * Custom is the FIFTH MODE, not a separate block underneath.
  *
- * Trước đây bốn preset nằm trong dropdown còn bốn slider luôn hiện bên dưới
- * dưới tiêu đề "CUSTOM". Màn hình vì thế nói hai câu ngược nhau cùng lúc:
- * "Mode: Recovery" ở trên, "Custom 43.5h" ở dưới. Nay chỉ có MỘT danh sách
- * năm lựa chọn, và chỉ mode đang chọn mới hiện phần điều khiển của nó.
+ * Four presets used to sit in a dropdown while four sliders always showed
+ * below under "CUSTOM". The screen said two opposite things at once:
+ * "Mode: Recovery" above, "Custom 43.5h" below. Now there is ONE list of five
+ * choices, and only the selected mode shows its controls.
  */
 type ModeId = PresetId | 'custom';
 const MODE_ORDER: ModeId[] = [...PRESET_ORDER, 'custom'];
@@ -69,9 +69,9 @@ const h = (n: number) => `${Math.round(n * 10) / 10}h`;
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /**
- * Bỏ Sleep rồi thì KHÔNG còn category nào cố định: cả 4 đều kéo được
- * (AMENDMENT-remove-sleep mục 11). Giữ tên `ADJUSTABLE` cho khỏi phải sửa
- * mọi chỗ gọi, nhưng nay nó đúng bằng `CATEGORIES`.
+ * With Sleep gone, NO category is fixed: all 4 can be dragged
+ * (AMENDMENT-remove-sleep section 11). The name `ADJUSTABLE` stays to avoid
+ * touching every caller, but it now equals `CATEGORIES`.
  */
 const ADJUSTABLE = CATEGORIES;
 
@@ -80,8 +80,8 @@ function summary(weekly: Weekly): string {
 }
 
 /**
- * `useSearchParams` khiến cây con phải render ở client, nên bọc Suspense -
- * đây là yêu cầu của Next khi build bản tĩnh, không phải cho đẹp.
+ * `useSearchParams` forces the subtree to render on the client, so wrap it in
+ * Suspense - Next requires this for a static build, it is not for looks.
  */
 export default function TargetsPage() {
   return (
@@ -96,7 +96,7 @@ function TargetsView() {
   const uid = user?.uid ?? null;
   const week = useCurrentWeek();
 
-  // Vào thẳng tab này lúc sáng thứ Hai cũng phải chuyển tuần được.
+  // Opening this tab first on Monday morning must still roll the week over.
   useRollover();
 
   const { target, loading } = useWeekTarget(week);
@@ -104,35 +104,35 @@ function TargetsView() {
   const { streak } = useCrunchStreak(target?.preset ?? null);
   const { toasts, push, dismiss } = useToasts();
 
-  // `/targets?suggest=crunch` - Stage 7 chỉ TÔ SÁNG thẻ, không bao giờ tự áp.
-  // Người dùng vẫn phải bấm và xác nhận như mọi lần đổi preset khác.
+  // `/targets?suggest=crunch` - Stage 7 only HIGHLIGHTS the card, never applies it.
+  // The user still taps and confirms, like any other preset change.
   const params = useSearchParams();
   const raw = params.get('suggest');
   const suggested: PresetId | null =
     raw !== null && (PRESET_ORDER as readonly string[]).includes(raw) ? (raw as PresetId) : null;
 
-  /** Có gợi ý, và nó khác preset đang dùng → còn việc để làm. */
+  /** There is a suggestion, and it differs from the current preset → something to do. */
   const suggestPending = suggested !== null && suggested !== target?.preset;
 
   const [busy, setBusy] = useState(false);
-  // Danh sách mode gấp lại theo mặc định. Tự mở khi vào từ `?suggest=` - deep
-  // link mà đáp xuống một khối đang đóng thì coi như không dẫn tới đâu.
+  // The mode list is collapsed by default. It opens when arriving via `?suggest=` -
+  // a deep link that lands on a closed block leads nowhere.
   const [modeOpen, setModeOpen] = useState(suggested !== null);
   const [confirm, setConfirm] = useState<PresetId | null>(null);
   const [draft, setDraft] = useState<Weekly | null>(null);
-  /** Người dùng vừa chọn mode Custom, dù số đang lưu vẫn đúng bằng preset. */
+  /** The user just picked Custom, even if the saved numbers still equal the preset. */
   const [customPicked, setCustomPicked] = useState(false);
   /**
-   * Category bị ghim: kéo cái khác thì KHÔNG được lấy giờ của nó.
-   * Chỉ sống trong phiên - đây là cách bạn đang kéo, không phải mục tiêu tuần.
+   * Pinned categories: dragging another one must NOT take their hours.
+   * Session only - this is how you are dragging, not a weekly goal.
    */
   const [pinned, setPinned] = useState<Set<Category>>(() => new Set());
   const [keepStreak, setKeepStreak] = useState(false);
-  /** Weekly Review mở tay từ đây, không cần đợi tối Chủ nhật. */
+  /** Weekly Review opened by hand from here, no need to wait for Sunday evening. */
   const [reviewOpen, setReviewOpen] = useState<string | null>(null);
 
-  // Từ 21:00 CN tới 04:00 T2, tuần vẫn là "tuần này" nhưng đã đóng sổ.
-  // Khoá lười có thể chưa kịp ghi `lockedAt`, nên UI tự kiểm mốc thời gian.
+  // From 21:00 Sunday to 04:00 Monday the week is still "this week" but closed.
+  // The lazy lock may not have written `lockedAt` yet, so the UI checks the time itself.
   const nowMinute = useTick(60_000, true);
   const locked = target?.lockedAt != null || isWeekClosed(week, nowMinute);
   const saved: Weekly | null = target?.weekly ?? null;
@@ -144,9 +144,9 @@ function TargetsView() {
   );
   const dirty = draft !== null && saved !== null && ADJUSTABLE.some((c) => draft[c] !== saved[c]);
 
-  // Số đang lưu KHÁC preset đang ghi trong doc → tuần này thật ra là Custom.
-  // Không tính ra được điều này thì màn hình cứ báo "Recovery" mãi dù bạn đã
-  // kéo lệch đi 20h, và mode trở thành một cái nhãn nói dối.
+  // Saved numbers DIFFER from the preset in the doc → this week is really Custom.
+  // Without this the screen keeps saying "Recovery" after you dragged 20h away,
+  // and the mode becomes a lying label.
   const savedIsCustom = useMemo(() => {
     if (!saved || !target) return false;
     const base = reapplyDebt(PRESETS[target.preset].weekly, target.debtApplied ?? {});
@@ -156,7 +156,7 @@ function TargetsView() {
   const mode: ModeId =
     dirty || customPicked || savedIsCustom ? 'custom' : (target?.preset ?? 'normal');
 
-  // --- Hành động ---------------------------------------------------
+  // --- Actions -----------------------------------------------------
 
   const guard = useCallback(
     async (fn: () => Promise<void>) => {
@@ -165,7 +165,7 @@ function TargetsView() {
       try {
         await fn();
       } catch (e) {
-        // Tuần đóng sổ là chuyện thường, không phải lỗi hệ thống.
+        // A closed week is normal, not a system error.
         push(e instanceof TargetError ? e.message : `Could not save. ${msg(e)}`);
       } finally {
         setBusy(false);
@@ -184,7 +184,7 @@ function TargetsView() {
       push(`Switched to ${PRESETS[id].label}.`);
     });
 
-  /** Chọn Custom = giữ nguyên giờ hiện tại rồi mở slider. Chưa ghi gì cả. */
+  /** Picking Custom = keep the current hours and open the sliders. Nothing saved yet. */
   const pickCustom = () => {
     setCustomPicked(true);
     setConfirm(null);
@@ -197,7 +197,7 @@ function TargetsView() {
     if (!savedIsCustom) setCustomPicked(false);
   };
 
-  /** Ghim / bỏ ghim. Quá 3 thì lời mời bị từ chối im lặng - nút đã disabled. */
+  /** Pin / unpin. Beyond 3 the request is silently refused - the button is disabled. */
   const togglePin = (c: Category) =>
     setPinned((prev) => {
       const next = new Set(prev);
@@ -268,8 +268,8 @@ function TargetsView() {
           )}
 
           {/*
-            Bốn card preset chiếm gần hết màn hình cho một thứ đổi vài tuần
-            một lần. Gấp lại thành một dòng "Mode · Normal"; mở ra khi cần.
+            Four preset cards took most of the screen for something changed every
+            few weeks. Folded into one "Mode · Normal" row; opens when needed.
           */}
           <section className="mb-6">
             <button
@@ -324,7 +324,7 @@ function TargetsView() {
                       summary={summary(PRESETS[id].weekly)}
                       selected={mode === id}
                       suggested={suggested === id && mode !== id}
-                      // Nợ quá 20h thì không được vay thêm nữa.
+                      // Over 20h of debt, no more borrowing.
                       lockedReason={
                         id === 'crunch' && crunchLocked
                           ? `Locked - ${h(debtTotal)} of debt outstanding`
@@ -340,8 +340,8 @@ function TargetsView() {
           </section>
 
           {/*
-            Slider CHỈ hiện ở mode Custom. Đang ở Recovery mà vẫn thấy bốn
-            slider thì màn hình đang mời bạn phá chính cái preset vừa chọn.
+            Sliders ONLY show in Custom mode. Seeing four sliders in Recovery
+            invites you to break the preset you just picked.
           */}
           {weekly && mode === 'custom' && (
             <section className="mb-6">
@@ -358,8 +358,8 @@ function TargetsView() {
 
               {ADJUSTABLE.map((c) => {
                 const isPinned = pinned.has(c);
-                // Ghim hết 3 cái kia → cái này là phần còn lại của 89h, kéo nó
-                // thì không ai bù được. Để nó đọc được, không kéo được.
+                // The other 3 pinned → this one is the rest of 89h; dragging it
+                // could not be balanced. Readable, not draggable.
                 const derived = !isPinned && pinned.size >= MAX_PINNED;
                 const bounds = dragBounds(weekly, c, pinned);
                 return (
@@ -405,7 +405,7 @@ function TargetsView() {
 
           <DebtSection debt={debt} applied={target?.debtApplied ?? {}} />
 
-          {/* Routine (Stage 10): checklist lặp lại theo thứ, tick ở màn Now. */}
+          {/* Routine (Stage 10): a checklist repeating by weekday, ticked on Now. */}
           <RoutineSection />
         </>
       )}
@@ -421,7 +421,7 @@ function TargetsView() {
         />
       )}
 
-      {/* Settings không có trong thanh điều hướng: mỗi tuần mới vào một lần. */}
+      {/* Settings is not in the nav: visited about once a week. */}
       <Link href="/settings" className="mt-2 self-start text-[13px] text-ink-muted underline">
         Settings
       </Link>
@@ -449,7 +449,7 @@ function ModeCard({
   hint: string;
   summary: string;
   selected: boolean;
-  /** Do AI gợi ý ở màn Analytics. Chỉ là dấu nhắc, chưa áp dụng gì. */
+  /** Suggested by the AI on Analytics. Only a hint, nothing applied. */
   suggested?: boolean;
   lockedReason?: string | null;
   disabled: boolean;
@@ -491,7 +491,7 @@ function ModeCard({
 // Slider
 // ------------------------------------------------------------
 
-/** Ổ khoá nhỏ cạnh mỗi category. Đóng = không ai được lấy giờ của nó. */
+/** Small lock next to each category. Closed = nobody can take its hours. */
 function PinButton({
   pinned,
   canPin,
@@ -545,12 +545,12 @@ function Slider({
 }: {
   category: Category;
   value: number;
-  /** Sàn cứng của category này. */
+  /** This category's hard floor. */
   min: number;
-  /** Trần THẬT sau khi trừ phần đã ghim - không phải lúc nào cũng là 70h. */
+  /** The REAL cap after pinned hours - not always 70h. */
   max: number;
   pinned: boolean;
-  /** Ba cái kia đã ghim → số này là phần còn lại, chỉ để đọc. */
+  /** The other three are pinned → this number is the rest, read-only. */
   derived: boolean;
   canPin: boolean;
   disabled: boolean;
@@ -558,9 +558,9 @@ function Slider({
   onTogglePin: () => void;
 }) {
   const floor = HARD_FLOOR[category] ?? 0;
-  // Chạm sàn thì báo rõ, và `min` chặn luôn - không kéo xuống được nữa.
+  // At the floor, say so clearly, and `min` blocks it - no dragging lower.
   const atFloor = value <= floor + 0.05 && floor > 0;
-  // Trần 70h là giới hạn của thanh kéo; `max` là giới hạn của ngân sách.
+  // 70h is the slider's limit; `max` is the budget's limit.
   const ceiling = Math.max(min, Math.min(70, max));
 
   return (
@@ -642,7 +642,7 @@ function TotalRow({ weekly, errors }: { weekly: Weekly; errors: string[] }) {
 }
 
 // ------------------------------------------------------------
-// Nợ
+// Debt
 // ------------------------------------------------------------
 
 function DebtSection({
@@ -653,7 +653,7 @@ function DebtSection({
   applied: Partial<Record<Category, number>>;
 }) {
   const rows = CATEGORIES.filter((c) => (debt[c] ?? 0) > 0 || (applied[c] ?? 0) > 0);
-  if (rows.length === 0) return null; // Không nợ ai thì không cần mục này.
+  if (rows.length === 0) return null; // No debt, no section.
 
   return (
     <section className="mb-6">
@@ -761,7 +761,7 @@ function ConfirmSheet({
               </span>
               <span className="font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
                 {h(r.from)} → {h(r.to)}
-                {/* Đổi preset mà không thấy giá phải trả thì cơ chế này vô nghĩa. */}
+                {/* Changing preset without seeing the cost makes this mechanism pointless. */}
                 {r.debt > 0 && (
                   <span className="ml-2 font-medium text-zinc-900 dark:text-zinc-100">
                     +{h(r.debt)} debt

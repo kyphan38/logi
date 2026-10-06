@@ -3,8 +3,8 @@
 // ------------------------------------------------------------
 // logi - Weekly Review (Stage 6 Task 1)
 //
-// Đọc dữ liệu cho ba màn review. Không thêm listener nào cho tuần hiện tại:
-// dùng lại `useWeekActivities` và `useWeekTarget` đã có.
+// Reads data for the three review screens. Adds no listener for the current
+// week: reuses the existing `useWeekActivities` and `useWeekTarget`.
 // ------------------------------------------------------------
 
 import { useEffect, useMemo, useState } from 'react';
@@ -24,8 +24,8 @@ export function useReviewFlags(): { flags: ReviewFlags; loading: boolean } {
   const [flags, setFlags] = useState<ReviewFlags>({});
   const [loading, setLoading] = useState(true);
 
-  // Đổi user → xoá cờ ngay trong lúc render, đừng để cờ người này
-  // giấu banner của người kia dù chỉ một frame.
+  // User changed → clear the flag during render, so one person's flag never
+  // hides another's banner, not even for a frame.
   const [prevUid, setPrevUid] = useState(uid);
   if (prevUid !== uid) {
     setPrevUid(uid);
@@ -49,8 +49,8 @@ export function useReviewFlags(): { flags: ReviewFlags; loading: boolean } {
 }
 
 /**
- * Tuần đang cần review, hoặc null.
- * Tick 60s là đủ - mốc là 19:00, không ai cần độ chính xác từng giây.
+ * The week needing review, or null.
+ * A 60s tick is enough - the mark is 19:00, nobody needs second precision.
  */
 export function useReviewDue(): string | null {
   const now = useTick(60_000, true);
@@ -64,14 +64,14 @@ export function useReviewDue(): string | null {
 
 export interface ReviewData {
   summary: ReviewSummary | null;
-  /** Record của tuần - Stage 7 dùng lại để tính digest, không đọc lần hai. */
+  /** The week's records - Stage 7 reuses them for the digest, no second read. */
   activities: Activity[];
   weekTargets: Map<string, Weekly>;
-  /** Cùng mốc thời gian mà summary đã dùng. */
+  /** The same time mark the summary used. */
   now: number;
-  /** Sổ nợ hiện tại - màn 3 dùng để hiện phần cộng thêm. */
+  /** The current debt ledger - screen 3 uses it to show the added amount. */
   debt: ReturnType<typeof useDebt>;
-  /** Tuần đã qua thì chỉ xem. */
+  /** A past week is view-only. */
   canSetNext: boolean;
   loading: boolean;
 }

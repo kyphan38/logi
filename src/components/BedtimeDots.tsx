@@ -1,40 +1,40 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Chấm giờ đi ngủ trên thang liên tục
+// logi - Bedtime dots on a continuous scale
 //
-// Dùng ở hai chỗ với hai câu hỏi khác nhau:
-//   - tab Week  : mỗi cột là MỘT đêm  → "tuần này tôi ngủ thế nào"
-//   - tab Trend : mỗi cột là MỘT tuần → "mấy tháng nay tôi ngủ sớm lên chưa"
+// Used in two places for two different questions:
+//   - Week tab  : each column is ONE night → "how did I sleep this week"
+//   - Trend tab : each column is ONE week  → "have I gone to bed earlier lately"
 //
-// Không dùng Recharts: trục Y ở đây là thang liên tục (`bedtimeScale`), qua
-// nửa đêm vẫn tăng đều. Nhét vào Recharts phải tự viết formatter cho cả tick,
-// tooltip lẫn domain - dựng tay bằng absolute còn ít code hơn.
+// No Recharts: the Y axis is a continuous scale (`bedtimeScale`) that keeps
+// rising past midnight. In Recharts that means custom formatters for ticks,
+// tooltip and domain - absolute positioning by hand is less code.
 //
-// CHIỀU TRỤC: 21:00 ở TRÊN, 04:00 ở DƯỚI. Ngủ muộn hơn thì chấm TỤT XUỐNG -
-// đọc thẳng "tuần này tôi tụt dốc" mà không phải dịch trong đầu. Đây là chiều
-// ngược với chart giờ làm (cao = nhiều), nên đừng gộp hai cái làm một.
+// AXIS DIRECTION: 21:00 at the TOP, 04:00 at the BOTTOM. Later bedtime = the dot
+// DROPS - reads directly as "this week I slipped" with no mental flip. This is
+// the opposite of the hours chart (high = more), so never merge the two.
 //
-// Miền cố định 21:00→04:00 chứ không co theo dữ liệu: co theo dữ liệu thì tuần
-// ngủ đều 23:00-23:30 sẽ giãn hết khung trông y hệt tuần ngủ 21:00-04:00. Cùng
-// một khung mọi tuần thì hình dáng mới so được với nhau. Chỉ nới ra khi có mốc
-// nằm ngoài - nới còn hơn giấu mất một đêm.
+// The domain is fixed at 21:00→04:00, not fitted to data: fitted, a steady
+// 23:00-23:30 week would stretch to fill the frame and look like a 21:00-04:00
+// week. Only one frame for every week makes shapes comparable. It only widens
+// when a mark falls outside - widening beats hiding a night.
 //
-// Cột trống ĐỂ TRỐNG, không kéo về 0: đêm không ghi không phải đêm ngủ lúc
-// 20:00. Cùng luật với cột trống ở Trend và `sampleSize < 3` bên AI insights.
+// Empty columns STAY EMPTY, not pulled to 0: an unlogged night is not a night
+// asleep at 20:00. Same rule as empty Trend columns and `sampleSize < 3` in AI insights.
 // ---------------------------------------------------------------------------
 import { formatScale } from '@/lib/bedtime';
 import type { BedtimeStats } from '@/lib/bedtime';
 
-/** Đỉnh khung: 21:00. Trên thang liên tục thì 21:00 = 21. */
+/** Top of the frame: 21:00. On the continuous scale 21:00 = 21. */
 const FLOOR_LO = 21;
-/** Đáy khung: 04:00 hôm sau = 24 + 4 = 28. */
+/** Bottom of the frame: 04:00 next day = 24 + 4 = 28. */
 const FLOOR_HI = 28;
 
 export interface BedtimePoint {
   key: string;
   label: string;
-  /** `null` = kỳ chưa ghi đêm nào. */
+  /** `null` = no night logged in this period. */
   stats: BedtimeStats | null;
 }
 
@@ -44,22 +44,22 @@ export default function BedtimeDots({
   showValue = false,
 }: {
   points: readonly BedtimePoint[];
-  /** Chỉ ghi nhãn mỗi N cột. Nhiều cột quá thì nhãn chồng lên nhau. */
+  /** Only label every N columns. Too many columns and labels overlap. */
   labelEvery?: number;
-  /** Hiện giờ cụ thể cạnh mỗi chấm. Chỉ bật khi ít cột - 7 đêm thì vừa, 26 tuần thì chồng chữ. */
+  /** Show the exact time next to each dot. Only with few columns - 7 nights fit, 26 weeks overlap. */
   showValue?: boolean;
 }) {
   const have = points.filter((p) => p.stats !== null);
   if (have.length === 0) return null;
 
-  // Miền Y trên thang liên tục: 22:00 → 22, 00:15 → 24.25. Không quy đổi thì
-  // 22:00 và 00:15 trung bình ra 11 giờ trưa.
+  // Y domain on the continuous scale: 22:00 → 22, 00:15 → 24.25. Without the
+  // conversion, 22:00 and 00:15 average out to 11 am.
   const lo = Math.min(FLOOR_LO, Math.floor(Math.min(...have.map((p) => p.stats!.min))));
   const hi = Math.max(FLOOR_HI, Math.ceil(Math.max(...have.map((p) => p.stats!.max))));
   const ticks: number[] = [];
   for (let t = lo; t <= hi; t++) ticks.push(t);
 
-  // Muộn hơn = xuống thấp hơn, nên KHÔNG lật dấu như chart giờ làm.
+  // Later = lower, so do NOT flip the sign like the hours chart.
   const y = (v: number) => (hi === lo ? 50 : ((v - lo) / (hi - lo)) * 100);
 
   return (
@@ -78,8 +78,8 @@ export default function BedtimeDots({
       <div className="relative flex-1">
         <div className="absolute inset-0 flex items-stretch">
           {points.map((p, i) => {
-            // `flex-1 min-w-0` chứ không phải `w-8`: 26 cột × 32px = 832px, vượt
-            // khung 375px và không có thanh cuộn ngang nên chữ bên trong bị vỡ.
+            // `flex-1 min-w-0`, not `w-8`: 26 columns × 32px = 832px, wider than
+            // the 375px frame with no horizontal scroll, so the text breaks.
             const label = i % labelEvery === 0 ? p.label : '';
             return p.stats === null ? (
               <div
@@ -95,7 +95,7 @@ export default function BedtimeDots({
                 className="relative min-w-0 flex-1"
                 title={`${p.label}: ${formatScale(p.stats.median)} (n=${p.stats.n})`}
               >
-                {/* Dải min-max. Sớm nhất ở TRÊN nên `top` lấy theo min. */}
+                {/* The min-max band. Earliest is at the TOP, so `top` comes from min. */}
                 <span
                   aria-hidden="true"
                   className="absolute left-1/2 w-[2px] -translate-x-1/2 rounded bg-zinc-300 dark:bg-zinc-700"
@@ -104,15 +104,15 @@ export default function BedtimeDots({
                     height: `${Math.max(2, y(p.stats.max) - y(p.stats.min))}%`,
                   }}
                 />
-                {/* Điểm trung vị */}
+                {/* Median dot */}
                 <span
                   aria-hidden="true"
                   className="absolute left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100"
                   style={{ top: `calc(${y(p.stats.median)}% - 4px)` }}
                 />
                 {showValue && (
-                  // Chữ nằm TRÊN chấm, trừ khi chấm đã sát đỉnh thì lật xuống
-                  // dưới - không thì chữ tràn ra ngoài khung và bị cắt.
+                  // The label sits ABOVE the dot, unless the dot is at the top,
+                  // then it flips below - otherwise it spills out and gets cut.
                   <span
                     className="absolute inset-x-0 truncate text-center text-[10px] tabular-nums text-ink-soft"
                     style={

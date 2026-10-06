@@ -9,8 +9,8 @@ export type SessionUser = {
 };
 
 /**
- * Đọc session cookie và trả về user, hoặc null nếu không hợp lệ.
- * Nuốt mọi lỗi - người gọi chỉ cần biết có user hay không.
+ * Reads the session cookie and returns the user, or null if invalid.
+ * Swallows every error - callers only need to know whether there is a user.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
   try {
@@ -18,7 +18,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     const raw = store.get(process.env.AUTH_COOKIE_NAME ?? 'logi_session')?.value;
     if (!raw) return null;
 
-    // true = kiểm tra token đã bị thu hồi chưa.
+    // true = check whether the token was revoked.
     const decoded = await adminAuth.verifySessionCookie(raw, true);
 
     const allowed = process.env.ALLOWED_USER_EMAIL;
@@ -33,8 +33,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 }
 
 /**
- * Dùng trong API route ở các stage sau (nhất là /api/parse ở Stage 3).
- * Không có session hợp lệ → throw.
+ * Used in API routes (mainly /api/parse).
+ * No valid session → throw.
  */
 export async function requireSessionUser(): Promise<SessionUser> {
   const user = await getSessionUser();

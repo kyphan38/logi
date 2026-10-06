@@ -25,7 +25,7 @@ export type SheetTarget =
   | { mode: 'edit'; activity: Activity }
   | { mode: 'create'; startAt: number; endAt: number };
 
-/** Undo sau khi xoá: session đang chạy thì bật chạy lại, còn lại tạo record cũ. */
+/** Undo after delete: a running session restarts, anything else recreates the old record. */
 export async function restoreActivity(uid: string, a: Activity): Promise<void> {
   if (a.endAt === null) {
     await startActivity(uid, {
@@ -78,10 +78,10 @@ export default function RecordSheet({
   const [confirming, setConfirming] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
-  // Sheet mở thì khoá cuộn trang nền - cuộn lan ra sau lưng rất khó chịu.
-  // Khoá đúng <main> (chỗ duy nhất cuộn được), KHÔNG đụng vào body: body có
-  // overflow là iOS Safari làm hỏng mọi con `position: fixed`, kể cả sheet này.
-  // Khoá bằng overflow trên một thẻ thường thì vị trí cuộn vẫn giữ nguyên.
+  // While the sheet is open, lock the page behind - scroll leaking behind is annoying.
+  // Lock exactly <main> (the only scrollable place), NEVER body: overflow on
+  // body makes iOS Safari break every `position: fixed` child, this sheet included.
+  // Overflow on a normal element keeps the scroll position.
   useEffect(() => {
     const scroller = document.getElementById('app-scroll');
     if (!scroller) return;
@@ -92,7 +92,7 @@ export default function RecordSheet({
     };
   }, []);
 
-  // Vuốt xuống để đóng. Chỉ kéo từ phần đầu sheet, tránh đụng các field.
+  // Swipe down to close. Only from the top of the sheet, to avoid the fields.
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const dragFrom = useRef<number | null>(null);
@@ -119,11 +119,11 @@ export default function RecordSheet({
 
   const start = fromLocalInput(startStr);
   const end = fromLocalInput(endStr);
-  // Để trống End = việc vẫn đang chạy. Đúng cho cả hai chỗ:
-  //  - sửa session đang chạy: giữ nguyên, không ép điền giờ kết thúc;
-  //  - thêm tay: "8:00 sáng tôi bắt đầu và giờ vẫn đang làm" → tạo session chạy.
-  // Record đã xong thì vẫn bắt buộc có End - xoá End để mở lại là việc khác,
-  // dễ lỡ tay biến record cũ thành session chạy suốt nhiều ngày.
+  // Empty End = still running. Right in both cases:
+  //  - editing a running session: keep it, never force an end time;
+  //  - adding by hand: "I started at 8:00 and I am still at it" → a running session.
+  // A finished record still requires End - clearing End to reopen is something
+  // else, and could easily turn an old record into a session running for days.
   const endRequired = editing !== null && editing.endAt !== null;
   const running = !endRequired && end === null;
 
@@ -163,13 +163,13 @@ export default function RecordSheet({
             label: text,
             startAt: start,
             endAt: end,
-            // Đang chạy mà điền End → session kết thúc, không còn 'active'.
+            // End filled on a running session → it ends, no longer 'active'.
             ...(editing.endAt === null && end !== null ? { status: 'done' as const } : {}),
           }),
           late
         );
       } else if (end === null) {
-        // Thêm tay một việc chưa xong: mở session chạy từ giờ đã ghi.
+        // Adding an unfinished task by hand: open a running session from the given time.
         await capWait(
           startActivity(uid, { category, label: text, startAt: start }),
           late
@@ -186,7 +186,7 @@ export default function RecordSheet({
         );
       }
 
-      // Đổi ngày logic → phải nói ra, không thì tưởng record biến mất.
+      // The logical day changed → say so, or it looks like the record vanished.
       const before = editing ? editing.logicalDate : logicalDate(start);
       const after = logicalDate(start);
       onToast(
@@ -239,7 +239,7 @@ export default function RecordSheet({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Vùng kéo: thanh nắm + tiêu đề. */}
+        {/* Drag area: handle + title. */}
         <div
           className="-mx-5 cursor-grab px-5 pb-1 pt-1"
           style={{ touchAction: 'none' }}
@@ -331,7 +331,7 @@ export default function RecordSheet({
             <p className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
               Duration: {running ? 'running' : duration}
             </p>
-            {/* Xoá giờ trong ô datetime trên điện thoại khá vướng - cho nút tắt. */}
+            {/* Clearing a datetime field on a phone is fiddly - give a shortcut button. */}
             {endRequired ? null : (
               <button
                 type="button"

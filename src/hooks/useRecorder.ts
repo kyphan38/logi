@@ -1,33 +1,33 @@
 'use client';
 
 // ============================================================
-// logi - Ghi âm cho voice logging
+// logi - Recording for voice logging
 //
-// Audio KHÔNG được lưu ở bất kỳ đâu: blob chỉ sống trong biến local,
-// đổi sang base64 rồi gán null. Không disk, không Storage, không log.
+// Audio is NEVER stored anywhere: the blob only lives in a local variable,
+// is converted to base64, then set to null. No disk, no Storage, no logs.
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { pickAudioMime } from '@/lib/gemini-parse';
 
-/** Giữ nút quá lâu thì tự dừng - 30s mp4 ~400KB, thừa sức cho một câu nói. */
+/** Holding too long auto-stops - 30s of mp4 is ~400KB, plenty for one sentence. */
 const MAX_MS = 30_000;
-/** Chạm nhầm rồi nhả ra ngay → bỏ, đừng tốn một lượt gọi Gemini. */
+/** A mistap released at once → drop it, do not spend a Gemini call. */
 const MIN_MS = 400;
-/** Bao lâu cập nhật `level` một lần. 60fps thì render quá nhiều mà mắt không thấy khác. */
+/** How often `level` updates. 60fps renders too much with no visible difference. */
 const LEVEL_MS = 60;
 
 export type RecorderState = 'idle' | 'requesting' | 'recording' | 'processing';
 
 export interface Recording {
   base64: string;
-  /** Đã cắt bỏ phần `;codecs=...` - Gemini chỉ nhận mime gốc. */
+  /** `;codecs=...` already stripped - Gemini only accepts the base mime. */
   mimeType: string;
   durationMs: number;
 }
 
-/** Base64 qua FileReader: chuỗi ra dạng `data:audio/mp4;base64,xxx`, lấy phần sau dấu phẩy. */
+/** Base64 via FileReader: the string is `data:audio/mp4;base64,xxx`; take the part after the comma. */
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
@@ -41,12 +41,12 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-/** Khả năng ghi âm chỉ biết được ở client - dùng store ngoài để SSR không lệch. */
+/** Recording support is only known on the client - an external store keeps SSR consistent. */
 const NO_CHANGE = () => () => {};
 const readSupported = () =>
   typeof MediaRecorder !== 'undefined' &&
   typeof navigator.mediaDevices?.getUserMedia === 'function';
-/** Server đoán là có, nên nút mic không nhấp nháy rồi mới hiện. */
+/** The server guesses yes, so the mic button does not flicker before showing. */
 const SUPPORTED_ON_SERVER = () => true;
 
 function micError(e: unknown): string {
@@ -70,14 +70,14 @@ export function useRecorder() {
   const chunksRef = useRef<BlobPart[]>([]);
   const startedAtRef = useRef(0);
   const cancelledRef = useRef(false);
-  /** Đang chờ quyền mic. Nhả tay lúc này thì phải huỷ, không để nó ghi tiếp. */
+  /** Waiting for mic permission. Releasing now must cancel, not keep recording. */
   const startingRef = useRef(false);
   const capRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
-  /** Người gọi đang chờ `stop()`. */
+  /** The caller is waiting on `stop()`. */
   const waiterRef = useRef<((r: Recording | null) => void) | null>(null);
-  /** Bản ghi xong khi tự dừng ở 30s, giữ lại cho lần `stop()` kế tiếp. */
+  /** A recording finished by the 30s auto-stop, kept for the next `stop()`. */
   const pendingRef = useRef<Recording | null>(null);
   const aliveRef = useRef(true);
 
@@ -96,8 +96,8 @@ export function useRecorder() {
   }, []);
 
   /**
-   * Tắt mic. Thiếu bước này thì chấm cam trên thanh trạng thái iOS không tắt,
-   * và lần ghi sau dễ bị kẹt.
+   * Turn the mic off. Without this the orange dot in the iOS status bar stays
+   * on, and the next recording may get stuck.
    */
   const releaseMic = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -111,7 +111,7 @@ export function useRecorder() {
     releaseMic();
   }, [stopMeter, releaseMic]);
 
-  // Rời trang giữa chừng vẫn phải trả mic lại cho hệ thống.
+  // Leaving the page midway must still give the mic back to the system.
   useEffect(() => {
     return () => {
       const rec = recRef.current;
@@ -129,11 +129,11 @@ export function useRecorder() {
     const Ctx =
       window.AudioContext ??
       (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return; // không đo được thì thôi, ghi âm vẫn chạy
+    if (!Ctx) return; // cannot measure, never mind - recording still works
 
     const ctx = new Ctx();
     audioCtxRef.current = ctx;
-    // iOS mở AudioContext ở trạng thái 'suspended' → waveform đứng im nếu quên.
+    // iOS opens AudioContext 'suspended' → the waveform freezes if this is forgotten.
     if (ctx.state === 'suspended') void ctx.resume().catch(() => {});
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
@@ -153,7 +153,7 @@ export function useRecorder() {
         const d = (v - 128) / 128;
         sum += d * d;
       }
-      // RMS nhân 3 vì giọng nói bình thường chỉ quanh 0.1–0.3.
+      // RMS times 3, because normal speech is only around 0.1–0.3.
       setLevel(Math.min(1, Math.sqrt(sum / buf.length) * 3));
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -173,7 +173,7 @@ export function useRecorder() {
         const waiter = waiterRef.current;
         waiterRef.current = null;
         if (waiter) waiter(r);
-        else pendingRef.current = r; // tự dừng ở 30s - giữ lại cho stop() sau
+        else pendingRef.current = r; // auto-stopped at 30s - keep it for a later stop()
         if (aliveRef.current) setState('idle');
       };
 
@@ -185,7 +185,7 @@ export function useRecorder() {
       let blob: Blob | null = new Blob(chunks, { type: mimeType });
       try {
         const base64 = await blobToBase64(blob);
-        blob = null; // không giữ audio lại
+        blob = null; // never keep the audio
         deliver({ base64, mimeType, durationMs });
       } catch (e) {
         blob = null;
@@ -197,8 +197,8 @@ export function useRecorder() {
   );
 
   /**
-   * PHẢI gọi thẳng từ sự kiện chạm. `getUserMedia` nằm ngay đầu hàm,
-   * không có `await` nào trước nó - Safari coi đó là mất user gesture.
+   * MUST be called directly from the tap event. `getUserMedia` is at the very
+   * top, with no `await` before it - Safari treats that as losing the user gesture.
    */
   const start = useCallback(async () => {
     if (recRef.current) return;
@@ -228,7 +228,7 @@ export function useRecorder() {
     }
     startingRef.current = false;
 
-    // Nhả tay quá nhanh, hoặc rời trang, trong lúc đang xin quyền.
+    // Released too fast, or left the page, while asking for permission.
     if (!aliveRef.current || cancelledRef.current) {
       stream.getTracks().forEach((t) => t.stop());
       if (aliveRef.current) setState('idle');
@@ -237,7 +237,7 @@ export function useRecorder() {
 
     streamRef.current = stream;
 
-    // iOS WebKit không hỗ trợ audio/webm - pickAudioMime() trả audio/mp4 ở đó.
+    // iOS WebKit does not support audio/webm - pickAudioMime() returns audio/mp4 there.
     const picked = pickAudioMime();
     let rec: MediaRecorder;
     try {
@@ -249,7 +249,7 @@ export function useRecorder() {
       return;
     }
 
-    // Trình duyệt có thể thêm `;codecs=opus`; Gemini chỉ nhận mime gốc.
+    // The browser may add `;codecs=opus`; Gemini only accepts the base mime.
     const mimeType = (rec.mimeType || picked || 'audio/mp4').split(';')[0];
 
     chunksRef.current = [];
@@ -273,13 +273,13 @@ export function useRecorder() {
     }, MAX_MS);
   }, [finish, meter, releaseMic]);
 
-  /** Trả null khi: bấm nhầm (< 400ms), đã cancel, hoặc chưa hề ghi. */
+  /** Returns null when: a mistap (< 400ms), cancelled, or never recorded. */
   const stop = useCallback((): Promise<Recording | null> => {
     const rec = recRef.current;
     if (!rec || rec.state === 'inactive') {
-      // Chạm rồi nhả trước khi trình duyệt trả quyền mic → đừng ghi nữa.
+      // Tapped and released before the browser granted the mic → do not record.
       if (startingRef.current) cancelledRef.current = true;
-      const done = pendingRef.current; // đã tự dừng ở mốc 30s
+      const done = pendingRef.current; // already auto-stopped at 30s
       pendingRef.current = null;
       return Promise.resolve(done);
     }
@@ -295,7 +295,7 @@ export function useRecorder() {
     pendingRef.current = null;
     const rec = recRef.current;
     if (rec && rec.state !== 'inactive') {
-      rec.stop(); // onstop dọn nốt và trả null
+      rec.stop(); // onstop cleans up and returns null
     } else {
       recRef.current = null;
       chunksRef.current = [];

@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { useTick } from '@/hooks/useActivities';
 import { useRecorder, type Recording } from '@/hooks/useRecorder';
 
-/** Vuốt lên quá ngần này rồi thả = huỷ, không gửi đi. */
+/** Swipe up past this and release = cancel, nothing is sent. */
 const CANCEL_DY = 80;
 
 function MicIcon() {
@@ -17,14 +17,14 @@ function MicIcon() {
   );
 }
 
-/** Đang xử lý: một chấm mờ dần rồi hiện lại, không có vòng quay (DESIGN.md). */
+/** Processing: a dot that fades out and back, no spinner (DESIGN.md). */
 function Spinner() {
   return <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-current" aria-hidden="true" />;
 }
 
 /**
- * FAB giữ-để-nói, nổi phía trên bottom nav.
- * Ẩn hẳn khi trình duyệt không ghi âm được - lúc đó chỉ còn nhập tay.
+ * Hold-to-talk FAB, floating above the bottom nav.
+ * Hidden when the browser cannot record - then only manual entry is left.
  */
 export default function MicButton({
   onResult,
@@ -33,12 +33,12 @@ export default function MicButton({
 }: {
   onResult: (r: Recording) => void;
   disabled?: boolean;
-  /** Đang chờ /api/parse trả lời. Giữ spinner để người dùng biết máy còn nghĩ. */
+  /** Waiting for /api/parse. Keep the indicator so the user knows it is still thinking. */
   thinking?: boolean;
 }) {
   const { state, start, stop, cancel, level, error, supported } = useRecorder();
   const [startedAt, setStartedAt] = useState(0);
-  const [armed, setArmed] = useState(false); // đang ở vùng huỷ
+  const [armed, setArmed] = useState(false); // in the cancel zone
   const startYRef = useRef(0);
 
   const recording = state === 'recording';
@@ -55,8 +55,8 @@ export default function MicButton({
     startYRef.current = e.clientY;
     setArmed(false);
     setStartedAt(Date.now());
-    navigator.vibrate?.(10); // Android rung nhẹ; iOS bỏ qua
-    // Gọi thẳng, KHÔNG await gì trước: Safari cần getUserMedia trong cùng tick chạm.
+    navigator.vibrate?.(10); // a light buzz on Android; iOS ignores it
+    // Call directly, NO await before it: Safari needs getUserMedia in the same tap tick.
     void start();
   }
 
@@ -103,7 +103,7 @@ export default function MicButton({
       ) : null}
 
       <div className="pointer-events-auto relative">
-        {/* Vòng sóng - to nhỏ theo `level`, nằm dưới nút nên không chắn ngón tay. */}
+        {/* Wave ring - grows and shrinks with `level`, sits under the button so it never blocks the finger. */}
         {recording ? (
           <span
             aria-hidden="true"
@@ -120,13 +120,13 @@ export default function MicButton({
           onPointerMove={move}
           onPointerUp={release}
           onPointerCancel={release}
-          // iOS hiện menu copy/paste khi giữ lâu nếu thiếu hai dòng này.
+          // Without these two lines iOS shows the copy/paste menu on a long press.
           onContextMenu={(e) => e.preventDefault()}
           style={{ touchAction: 'none', WebkitTouchCallout: 'none' }}
           className={[
-            // 64px trên điện thoại (ngón cái với tới), 56px trên desktop nơi có chuột.
+            // 64px on phones (thumb reach), 56px on desktop with a mouse.
             'relative flex h-16 w-16 select-none items-center justify-center rounded-full transition md:h-14 md:w-14',
-            // Bóng đậm + quầng sáng mỏng: tách hẳn nút khỏi nội dung phía sau.
+            // Strong shadow + a thin halo: sets the button apart from the content behind.
             'shadow-[0_8px_24px_rgb(0_0_0/0.28)] ring-1 ring-black/5',
             'disabled:opacity-50',
             recording

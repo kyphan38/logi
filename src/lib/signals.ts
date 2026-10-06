@@ -1,15 +1,15 @@
 // ---------------------------------------------------------------------------
-// logi - Chỉ số deterministic cho AI Insights (Stage 7 Task 1)
+// logi - Deterministic stats for AI Insights (Stage 7 Task 1)
 //
-// Quy tắc bất biến của Stage 7:
+// Stage 7's fixed rule:
 //
-//     Code tính toán. AI chỉ diễn giải và chọn cái đáng nói.
+//     Code computes. The AI only interprets and picks what is worth saying.
 //
-// File này là phần "code tính toán". Mọi con số mà model được phép viết ra
-// đều phải sinh ra ở đây trước. Model không bao giờ nhìn thấy record thô.
+// This file is the "code computes" part. Every number the model may write
+// must be produced here first. The model never sees raw records.
 //
-// Thuần: không React, không Firestore, không Gemini. Test bằng `node --test`.
-// Không sửa `logi.ts` / `balance.ts` - chỉ dùng lại.
+// Pure: no React, no Firestore, no Gemini. Tested with `node --test`.
+// Reuses `logi.ts` / `balance.ts` without changing them.
 // ---------------------------------------------------------------------------
 import { logicalDate } from '@/lib/balance';
 import { dailyTargetFor } from '@/lib/day-target';
@@ -29,32 +29,32 @@ import {
 const H = 3_600_000;
 const MIN = 60_000;
 
-/** Dưới ngần này mẫu thì mọi liên hệ chéo đều là ngẫu nhiên → trả `null`. */
+/** Below this many samples every cross-correlation is chance → return `null`. */
 export const MIN_SAMPLE = 3;
 
-/** Ngày Work nhiều: trên 9h. Dùng cho nhóm G và `skippedAfterWorkDays`. */
+/** A heavy Work day: over 9h. For group G and `skippedAfterWorkDays`. */
 export const HIGH_WORK_H = 9;
 
 /**
- * Không còn dữ liệu ngủ (AMENDMENT-remove-sleep mục 10), nên dùng HOẠT ĐỘNG
- * KHUYA làm chỉ báo gián tiếp. Hoạt động cuối cùng kết thúc lúc 22:00 hay 01:00
- * nói lên khá nhiều, dù không chính xác bằng giờ đi ngủ thật.
+ * No sleep data anymore (AMENDMENT-remove-sleep section 10), so LATE ACTIVITY
+ * is used as an indirect signal. Whether the last activity ends at 22:00 or
+ * 01:00 says a lot, though less precisely than a real bedtime.
  */
 export const LATE_NIGHT_MIN = 23 * 60;
-/** Bắt đầu ngày trước mốc này là dậy sớm. */
+/** Starting the day before this mark counts as early. */
 export const EARLY_START_MIN = 6 * 60;
 
 // ---------------------------------------------------------------------------
-// Kiểu dữ liệu
+// Types
 // ---------------------------------------------------------------------------
 
-/** Nhóm A - mọi category đo cùng một bộ chỉ số, không ưu ái cái nào. */
+/** Group A - every category gets the same set of stats, no favorites. */
 export interface CatStat {
   actual: number;
   expected: number;
-  /** (actual − expected) / expected. Không có target → null. */
+  /** (actual − expected) / expected. No target → null. */
   deviationPct: number | null;
-  /** Chênh giờ so với kỳ trước. Không có kỳ trước → null. */
+  /** Hour change versus the previous period. No previous period → null. */
   deltaVsPrevious: number | null;
   sessions: number;
   medianSessionMin: number | null;
@@ -63,21 +63,21 @@ export interface CatStat {
 }
 
 /**
- * Nhóm B - Nhịp ngày, thay cho nhóm Sleep cũ.
+ * Group B - Day rhythm, replacing the old Sleep group.
  *
- * Mọi con số ở đây đo HOẠT ĐỘNG ĐÃ LOG, không suy ra giấc ngủ. App không biết
- * người dùng ngủ lúc nào và không được đoán.
+ * Every number here measures LOGGED ACTIVITY, never inferred sleep. The app
+ * does not know when the user sleeps and must not guess.
  */
 export interface NightSignals {
-  /** Số ngày có bất kỳ activity nào chạm mốc sau 23:00. */
+  /** Days with any activity reaching past 23:00. */
   lateNightActivityDays: number;
-  /** Trung vị giờ kết thúc activity cuối cùng, phút trên trục ngày logic. */
+  /** Median end time of the last activity, minutes on the logical-day axis. */
   lastActivityMedian: number | null;
-  /** Dao động của giờ đó, phút. */
+  /** Spread of that time, in minutes. */
   lastActivitySpreadMin: number | null;
-  /** Số ngày có activity đầu tiên bắt đầu trước 06:00. */
+  /** Days whose first activity starts before 06:00. */
   earlyStartDays: number;
-  /** Số ngày có log, dùng làm mẫu số khi đọc bốn con số trên. */
+  /** Days with logs, the denominator for reading the four numbers above. */
   daysWithActivity: number;
 }
 
@@ -123,7 +123,7 @@ export interface LeisureSignals {
   weekendLeisureHours: number;
 }
 
-/** Mọi chỉ số nhóm G bắt buộc kèm `sampleSize`. */
+/** Every group G stat must carry `sampleSize`. */
 export interface Link {
   value: number;
   sampleSize: number;
@@ -132,7 +132,7 @@ export interface Link {
 export interface LinkSignals {
   learnOnHighWorkDays: Link | null;
   learnOnNormalDays: Link | null;
-  /** Học được bao nhiêu ở ngày SAU một ngày còn hoạt động sau 23:00. */
+  /** How much Learn happened on the day AFTER a day with activity past 23:00. */
   learnAfterLateNights: Link | null;
   weekendLearnVsWeekendWork: { learn: number; work: number; sampleSize: number } | null;
   displacedBy: {
@@ -149,10 +149,10 @@ export interface Signals {
   to: string;
   rangeLabel: string;
   dayCount: number;
-  /** Số ngày đã thực sự sống trong khoảng - ngày mai không thể có zeroDays. */
+  /** Days actually lived in the range - tomorrow cannot have zeroDays. */
   elapsedDays: number;
   preset: PresetId | null;
-  /** Chất lượng log của khoảng (mục 3.2). Thay cho tỉ lệ trên nền 24h cũ. */
+  /** The range's log quality (section 3.2). Replaces the old ratio against 24h. */
   logQuality: LogQuality;
   overlapHours: number;
   recordCount: number;
@@ -172,8 +172,8 @@ export interface PreviousPeriod {
 }
 
 /**
- * Khoảng liền trước, cùng độ dài. Dùng cho `deltaVsPrevious` và `displacedBy`.
- * Tách ra để UI query đúng cửa sổ mà `computeSignals` mong đợi.
+ * The previous range, same length. For `deltaVsPrevious` and `displacedBy`.
+ * Kept separate so the UI queries exactly the window `computeSignals` expects.
  */
 export function previousRange(range: Range): Range {
   const n = daysBetween(range.from, range.to);
@@ -186,7 +186,7 @@ export function previousRange(range: Range): Range {
 }
 
 // ---------------------------------------------------------------------------
-// Tiện ích nội bộ
+// Internal helpers
 // ---------------------------------------------------------------------------
 
 function zero(): Record<Category, number> {
@@ -210,34 +210,33 @@ function minutesOfDay(ts: number): number {
 }
 
 /**
- * Trục NGÀY LOGIC: phút trong ngày, nhưng giờ trước mốc cắt 04:00 được đẩy
- * sang cuối. 06:00 → 360, 23:30 → 1410, 01:00 → 1500.
+ * The LOGICAL DAY axis: minutes in the day, but hours before the 04:00 cut are
+ * pushed to the end. 06:00 → 360, 23:30 → 1410, 01:00 → 1500.
  *
- * Cần trục này để so sánh hai mốc thời gian trong cùng một ngày logic. Không
- * có nó thì "hoạt động cuối cùng lúc 01:00" ra 60 phút, hoá ra sớm hơn cả
- * 06:00 sáng - sai hoàn toàn. Giá trị luôn nằm trong [240, 1679] nên trung vị
- * và độ dao động đều đúng thứ tự.
+ * Needed to compare two times within one logical day. Without it "last
+ * activity at 01:00" becomes 60 minutes, earlier than 06:00 - completely
+ * wrong. Values always sit in [240, 1679], so median and spread keep order.
  */
 function dayAxis(min: number): number {
   return min < DAY_CUTOFF_HOUR * 60 ? min + 1440 : min;
 }
 
-/** Một session đã cắt gọn trong cửa sổ khoảng. */
+/** A session clipped to the range window. */
 interface Sess {
   category: Category;
-  /** Đã cắt. */
+  /** Clipped. */
   start: number;
   end: number;
-  /** Nguyên bản - dùng cho giờ đi ngủ / giờ dậy. */
+  /** Original - for bedtime / wake time. */
   rawStart: number;
   rawEnd: number;
-  /** Ngày logic của thời điểm bắt đầu. */
+  /** The logical day of the start time. */
   day: string;
   minutes: number;
   fullHours: number;
 }
 
-/** Một lát của session nằm gọn trong MỘT ngày lịch, tính bằng phút. */
+/** A slice of a session within ONE calendar day, in minutes. */
 interface Seg {
   weekday: number;
   startMin: number;
@@ -258,13 +257,13 @@ function nextMidnight(ts: number): number {
 }
 
 /**
- * Cắt [s, e) theo ngày LỊCH (nửa đêm), không phải ngày logic.
- * "Work ngoài 08:00–17:00" nói về đồng hồ treo tường, nên mốc phải là 00:00.
+ * Splits [s, e) by CALENDAR day (midnight), not logical day.
+ * "Work outside 08:00–17:00" is about the wall clock, so the cut is 00:00.
  */
 function calSegments(s: number, e: number): Seg[] {
   const out: Seg[] = [];
   let cur = s;
-  // Chặn vòng lặp vô hạn nếu ai đó truyền vào khoảng vô lý.
+  // Guards against an infinite loop if someone passes a nonsense range.
   for (let guard = 0; cur < e && guard < 400; guard++) {
     const day0 = midnightOf(cur);
     const day1 = nextMidnight(cur);
@@ -285,7 +284,7 @@ function overlapMin(seg: Seg, a: number, b: number): number {
 
 const isWeekend = (weekday: number) => weekday === 0 || weekday === 6;
 
-/** Tổng giờ của một category rơi vào các khung giờ trong ngày. */
+/** Total hours of a category falling into given hours of the day. */
 function hoursInWindows(
   sessions: Sess[],
   category: Category,
@@ -303,7 +302,7 @@ function hoursInWindows(
   return min / 60;
 }
 
-/** Giờ NGOÀI một khung, trong các ngày được chọn. */
+/** Hours OUTSIDE a window, on the chosen days. */
 function hoursOutsideWindow(
   sessions: Sess[],
   category: Category,
@@ -327,10 +326,10 @@ function hoursOutsideWindow(
 // ---------------------------------------------------------------------------
 
 /**
- * @param expected    `expectedForRange()` của Stage 5 - target theo lịch
- * @param weekTargets target từng tuần; cần cho target NGÀY (`learnStreak`,
- *                    `weekendLearnTarget`) mà tổng `expected` không cho biết
- * @param previous    kỳ trước cùng độ dài (`previousRange`), có thể bỏ trống
+ * @param expected    Stage 5's `expectedForRange()` - the calendar target
+ * @param weekTargets per-week targets; needed for DAILY targets (`learnStreak`,
+ *                    `weekendLearnTarget`) that the `expected` total cannot give
+ * @param previous    the previous same-length period (`previousRange`), optional
  */
 export function computeSignals(
   activities: Activity[],
@@ -397,7 +396,7 @@ function round1(v: number | null): number | null {
   return v === null ? null : Math.round(v * 10) / 10;
 }
 
-/** Preset của tuần đầu tiên trong khoảng, nếu nó khớp đúng một preset. */
+/** The preset of the range's first week, if it matches exactly one preset. */
 function presetOf(
   range: Range,
   weekTargets: Map<string, Record<Category, number>>
@@ -436,7 +435,7 @@ function toSessions(activities: Activity[], range: Range, now: number): Sess[] {
   return out.sort((x, y) => x.start - y.start);
 }
 
-/** Giờ theo NGÀY LOGIC × category. Session vắt qua 04:00 bị chia cho hai ngày. */
+/** Hours per LOGICAL DAY × category. A session crossing 04:00 is split across two days. */
 function hoursByDay(sessions: Sess[], days: string[]): Map<string, Record<Category, number>> {
   const map = new Map<string, Record<Category, number>>();
   for (const d of days) map.set(d, zero());
@@ -455,33 +454,33 @@ function hoursByDay(sessions: Sess[], days: string[]): Map<string, Record<Catego
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm B - Nhịp ngày (thay nhóm Sleep)
+// Group B - Day rhythm (replaces the Sleep group)
 // ---------------------------------------------------------------------------
 
-/** Một ngày logic có log, rút gọn còn hai đầu mút. */
+/** A logical day with logs, reduced to its two ends. */
 interface DayEdges {
   day: string;
-  /** Phút bắt đầu của activity SỚM NHẤT, trên trục ngày logic. */
+  /** Start minute of the EARLIEST activity, on the logical-day axis. */
   firstStartMin: number;
-  /** Phút kết thúc của activity MUỘN NHẤT, trên trục ngày logic. */
+  /** End minute of the LATEST activity, on the logical-day axis. */
   lastEndMin: number;
-  /** Có activity nào chạm mốc sau 23:00 không. */
+  /** Whether any activity reaches past 23:00. */
   late: boolean;
 }
 
 /**
- * Hai đầu mút của mỗi ngày logic.
+ * The two ends of each logical day.
  *
- * Gộp theo `s.day` (ngày logic của `startAt`), đúng quy tắc mục 7: session
- * 23:00 → 01:00 thuộc trọn ngày hôm trước, nên nó kéo dài `lastEndMin` của
- * ngày đó chứ không mở đầu ngày hôm sau.
+ * Grouped by `s.day` (the logical day of `startAt`), per section 7: a
+ * 23:00 → 01:00 session belongs entirely to the previous day, so it extends
+ * that day's `lastEndMin` rather than starting the next day.
  */
 function dayEdges(sessions: Sess[]): DayEdges[] {
   const map = new Map<string, DayEdges>();
 
   for (const s of sessions) {
-    // Cả hai đầu đều trên trục ngày logic: có thế mới so sánh được 05:00 với
-    // 01:00 của cùng một ngày.
+    // Both ends on the logical-day axis: only then can 05:00 and 01:00 of the
+    // same day be compared.
     const startMin = dayAxis(minutesOfDay(s.rawStart));
     const endMin = dayAxis(minutesOfDay(s.rawEnd));
     const late = endMin >= LATE_NIGHT_MIN;
@@ -517,7 +516,7 @@ function round0(v: number | null): number | null {
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm C - Work
+// Group C - Work
 // ---------------------------------------------------------------------------
 
 const WORK_START = 8 * 60;
@@ -526,8 +525,8 @@ const LATE_WORK = 20 * 60;
 const OFFICE_START = 7 * 60 + 45;
 
 /**
- * "Làm khuya" gồm cả phần tràn qua nửa đêm - mốc cắt ngày của app là 04:00,
- * nên 00:30 vẫn là buổi tối hôm trước, không phải sáng sớm hôm sau.
+ * "Late work" includes the part past midnight - the app's day cut is 04:00,
+ * so 00:30 is still the evening before, not early next morning.
  */
 const LATE_WINDOWS: [number, number][] = [
   [LATE_WORK, 1440],
@@ -549,8 +548,8 @@ function workSignals(
     }
   }
 
-  // Giờ kết thúc Work của từng ngày lịch - dao động lớn nghĩa là hết giờ
-  // làm mỗi hôm một khác, thứ mà tổng giờ Work không cho thấy.
+  // Work end time per calendar day - a wide spread means a different finish
+  // every day, which total Work hours do not show.
   const ends = new Map<string, number>();
   const starts = new Set<string>();
   for (const s of sessions) {
@@ -558,8 +557,8 @@ function workSignals(
     const dayKey = logicalDate(s.rawStart);
     const endMin = dayAxis(minutesOfDay(s.rawEnd));
     ends.set(dayKey, Math.max(ends.get(dayKey) ?? 0, endMin));
-    // Cùng trục với `endMin`: ca làm bắt đầu 01:00 là làm khuya, không phải
-    // đi làm sớm.
+    // Same axis as `endMin`: a shift starting at 01:00 is late work, not an
+    // early start.
     if (dayAxis(minutesOfDay(s.rawStart)) < OFFICE_START) starts.add(dayKey);
   }
   const endList = [...ends.values()];
@@ -577,15 +576,15 @@ function workSignals(
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm D - Learn
+// Group D - Learn
 // ---------------------------------------------------------------------------
 
 const MORNING_START = 4 * 60;
 const MORNING_END = 8 * 60;
-const MORNING_MARK = 7 * 60; // "có học buổi sáng" = bắt đầu trước 07:00
+const MORNING_MARK = 7 * 60; // "studied in the morning" = started before 07:00
 const EVENING_START = 20 * 60;
 const EVENING_END = 23 * 60;
-/** Đạt ngày học: từ 50% target ngày đó trở lên. */
+/** A study day counts: 50% or more of that day's target. */
 export const STREAK_RATIO = 0.5;
 
 function learnSignals(
@@ -607,15 +606,15 @@ function learnSignals(
     }
   }
 
-  // Target Learn của từng ngày - cần cho streak và target cuối tuần.
+  // Each day's Learn target - needed for the streak and the weekend target.
   const targetOf = (d: string) =>
     dailyTargetFor(weekdayOf(d), weekTargets.get(weekOf(d)) ?? PRESETS.normal.weekly).learn;
 
   let weekendTarget = 0;
   for (const d of elapsed) if (isWeekend(weekdayOf(d))) weekendTarget += targetOf(d);
 
-  // Chuỗi tính NGƯỢC từ ngày cuối đã sống. Hôm nay còn dở dang thì bỏ qua:
-  // 10 giờ sáng mà bắt so với target cả ngày thì chuỗi nào cũng đứt.
+  // The streak counts BACK from the last lived day. An unfinished today is
+  // skipped: at 10 am against a full day's target every streak would break.
   let streak = 0;
   const walk = [...elapsed];
   if (range.isPartial && walk[walk.length - 1] === today) walk.pop();
@@ -645,8 +644,8 @@ function learnSignals(
 }
 
 /**
- * Thứ nào Learn thấp nhất. Cần đủ 7 ngày, nếu không thì "thứ Ba tệ nhất"
- * chỉ có nghĩa là "khoảng này chỉ có một thứ Ba".
+ * The weekday with the lowest Learn. Needs all 7 days, otherwise "Tuesday is
+ * worst" only means "this range has one Tuesday".
  */
 function worstWeekday(
   byDay: Map<string, Record<Category, number>>,
@@ -666,7 +665,7 @@ function worstWeekday(
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm E - Fitness
+// Group E - Fitness
 // ---------------------------------------------------------------------------
 
 function fitnessSignals(
@@ -683,7 +682,7 @@ function fitnessSignals(
   const fitDays = [...new Set(fit.map((s) => s.day))].sort();
   let longestGap: number | null = null;
   for (let i = 1; i < fitDays.length; i++) {
-    // `daysBetween` đếm cả hai đầu → trừ một để ra số ngày cách nhau.
+    // `daysBetween` counts both ends → subtract one for the gap in days.
     const gap = daysBetween(fitDays[i - 1], fitDays[i]) - 1;
     if (longestGap === null || gap > longestGap) longestGap = gap;
   }
@@ -706,7 +705,7 @@ function fitnessSignals(
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm F - Leisure
+// Group F - Leisure
 // ---------------------------------------------------------------------------
 
 const LATE_LEISURE = 22 * 60;
@@ -715,7 +714,7 @@ function leisureSignals(sessions: Sess[]): LeisureSignals {
   const lei = sessions.filter((s) => s.category === 'leisure');
   const durations = lei.map((s) => s.minutes);
 
-  // Cùng lối tính với `lateWorkHours`, chỉ khác mốc giờ.
+  // Same method as `lateWorkHours`, only a different time mark.
   const lateWindows: [number, number][] = [
     [LATE_LEISURE, 1440],
     [0, 4 * 60],
@@ -724,8 +723,8 @@ function leisureSignals(sessions: Sess[]): LeisureSignals {
   return {
     hours: lei.reduce((a, s) => a + s.minutes / 60, 0),
     lateLeisureHours: hoursInWindows(sessions, 'leisure', lateWindows),
-    // `leisureNightsDelayingSleep` đã bỏ (mục 10): không còn dữ liệu ngủ để nói
-    // rằng xem khuya làm ngủ muộn. `lateLeisureHours` là con số thô còn đúng.
+    // `leisureNightsDelayingSleep` was removed (section 10): no sleep data to say
+    // late watching delays sleep. `lateLeisureHours` is the raw number that still holds.
     longestBlockMin: durations.length ? Math.round(Math.max(...durations)) : null,
     weekdayLeisureHours: hoursInWindows(sessions, 'leisure', [[0, 1440]], (w) => !isWeekend(w)),
     weekendLeisureHours: hoursInWindows(sessions, 'leisure', [[0, 1440]], isWeekend),
@@ -733,7 +732,7 @@ function leisureSignals(sessions: Sess[]): LeisureSignals {
 }
 
 // ---------------------------------------------------------------------------
-// Nhóm G - Liên hệ chéo. Chỉ mô tả, không nhân quả. Dưới 3 mẫu → null.
+// Group G - Cross-correlations. Description only, no causation. Under 3 samples → null.
 // ---------------------------------------------------------------------------
 
 function link(values: number[]): Link | null {
@@ -759,9 +758,9 @@ function linkSignals(i: {
     (row.work > HIGH_WORK_H ? high : normal).push(row.learn);
   }
 
-  // Ngày SAU một ngày còn hoạt động sau 23:00. Thay cho `learnAfterShortNights`
-  // cũ: không còn dữ liệu ngủ, nhưng "hôm qua thức khuya" vẫn đo được.
-  // Chỉ mô tả, không kết luận nhân quả.
+  // The day AFTER a day with activity past 23:00. Replaces the old
+  // `learnAfterShortNights`: no sleep data, but "up late yesterday" is still measurable.
+  // Description only, no causal claim.
   const afterLateNightLearn: number[] = [];
   for (const e of edges) {
     if (!e.late) continue;
@@ -795,7 +794,7 @@ function linkSignals(i: {
   };
 }
 
-/** Đổi chỗ: category nào tăng nhiều nhất, category nào giảm nhiều nhất. */
+/** Displacement: which category rose most, which fell most. */
 const DISPLACE_MIN_H = 1;
 
 function displacedBy(

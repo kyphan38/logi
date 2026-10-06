@@ -39,58 +39,58 @@ const row = (
 });
 
 // ------------------------------------------------------------
-// Kích hoạt
+// Trigger
 // ------------------------------------------------------------
 
-test('Chủ nhật 19:00 → hiện review tuần này', () => {
+test('Sunday 19:00 → show the review for this week', () => {
   assert.equal(reviewDueWeek(at('2026-08-30', '19:00'), () => false), W35);
 });
 
-test('Chủ nhật 18:59 → chưa hiện', () => {
+test('Sunday 18:59 → not yet', () => {
   assert.equal(reviewDueWeek(at('2026-08-30', '18:59'), () => false), null);
 });
 
-test('đã review rồi → không hiện lại', () => {
+test('already reviewed → do not show again', () => {
   const now = at('2026-08-30', '20:00');
   assert.equal(reviewDueWeek(now, (w) => w === W35), null);
 });
 
-test('lỡ Chủ nhật → thứ Hai và thứ Ba vẫn mở, trỏ về tuần trước', () => {
+test('missed Sunday → Monday and Tuesday still open, pointing at last week', () => {
   assert.equal(reviewDueWeek(at('2026-08-31', '10:00'), () => false), W35); // T2
   assert.equal(reviewDueWeek(at('2026-09-01', '23:00'), () => false), W35); // T3
 });
 
-test('thứ Tư trở đi → thôi, tuần đó coi như bỏ qua', () => {
+test('Wednesday on → give up, that week is skipped', () => {
   assert.equal(reviewDueWeek(at('2026-09-02', '10:00'), () => false), null);
 });
 
-test('giữa tuần không hiện banner', () => {
+test('no banner mid-week', () => {
   assert.equal(reviewDueWeek(at('2026-08-27', '19:00'), () => false), null);
 });
 
 // ------------------------------------------------------------
-// Khoảng tuần
+// Week range
 // ------------------------------------------------------------
 
-test('weekRange trả đúng T2 → CN', () => {
+test('weekRange returns Mon → Sun', () => {
   const r = weekRange(W35, at('2026-08-31', '10:00'));
   assert.equal(r.from, '2026-08-24');
   assert.equal(r.to, '2026-08-30');
 });
 
-test('tuần đã xong → isPartial false, KHÔNG pro-rate', () => {
+test('finished week → isPartial false, NO pro-rate', () => {
   assert.equal(weekRange(W35, at('2026-08-31', '10:00')).isPartial, false);
 });
 
-test('đúng tối Chủ nhật → isPartial true, target hôm đó được pro-rate', () => {
+test('on Sunday evening → isPartial true, the target for that day is pro-rated', () => {
   assert.equal(weekRange(W35, at('2026-08-30', '19:00')).isPartial, true);
 });
 
 // ------------------------------------------------------------
-// Màn 1 - số liệu
+// Screen 1 - numbers
 // ------------------------------------------------------------
 
-test('review tuần đã xong: Work expected đúng 43h, không phải 30.7h', () => {
+test('review of a finished week: Work expected is 43h, not 30.7h', () => {
   const s = buildReview({
     week: W35,
     activities: [],
@@ -103,7 +103,7 @@ test('review tuần đã xong: Work expected đúng 43h, không phải 30.7h', (
   assert.notEqual(r1(work.expected), 30.7);
 });
 
-test('title có số tuần và khoảng ngày', () => {
+test('title has the week number and date range', () => {
   const s = buildReview({
     week: W35,
     activities: [],
@@ -114,7 +114,7 @@ test('title có số tuần và khoảng ngày', () => {
   assert.match(s.title, /^Week 35 · /);
 });
 
-test('actual cộng đúng từ record trong tuần', () => {
+test('actual sums the records in the week', () => {
   const acts = [
     act({ startAt: at('2026-08-24', '09:00'), endAt: at('2026-08-24', '17:00'), category: 'work' }),
     act({ startAt: at('2026-08-25', '19:00'), endAt: at('2026-08-25', '22:00'), category: 'learn' }),
@@ -131,7 +131,7 @@ test('actual cộng đúng từ record trong tuần', () => {
 });
 
 // ------------------------------------------------------------
-// Màn 2 - notes
+// Screen 2 - notes
 // ------------------------------------------------------------
 
 const noteBase = {
@@ -142,7 +142,7 @@ const noteBase = {
   now: at('2026-08-31', '10:00'),
 };
 
-/** LogQuality giả - chỉ hai con số mà `pickNotes` thật sự đọc. */
+/** Fake LogQuality - only the two numbers `pickNotes` actually reads. */
 function q(loggedDays: number, totalDays = 7): LogQuality {
   return {
     trackedHours: loggedDays * 9,
@@ -154,7 +154,7 @@ function q(loggedDays: number, totalDays = 7): LogQuality {
   };
 }
 
-test('không có gì đáng nói → một dòng balanced', () => {
+test('nothing worth saying → one balanced line', () => {
   const notes = pickNotes({
     ...noteBase,
     rows: [row('work', 43, 43, 'ok')],
@@ -163,7 +163,7 @@ test('không có gì đáng nói → một dòng balanced', () => {
   assert.deepEqual(notes, [BALANCED]);
 });
 
-test('tối đa hai dòng', () => {
+test('at most two lines', () => {
   const notes = pickNotes({
     ...noteBase,
     rows: [row('learn', 22.4, 31, 'under'), row('work', 51.2, 43, 'over')],
@@ -173,7 +173,7 @@ test('tối đa hai dòng', () => {
   assert.equal(notes.length, 2);
 });
 
-test('lệch lớn nhất theo giờ được chọn trước', () => {
+test('biggest gap in hours is picked first', () => {
   const notes = pickNotes({
     ...noteBase,
     rows: [row('leisure', 9, 6, 'over'), row('work', 51.2, 43, 'over')],
@@ -182,7 +182,7 @@ test('lệch lớn nhất theo giờ được chọn trước', () => {
   assert.match(notes[0], /Work/);
 });
 
-test('flag ok không bao giờ thành note', () => {
+test('an ok flag never becomes a note', () => {
   const notes = pickNotes({
     ...noteBase,
     rows: [row('work', 44, 43, 'ok')],
@@ -191,17 +191,17 @@ test('flag ok không bao giờ thành note', () => {
   assert.deepEqual(notes, [BALANCED]);
 });
 
-test('log quá thưa được nêu số ngày', () => {
+test('sparse logging names the day count', () => {
   const notes = pickNotes({ ...noteBase, rows: [], quality: q(3) });
   assert.match(notes[0], /Only 3 of 7 days are logged well enough/);
 });
 
-test('log đủ dày → không nhắc', () => {
+test('dense enough logging → no mention', () => {
   const notes = pickNotes({ ...noteBase, rows: [], quality: q(6) });
   assert.deepEqual(notes, [BALANCED]);
 });
 
-test('crunch streak 4/6 được nêu', () => {
+test('crunch streak 4/6 is mentioned', () => {
   const history = [
     { preset: 'crunch' as PresetId },
     { preset: 'normal' as PresetId },
@@ -214,7 +214,7 @@ test('crunch streak 4/6 được nêu', () => {
   assert.match(notes[0], /Crunch: 4 of the last 6 weeks/);
 });
 
-test('OT cuối tuần được ưu tiên lên đầu', () => {
+test('weekend OT goes to the top', () => {
   const acts = [
     act({ startAt: at('2026-08-29', '09:00'), endAt: at('2026-08-29', '17:00'), category: 'work' }),
   ];
@@ -225,36 +225,36 @@ test('OT cuối tuần được ưu tiên lên đầu', () => {
     quality: q(7),
   });
   assert.equal(notes.length, 2);
-  assert.match(notes[0], /cuối tuần/);
+  assert.match(notes[0], /Weekend OT/);
 });
 
 // ------------------------------------------------------------
-// Màn 3 - tuần tới
+// Screen 3 - next week
 // ------------------------------------------------------------
 
-test('planNextWeek trỏ đúng tuần kế tiếp', () => {
+test('planNextWeek points at the next week', () => {
   assert.equal(planNextWeek(W35, 'normal', {}).week, W36);
 });
 
-test('không nợ → không có dòng carrying over', () => {
+test('no debt → no carrying over line', () => {
   assert.equal(planNextWeek(W35, 'normal', {}).debtNote, '');
 });
 
-test('có nợ → nêu rõ số giờ cộng thêm (50% theo DEBT_CARRYOVER_RATE)', () => {
+test('with debt → states the added hours (50% per DEBT_CARRYOVER_RATE)', () => {
   const p = planNextWeek(W35, 'normal', { learn: 6 });
   assert.match(p.debtNote, /Carrying over: Learn \+3h debt/);
   assert.equal(p.applied.learn, 3);
-  // Nửa còn lại vẫn nằm trong sổ nợ, không bốc hơi.
+  // The other half stays in the debt ledger, it does not vanish.
   assert.equal(p.remaining.learn, 3);
 });
 
-test('weekly của plan giữ nguyên tổng ngân sách', () => {
+test('plan weekly keeps the total budget', () => {
   const p = planNextWeek(W35, 'deep_learn', { learn: 6 });
   const total = Object.values(p.weekly).reduce((a, b) => a + b, 0);
   assert.equal(r1(total), 89);
 });
 
-test('tuần đã qua → chỉ xem, không cho đặt preset', () => {
+test('past week → view only, no preset choice', () => {
   const now = at('2026-09-14', '12:00'); // W38
   assert.equal(canSetNextWeek(W35, now), false);
   assert.equal(canSetNextWeek('2026-W37', now), true);

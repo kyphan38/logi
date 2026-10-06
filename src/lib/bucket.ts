@@ -1,30 +1,30 @@
 // ---------------------------------------------------------------------------
-// logi - Gộp khoảng thành các cột cho stacked bar (Stage 5 Task 4)
+// logi - Grouping a range into stacked bar columns (Stage 5 Task 4)
 //
-// 30 cột trên màn 375px không ai đọc được: nhãn chồng lên nhau, mỗi cột rộng
-// 5px. Nên quy tắc là cứng:
-//   ≤ 14 ngày  → 1 cột / ngày
-//   > 14 ngày  → 1 cột / tuần logic
+// 30 columns on a 375px screen are unreadable: labels overlap, each column
+// is 5px wide. So the rule is fixed:
+//   ≤ 14 days  → 1 column / day
+//   > 14 days  → 1 column / logical week
 //
-// File thuần: không React, không Firestore.
+// Pure file: no React, no Firestore.
 // ---------------------------------------------------------------------------
 import { logicalDate } from '@/lib/balance';
 import { daysBetween, daysOf, weekOf, weekdayOf, type Range } from '@/lib/range';
 import { weekLabel } from '@/lib/week';
 
-/** Quá ngưỡng này thì đổi sang gộp theo tuần. */
+/** Beyond this threshold, switch to weekly grouping. */
 export const MAX_DAY_COLUMNS = 14;
 
 export type BucketMode = 'day' | 'week';
 
 export interface Bucket {
-  /** Khoá ổn định cho React và cho Recharts. */
+  /** A stable key for React and Recharts. */
   key: string;
-  /** Nhãn trục X: "Mon 24" hoặc "W35". */
+  /** X-axis label: "Mon 24" or "W35". */
   label: string;
-  /** Khoảng con, dùng lại được với `actualForRange` / `expectedForRange`. */
+  /** The sub-range, reusable with `actualForRange` / `expectedForRange`. */
   range: Range;
-  /** Số ngày logic thật sự nằm trong cột (tuần ở hai đầu có thể bị cắt). */
+  /** Logical days really in the column (weeks at either end may be cut). */
   days: number;
 }
 
@@ -33,9 +33,9 @@ export function bucketMode(range: { from: string; to: string }): BucketMode {
 }
 
 /**
- * Cắt khoảng thành các cột. Tuần ở hai đầu bị cắt theo đúng biên của khoảng -
- * không kéo dài ra ngoài, nếu không cột đầu sẽ trông thấp giả tạo so với target
- * của cả tuần.
+ * Splits a range into columns. Weeks at either end are cut at the range edge -
+ * never extended beyond it, or the first column would look falsely low against
+ * a full week's target.
  */
 export function bucketsOf(range: Range, now: number = Date.now()): Bucket[] {
   const days = daysOf(range);
@@ -46,7 +46,7 @@ export function bucketsOf(range: Range, now: number = Date.now()): Bucket[] {
     from,
     to,
     kind: 'custom',
-    // Chỉ cột chứa hôm nay mới dở dang, và chỉ khi cả khoảng đang dở dang.
+    // Only the column holding today is unfinished, and only if the whole range is.
     isPartial: range.isPartial && from <= today && today <= to,
   });
 
@@ -78,8 +78,8 @@ const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 /**
  * "2026-08-24" → "Mon 24".
  *
- * Ghép tay chứ không dùng `toLocaleDateString`: locale của máy quyết định thứ
- * tự ("24 Mon" ở nhiều nơi), mà trục X thì phải giống nhau ở mọi máy.
+ * Built by hand, not `toLocaleDateString`: the device locale decides the order
+ * ("24 Mon" in many places), but the X axis must be the same on every device.
  */
 export function dayLabel(date: string): string {
   const [, , d] = date.split('-').map(Number);

@@ -7,27 +7,27 @@ import { clockTime } from '@/lib/datetime';
 import { CATEGORY_LABEL, type Category } from '@/types/logi';
 
 // -----------------------------------------------------------------------------
-// logi - "Khi nào bắt đầu" (giữ lâu một nút category)
+// logi - "When did it start" (long-press a category button)
 //
-// Ba đường vào cùng một câu hỏi, xếp theo mức độ hay dùng:
-//   1. chip khoảng cách  - 7:30 mới nhớ mở app, thật ra làm từ 7:15
-//   2. ô giờ cụ thể      - nhớ chính xác, hoặc lâu hơn 1 tiếng
-//   3. chiều After       - hẹn giờ trước, ghi status 'scheduled'
+// Three ways into the same question, ordered by how often they are used:
+//   1. offset chips   - opened the app at 7:30, really started at 7:15
+//   2. exact time     - you remember it exactly, or it was over an hour ago
+//   3. After          - schedule ahead, saved with status 'scheduled'
 //
-// Chip commit NGAY, không có bước xác nhận: đằng nào toast cũng có Undo 5 giây.
-// Ô giờ cụ thể thì phải bấm nút - gõ giờ là việc dễ gõ nhầm.
+// Chips commit AT ONCE, no confirm step: the toast has a 5-second Undo anyway.
+// The exact time needs a button tap - typing a time is easy to get wrong.
 //
-// Mọi nhãn giờ đọc từ prop `now` chứ không phải `Date.now()`. Nhãn hiện ra và
-// mốc thật sự ghi xuống vì thế không bao giờ vênh nhau.
+// Every time label reads the `now` prop, not `Date.now()`. So the label shown
+// and the time actually saved never disagree.
 // -----------------------------------------------------------------------------
 
-/** Bốn khoảng quen thuộc. Xa hơn 1 tiếng thì gõ giờ nhanh hơn là đếm chip. */
+/** Four familiar offsets. Beyond an hour, typing the time beats counting chips. */
 const OFFSETS = [5, 15, 30, 60] as const;
 
 export interface StartWhen {
-  /** `null` = bắt đầu ngay bây giờ. */
+  /** `null` = start right now. */
   startAt: number | null;
-  /** `true` → ghi `status: 'scheduled'`, để `promoteScheduled()` bật lên sau. */
+  /** `true` → save `status: 'scheduled'`, for `promoteScheduled()` to start later. */
   scheduled: boolean;
 }
 
@@ -40,7 +40,7 @@ export default function StartWhenSheet({
   onClose,
 }: {
   category: Category;
-  /** Mốc "bây giờ" của trang. Chỉ nhích mỗi phút - đủ cho một cái áng chừng. */
+  /** The page's "now". Only moves each minute - enough for an estimate. */
   now: number;
   onPick: (when: StartWhen) => void;
   onClose: () => void;
@@ -70,7 +70,7 @@ export default function StartWhenSheet({
       >
         <h2 className="text-base font-semibold">Start {CATEGORY_LABEL[category]}</h2>
 
-        {/* Before / After. Before mặc định vì "quên bấm" hay xảy ra hơn "hẹn trước". */}
+        {/* Before / After. Before is the default since "forgot to tap" beats "planned ahead". */}
         <div className="mt-3 grid grid-cols-2 gap-1 rounded-sm bg-surface-1 p-1">
           {(['past', 'future'] as const).map((d) => (
             <button
@@ -90,7 +90,7 @@ export default function StartWhenSheet({
           ))}
         </div>
 
-        {/* Dòng 2 của mỗi chip là giờ thật, để khỏi phải nhẩm trừ trong đầu. */}
+        {/* Line 2 of each chip is the real time, so no mental subtraction. */}
         <div className="mt-3 grid grid-cols-4 gap-2">
           {OFFSETS.map((m) => {
             const ts = now + sign * m * 60_000;
@@ -125,8 +125,8 @@ export default function StartWhenSheet({
               />
             </label>
 
-            {/* Xác nhận sống: nói ra ngày nào, cách bây giờ bao lâu. Đây là chỗ
-                người dùng phát hiện mình vừa gõ nhầm sang đêm hôm trước. */}
+            {/* Live confirmation: which day, how long from now. This is where users
+                catch that they just typed into the night before. */}
             <p className="mt-2 min-h-5 text-xs tabular-nums text-ink-muted">
               {typed === null ? '·' : `${clockTime(typed)} · ${relativeLabel(typed, now)}`}
             </p>

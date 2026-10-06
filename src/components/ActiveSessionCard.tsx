@@ -5,7 +5,7 @@ import { useTap } from '@/hooks/useTap';
 import { clockTime } from '@/lib/datetime';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
-/** 2:41:07 - luôn derive từ số giây, không cộng dồn. */
+/** 2:41:07 - always derived from seconds, never accumulated. */
 function hms(totalSec: number): string {
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -23,22 +23,22 @@ export default function ActiveSessionCard({
 }: {
   activity: Activity;
   onStop: () => void;
-  /** Chạm vào thân card - mở RecordSheet để sửa giờ bắt đầu / nhãn. */
+  /** Tap on the card body - opens RecordSheet to edit the start time / label. */
   onEdit?: () => void;
   busy: boolean;
-  /** Ghi còn nằm trong hàng đợi, chưa lên server. */
+  /** The write is still queued, not on the server yet. */
   pending?: boolean;
   /**
-   * Từ 3 session chạy song song trở lên, card thu thành một hàng 56px
-   * (AMENDMENT-remove-sleep 6b). Mục tiêu là cả màn Now vừa một màn hình -
-   * không cuộn thì không bấm nhầm.
+   * From 3 parallel sessions up, the card collapses to a 56px row
+   * (AMENDMENT-remove-sleep 6b). The goal is the whole Now screen fitting one
+   * screen - no scrolling, no mistaps.
    */
   compact?: boolean;
 }) {
   const elapsed = useElapsed(activity.startAt);
   const color = CATEGORY_COLOR[activity.category];
-  // Nút Stop nằm ngoài vùng chạm, nên không phải chặn nổi bọt, và cũng không
-  // lồng <button> trong <button>.
+  // The Stop button sits outside the tap area, so no need to stop bubbling,
+  // and no <button> inside a <button>.
   const tap = useTap(busy ? undefined : onEdit);
   const hint = onEdit ? `${CATEGORY_LABEL[activity.category]} running, tap to edit` : undefined;
 

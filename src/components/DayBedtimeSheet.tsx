@@ -7,23 +7,23 @@ import { formatBedtime } from '@/lib/bedtime';
 import type { DayLog } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
-// logi - "Đêm hôm đó đi ngủ lúc mấy giờ" (History)
+// logi - "What time did I go to bed that night" (History)
 //
-// Anh em của `BedtimeSheet` bên Now, khác đúng một điểm và điểm đó là lý do nó
-// tồn tại: NGÀY ĐƯỢC CHO TRƯỚC, lấy từ thanh chọn ngày của History.
+// Sibling of `BedtimeSheet` on Now, differing in exactly one way, which is why
+// it exists: THE DAY IS GIVEN, from the History day picker.
 //
-// Sheet bên Now suy ngày ra từ giờ ("gần nhất trong quá khứ"), nên nó không bao
-// giờ với xa quá 24 tiếng - quên ghi hai đêm là hết đường. Ở đây ngày đã nằm sẵn
-// trong tay, nên chỉ còn việc ghép giờ vào đúng đêm đó.
+// The Now sheet derives the day from the time ("latest in the past"), so it
+// never reaches beyond 24 hours - forget two nights and there is no way back.
+// Here the day is already known, so only the time is attached to that night.
 //
-// Vẫn KHÔNG có ô chọn ngày trong sheet: chọn ngày là việc của thanh ngày phía
-// trên, hỏi lại lần nữa thì hai chỗ có thể nói hai đằng.
+// Still NO date field in the sheet: picking the day is the day bar's job above;
+// asking again would let two places disagree.
 // ---------------------------------------------------------------------------
 
-/** Giờ hay đi ngủ. Bốn ô một hàng, hai ô cuối vắt qua nửa đêm. */
+/** Usual bedtimes. Four cells in a row; the last two cross midnight. */
 const CHIPS = ['22:00', '23:00', '00:00', '01:00'] as const;
 
-/** '2026-09-05' → 'Fri, Sep 5'. Có thứ mới nhận ra được đêm nào. */
+/** '2026-09-05' → 'Fri, Sep 5'. The weekday is what tells which night. */
 function nightLabel(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString([], {
@@ -33,7 +33,7 @@ function nightLabel(date: string): string {
   });
 }
 
-/** Mốc epoch → 'Sat, Sep 6'. Ngày LỊCH của mốc, không phải ngày logic. */
+/** epoch → 'Sat, Sep 6'. The mark's CALENDAR day, not its logical day. */
 function stampLabel(ts: number): string {
   return new Date(ts).toLocaleDateString([], {
     weekday: 'short',
@@ -50,9 +50,9 @@ export default function DayBedtimeSheet({
   onClear,
   onClose,
 }: {
-  /** Ngày logic đang xem ở History - đêm sẽ được ghi vào. */
+  /** The logical day viewed in History - the night it will be saved to. */
   date: string;
-  /** Mốc hiện có của chính ngày đó. */
+  /** The existing mark of that day. */
   log: DayLog;
   busy: boolean;
   onPick: (at: number) => void;
@@ -60,8 +60,8 @@ export default function DayBedtimeSheet({
   onClose: () => void;
 }) {
   const current = log.bedtimeAt;
-  // Có mốc rồi thì mở ra đúng giờ cũ: sửa 23:10 thành 23:40 không phải gõ lại
-  // từ đầu. Chưa có thì 23:00 cho đỡ phải kéo số.
+  // With an existing mark, open at that time: changing 23:10 to 23:40 needs no
+  // retyping. Without one, 23:00 saves some number dragging.
   const [text, setText] = useState(() => (current === null ? '23:00' : toClockInput(current)));
   const typed = resolveClockOnDate(text, date);
 
@@ -79,8 +79,9 @@ export default function DayBedtimeSheet({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-base font-semibold">Bedtime</h2>
-        {/* Nói thẳng đang sửa đêm nào. Sheet mở từ header, mà header thì cuộn
-            đi mất - không có dòng này thì rất dễ ghi nhầm sang ngày khác. */}
+        {/* Say plainly which night is being edited. The sheet opens from the
+            header, which scrolls away - without this line it is easy to save
+            onto the wrong day. */}
         <p className="mt-0.5 text-xs text-ink-muted">Night of {nightLabel(date)}</p>
 
         <div className="mt-3 flex min-h-11 items-center gap-3 rounded-sm border border-line bg-surface-1 px-3 py-2 text-sm">
@@ -101,8 +102,8 @@ export default function DayBedtimeSheet({
           )}
         </div>
 
-        {/* Dòng 2 của mỗi ô là NGÀY LỊCH của mốc. 00:00 và 01:00 rơi sang hôm
-            sau, nhưng vẫn thuộc đêm này - viết ra thì khỏi phải tin lời. */}
+        {/* Line 2 of each cell is the mark's CALENDAR day. 00:00 and 01:00 fall on
+            the next day but still belong to this night - written out, no trust needed. */}
         <div className="mt-3 grid grid-cols-4 gap-2">
           {CHIPS.map((hhmm) => {
             const ts = resolveClockOnDate(hhmm, date);

@@ -13,60 +13,60 @@ const W = PRESETS.normal.weekly;
 // dow: 0 = CN … 6 = T7
 const [SUN, MON, TUE, WED, THU, FRI, SAT] = [0, 1, 2, 3, 4, 5, 6];
 
-// --- vị trí trong tuần -------------------------------------------------------
+// --- position in the week -------------------------------------------------------
 
-test('weekPos: tuần chạy T2 → CN, không phải CN → T7', () => {
+test('weekPos: the week runs Mon → Sun, not Sun → Sat', () => {
   assert.equal(weekPos(MON), 0);
   assert.equal(weekPos(SAT), 5);
-  assert.equal(weekPos(SUN), 6, 'Chủ nhật là ngày cuối, không phải ngày đầu');
+  assert.equal(weekPos(SUN), 6, 'Sunday is the last day, not the first');
 });
 
-test('dowAt là nghịch đảo của weekPos', () => {
+test('dowAt is the inverse of weekPos', () => {
   for (let dow = 0; dow < 7; dow++) assert.equal(dowAt(weekPos(dow)), dow);
 });
 
-test('isWeekend chỉ đúng với T7 và CN', () => {
+test('isWeekend is only true for Sat and Sun', () => {
   assert.deepEqual(
     [SUN, MON, TUE, WED, THU, FRI, SAT].map(isWeekend),
     [true, false, false, false, false, false, true]
   );
 });
 
-test('dayCap: trần cuối tuần của Learn cao hơn standard cuối tuần (8h)', () => {
-  assert.ok(dayCap('learn', SAT) > BASELINE_DAILY.learn[SAT], 'trần thấp hơn chuẩn thì vô lý');
+test('dayCap: the weekend Learn cap is above the weekend standard (8h)', () => {
+  assert.ok(dayCap('learn', SAT) > BASELINE_DAILY.learn[SAT], 'a cap below the standard makes no sense');
   assert.ok(dayCap('learn', SUN) > BASELINE_DAILY.learn[SUN]);
 });
 
-test('dayCap: trần ngày thường của Work vẫn trên 9.5h (8h + 1.5h đi lại)', () => {
-  assert.ok(dayCap('work', TUE) >= BASELINE_DAILY.work[TUE], 'T3/T5 là ngày lên văn phòng');
+test('dayCap: the weekday Work cap is still above 9.5h (8h + 1.5h commute)', () => {
+  assert.ok(dayCap('work', TUE) >= BASELINE_DAILY.work[TUE], 'Tue/Thu are office days');
 });
 
-// --- đúng kế hoạch thì kế hoạch không trôi -----------------------------------
+// --- on plan, the plan does not drift -----------------------------------
 
-test('làm đúng gợi ý mỗi ngày → ngày sau ra đúng con số đã dự tính từ đầu', () => {
-  // Bắt đầu sạch từ thứ Hai, không nợ không dư.
+test('doing the suggestion each day → the next day gives the number planned from the start', () => {
+  // A clean start on Monday, no debt and no surplus.
   const first = catchUp(W, zero(), MON);
   const plannedTue = catchUp(W, { ...zero(), learn: first.learn.suggested }, TUE);
 
-  // Thứ Hai làm đúng gợi ý → thứ Ba phải bằng gợi ý của một tuần sạch.
-  const cleanTue = catchUp(W, zero(), MON); // để lấy hình dạng
+  // Monday matches the suggestion → Tuesday must equal a clean week's suggestion.
+  const cleanTue = catchUp(W, zero(), MON); // for the shape
   assert.ok(cleanTue.learn.suggested > 0);
   assert.equal(
     +plannedTue.learn.suggested.toFixed(1),
     +dailyTargetFor(TUE, W).learn.toFixed(1),
-    'đi đúng kế hoạch thì gợi ý phải trùng standard'
+    'on plan, the suggestion must equal the standard'
   );
 });
 
-test('tuần sạch từ thứ Hai → gợi ý trùng standard ở mọi category', () => {
+test('a clean week from Monday → the suggestion equals the standard in every category', () => {
   const p = catchUp(W, zero(), MON);
   for (const c of CATEGORIES) {
     assert.equal(+p[c].suggested.toFixed(1), +p[c].standard.toFixed(1), c);
   }
 });
 
-test('đi đúng kế hoạch tới giữa tuần → gợi ý vẫn là standard', () => {
-  // Log đúng standard cho T2, T3, T4 rồi hỏi thứ Năm.
+test('on plan until mid-week → the suggestion is still the standard', () => {
+  // Log exactly the standard for Mon, Tue, Wed, then ask on Thursday.
   const before = zero();
   for (const dow of [MON, TUE, WED]) {
     const d = dailyTargetFor(dow, W);
@@ -78,20 +78,20 @@ test('đi đúng kế hoạch tới giữa tuần → gợi ý vẫn là standar
   }
 });
 
-// --- bù và giảm --------------------------------------------------------------
+// --- catching up and easing off --------------------------------------------------------------
 
-test('thứ Hai học vượt → thứ Ba gợi ý thấp hơn standard', () => {
+test('extra study on Monday → Tuesday suggests less than the standard', () => {
   const p = catchUp(W, { ...zero(), learn: 10 }, TUE);
-  assert.ok(p.learn.suggested < p.learn.standard, `${p.learn.suggested} phải < ${p.learn.standard}`);
+  assert.ok(p.learn.suggested < p.learn.standard, `${p.learn.suggested} must be < ${p.learn.standard}`);
   assert.equal(p.learn.remaining, +(W.learn - 10).toFixed(1));
 });
 
-test('bỏ trắng đầu tuần → gợi ý cao hơn standard', () => {
-  const p = catchUp(W, zero(), THU); // T2, T3, T4 không log gì
-  assert.ok(p.learn.suggested > p.learn.standard, 'nợ 3 ngày mà vẫn đòi 3h thì bù kiểu gì');
+test('an empty start of week → the suggestion is above the standard', () => {
+  const p = catchUp(W, zero(), THU); // nothing logged Mon, Tue, Wed
+  assert.ok(p.learn.suggested > p.learn.standard, 'owing 3 days but still asking 3h cannot catch up');
 });
 
-test('tổng các gợi ý còn lại = phần còn nợ, nếu không chạm trần', () => {
+test('the remaining suggestions add up to what is owed, if no cap is hit', () => {
   const before = { ...zero(), learn: 5 };
   let sum = 0;
   let done = { ...before };
@@ -100,46 +100,46 @@ test('tổng các gợi ý còn lại = phần còn nợ, nếu không chạm tr
     sum += p.learn.suggested;
     done = { ...done, learn: done.learn + p.learn.suggested };
   }
-  assert.ok(Math.abs(sum - (W.learn - 5)) < 0.15, `tổng ${sum} vs nợ ${W.learn - 5}`);
+  assert.ok(Math.abs(sum - (W.learn - 5)) < 0.15, `sum ${sum} vs owed ${W.learn - 5}`);
 });
 
-// --- xong rồi thì thôi -------------------------------------------------------
+// --- done is done -------------------------------------------------------
 
-test('đủ target tuần → met, gợi ý 0, không đòi thêm', () => {
+test('weekly target met → met, suggestion 0, nothing more asked', () => {
   const p = catchUp(W, { ...zero(), learn: W.learn }, WED);
   assert.equal(p.learn.met, true);
   assert.equal(p.learn.suggested, 0);
 });
 
-test('vượt target tuần → vẫn met, không ra số âm', () => {
+test('over the weekly target → still met, no negative number', () => {
   const p = catchUp(W, { ...zero(), learn: W.learn + 20 }, WED);
   assert.equal(p.learn.met, true);
   assert.equal(p.learn.remaining, 0);
   assert.equal(p.learn.suggested, 0);
 });
 
-test('target tuần bằng 0 → không phải "met", chỉ là không có việc', () => {
+test('a weekly target of 0 → not "met", just nothing to do', () => {
   const weekly = { ...W, fitness: 0 };
   const p = catchUp(weekly, zero(), WED);
-  assert.equal(p.fitness.met, false, 'gắn dấu xong cho việc chưa từng có là nói dối');
+  assert.equal(p.fitness.met, false, 'marking something done that never existed is a lie');
   assert.equal(p.fitness.suggested, 0);
 });
 
-// --- ngày nghỉ của category --------------------------------------------------
+// --- the category's day off --------------------------------------------------
 
-test('Fitness Chủ nhật là ngày nghỉ → nợ bao nhiêu cũng không đẩy vào', () => {
-  assert.equal(BASELINE_DAILY.fitness[SUN], 0, 'giả định của test');
-  const p = catchUp(W, zero(), SUN); // nợ cả 9h fitness
+test('Fitness on Sunday is a day off → no debt is ever pushed there', () => {
+  assert.equal(BASELINE_DAILY.fitness[SUN], 0, 'test assumption');
+  const p = catchUp(W, zero(), SUN); // owing all 9h of fitness
   assert.equal(p.fitness.suggested, 0);
 });
 
-test('Work cuối tuần là ngày nghỉ → không bảo đi làm bù', () => {
-  assert.equal(BASELINE_DAILY.work[SAT], 0, 'giả định của test');
+test('Work on weekends is a day off → never suggests make-up work', () => {
+  assert.equal(BASELINE_DAILY.work[SAT], 0, 'test assumption');
   const p = catchUp(W, zero(), SAT);
-  assert.equal(p.work.suggested, 0, 'nợ 43h Work không phải lý do để làm thứ Bảy');
+  assert.equal(p.work.suggested, 0, 'owing 43h of Work is no reason to work on Saturday');
 });
 
-test('Learn dồn hết vào cuối tuần khi chỉ còn T7 và CN', () => {
+test('Learn piles onto the weekend when only Sat and Sun remain', () => {
   const before = { ...zero(), learn: 5 };
   const sat = catchUp(W, before, SAT);
   const shape = BASELINE_DAILY.learn;
@@ -147,51 +147,51 @@ test('Learn dồn hết vào cuối tuần khi chỉ còn T7 và CN', () => {
   assert.equal(+sat.learn.suggested.toFixed(1), +Math.min(want, dayCap('learn', SAT)).toFixed(1));
 });
 
-// --- trần --------------------------------------------------------------------
+// --- the cap --------------------------------------------------------------------
 
-test('nợ nhiều mà còn ít ngày → chạm trần, không bảo học 20h', () => {
-  const p = catchUp(W, zero(), FRI); // nợ gần cả tuần Learn, còn T6/T7/CN
+test('lots of debt with few days left → hits the cap, never says study 20h', () => {
+  const p = catchUp(W, zero(), FRI); // owing almost a week of Learn, with Fri/Sat/Sun left
   const cap = dayCap('learn', FRI);
-  assert.ok(p.learn.suggested <= cap + 1e-9, `${p.learn.suggested} vượt trần ${cap}`);
+  assert.ok(p.learn.suggested <= cap + 1e-9, `${p.learn.suggested} is over the cap ${cap}`);
 });
 
-test('chạm trần thì có cờ capped, không thì không', () => {
-  const hard = catchUp(W, zero(), SUN); // dồn hết vào Chủ nhật
+test('hitting the cap sets capped, otherwise not', () => {
+  const hard = catchUp(W, zero(), SUN); // everything piled onto Sunday
   assert.equal(hard.learn.capped, true);
   assert.equal(hard.learn.suggested, DAY_CAP.learn.weekend);
 
   const easy = catchUp(W, zero(), MON);
-  assert.equal(easy.learn.capped, false, 'tuần sạch không việc gì phải chạm trần');
+  assert.equal(easy.learn.capped, false, 'a clean week has no reason to hit the cap');
 });
 
-test('target tuần cao → trần nhường chuẩn, kế hoạch đúng vẫn với tới target', () => {
-  // Learn 49h/tuần: chuẩn thứ Bảy là 12.6h, cao hơn trần cứng 10h.
+test('a high weekly target → the cap yields to the standard, an on-plan week still reaches the target', () => {
+  // Learn 49h/week: Saturday's standard is 12.6h, above the 10h hard cap.
   const weekly = { ...W, learn: 49 };
   const std = dailyTargetFor(SAT, weekly).learn;
-  assert.ok(std > DAY_CAP.learn.weekend, 'giả định của test');
+  assert.ok(std > DAY_CAP.learn.weekend, 'test assumption');
 
-  // Đi ĐÚNG kế hoạch tới hết thứ Sáu, rồi hỏi thứ Bảy - không nợ gì cả.
+  // On plan EXACTLY through Friday, then ask on Saturday - no debt at all.
   const onPlan = zero();
   for (const dow of [MON, TUE, WED, THU, FRI]) {
     for (const c of CATEGORIES) onPlan[c] += dailyTargetFor(dow, weekly)[c];
   }
   const p = catchUp(weekly, onPlan, SAT);
-  assert.equal(p.learn.capped, false, 'trần không được cãi lại chính kế hoạch');
+  assert.equal(p.learn.capped, false, 'the cap must not overrule the plan itself');
   assert.equal(+p.learn.suggested.toFixed(1), +std.toFixed(1));
 
-  // Đi đúng gợi ý cả tuần thì phải log đủ 49h, không hụt vì trần.
+  // Following the suggestion all week must log the full 49h, not fall short because of the cap.
   let done = zero();
   let sum = 0;
   for (let pos = 0; pos <= 6; pos++) {
     const day = catchUp(weekly, done, dowAt(pos)).learn;
-    assert.equal(day.capped, false, `ngày ${pos} báo chạm trần dù đi đúng kế hoạch`);
+    assert.equal(day.capped, false, `day ${pos} reports the cap despite being on plan`);
     sum += day.suggested;
     done = { ...done, learn: done.learn + day.suggested };
   }
-  assert.ok(Math.abs(sum - 49) < 0.15, `đi đúng kế hoạch mà chỉ ra ${sum}/49`);
+  assert.ok(Math.abs(sum - 49) < 0.15, `on plan but only ${sum}/49`);
 });
 
-test('mọi tình huống: gợi ý không bao giờ vượt trần và không bao giờ âm', () => {
+test('every case: the suggestion never exceeds the cap and is never negative', () => {
   for (const preset of Object.values(PRESETS)) {
     for (let dow = 0; dow < 7; dow++) {
       for (const doneRatio of [0, 0.25, 0.5, 1, 2]) {
@@ -200,20 +200,20 @@ test('mọi tình huống: gợi ý không bao giờ vượt trần và không b
         ) as Record<Category, number>;
         const p = catchUp(preset.weekly, before, dow);
         for (const c of CATEGORIES) {
-          assert.ok(p[c].suggested >= 0, `${c} âm`);
-          // Trần nhường chuẩn, và `suggested` làm tròn 0.1 nên trần cũng phải tròn.
+          assert.ok(p[c].suggested >= 0, `${c} is negative`);
+          // The cap yields to the standard, and `suggested` rounds to 0.1, so the cap must round too.
           const std = Math.round(dailyTargetFor(dow, preset.weekly)[c] * 10) / 10;
           const cap = Math.max(dayCap(c, dow), std);
-          assert.ok(p[c].suggested <= cap + 1e-9, `${c} vượt trần ở dow ${dow}`);
+          assert.ok(p[c].suggested <= cap + 1e-9, `${c} over the cap at dow ${dow}`);
         }
       }
     }
   }
 });
 
-// --- số ngày còn lại ---------------------------------------------------------
+// --- days left ---------------------------------------------------------
 
-test('daysLeft: thứ Hai còn 7, Chủ nhật còn 1', () => {
+test('daysLeft: Monday has 7, Sunday has 1', () => {
   assert.equal(catchUp(W, zero(), MON).learn.daysLeft, 7);
   assert.equal(catchUp(W, zero(), SUN).learn.daysLeft, 1);
 });

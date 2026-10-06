@@ -13,7 +13,7 @@ export default function Toasts({
 
   return (
     <div
-      // Cao hơn bottom nav một quãng để không đè lên nút mic ở màn Now.
+      // Sits a bit above the bottom nav so it does not cover the mic button on Now.
       className="pointer-events-none fixed inset-x-0 bottom-[calc(9rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-center gap-2 px-4 md:bottom-6"
       role="status"
       aria-live="polite"

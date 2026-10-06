@@ -10,19 +10,20 @@ import { CATEGORY_COLOR, CATEGORY_LABEL, type Category } from '@/types/logi';
 import StartWhenSheet, { type StartWhen } from './StartWhenSheet';
 
 // -----------------------------------------------------------------------------
-// logi - Lưới 4 nút Start (AMENDMENT-remove-sleep 6b + 6c)
+// logi - The grid of 4 Start buttons (AMENDMENT-remove-sleep 6b + 6c)
 //
-// Chính cái nút là thanh đo: mỗi nút mang một dải 3px ở mép dưới, so giờ hôm nay
-// với target của ĐÚNG ngày đó. Không thêm dòng nào mà vẫn thấy cái nào còn thiếu.
+// The button itself is the gauge: each has a 3px strip at the bottom edge,
+// comparing today's hours with THAT day's target. No extra line, yet you see
+// which one is short.
 //
-// Start giữ đúng MỘT chạm - không xác nhận, không long-press. Chống bấm nhầm nằm
-// ở `isRealTap()`, không phải ở một bước hỏi lại.
+// Start stays ONE tap - no confirm, no long-press. Mistap protection lives in
+// `isRealTap()`, not in a confirmation step.
 // -----------------------------------------------------------------------------
 
-/** Giữ lâu hơn ngưỡng của `isRealTap` → mở sheet chọn giờ, không phải Start. */
+/** Held longer than `isRealTap`'s threshold → open the time sheet, not Start. */
 const LONG_PRESS_MS = 500;
 
-/** Đoạn mực đậm ở mép phải khi vượt target (chỉ xám, DESIGN.md). */
+/** The strong ink segment at the right edge when over target (gray only, DESIGN.md). */
 const OVER_PCT = 14;
 const OVER_COLOR = 'var(--text-primary)';
 
@@ -35,17 +36,17 @@ export default function CategoryGrid({
   onFocusRunning,
   onEditRunning,
 }: {
-  /** Tiến độ hôm nay của cả 4 category, theo đúng thứ tự CATEGORIES. */
+  /** Today's progress for all 4 categories, in CATEGORIES order. */
   tiles: NowTile[];
   running: Set<Category>;
   busy: boolean;
-  /** Mốc "bây giờ" của trang, để nhãn giờ trong sheet khớp với mốc được ghi. */
+  /** The page's "now", so time labels in the sheet match the recorded time. */
   now: number;
   onStart: (category: Category, when: StartWhen) => void;
   onFocusRunning: (category: Category) => void;
   /**
-   * Giữ lâu một nút ĐANG chạy. `Before` trên category đang chạy chắc chắn ném
-   * `duplicate`, nên ý định thật gần như luôn là "tôi bắt đầu sai giờ".
+   * Long-press on a RUNNING button. `Before` on a running category always throws
+   * `duplicate`, so the real intent is almost always "I started at the wrong time".
    */
   onEditRunning: (category: Category) => void;
 }) {
@@ -64,15 +65,15 @@ export default function CategoryGrid({
 
   useEffect(() => clear, [clear]);
 
-  // Lớp 2 của 6c: vừa cuộn xong thì mọi chạm đều đáng ngờ. `capture` để bắt cả
-  // scroll của container con, `passive` để không cản cuộn.
-  // Mọi mốc thời gian ở đây lấy từ `event.timeStamp`, không phải `Date.now()`:
-  // cùng một đồng hồ (`performance.timeOrigin`), chỉ dùng để trừ nhau, và không
-  // nhảy khi hệ thống chỉnh giờ giữa lúc ngón tay còn đang chạm.
+  // Layer 2 of 6c: right after a scroll every tap is suspect. `capture` catches
+  // child container scrolls too, `passive` does not block scrolling.
+  // Every time here comes from `event.timeStamp`, not `Date.now()`: one clock
+  // (`performance.timeOrigin`), only used for differences, and it does not jump
+  // when the system adjusts time while a finger is down.
   useEffect(() => {
     const onScroll = (e: Event) => {
       lastScrollAt.current = e.timeStamp;
-      // Đang cuộn thì long-press không còn là long-press.
+      // While scrolling, a long-press is no longer a long-press.
       clear();
     };
     window.addEventListener('scroll', onScroll, { passive: true, capture: true });
@@ -90,7 +91,7 @@ export default function CategoryGrid({
     }, LONG_PRESS_MS);
   };
 
-  // Ngón đã đi xa thì đây là cú vuốt: huỷ luôn cả long-press.
+  // The finger moved far, so this is a swipe: cancel the long-press too.
   const pressMove = (e: React.PointerEvent) => {
     const d = down.current;
     if (!d) return;
@@ -106,7 +107,7 @@ export default function CategoryGrid({
     clear();
     const d = down.current;
     down.current = null;
-    // Long-press đã mở sheet → bỏ qua click phát sinh kèm theo.
+    // The long-press opened the sheet → ignore the click that comes with it.
     if (longFired.current) {
       longFired.current = false;
       return;
@@ -149,8 +150,8 @@ export default function CategoryGrid({
                   : `Start ${CATEGORY_LABEL[c]}, ${t.label}, hold to pick a time`
               }
               className={[
-                // Viền HAIRLINE xám cho mọi nút. Bốn viền pastel cạnh nhau là thứ
-                // làm màn này rối - màu category thu về đúng một chấm tròn.
+                // A gray HAIRLINE border for every button. Four pastel borders side
+                // by side is what made this screen busy - category color shrinks to one dot.
                 'relative flex min-h-[72px] select-none flex-col items-start justify-center gap-1',
                 'overflow-hidden rounded-md border border-line px-3 py-2 text-left transition md:min-h-[96px]',
                 'touch-manipulation active:scale-[0.98] disabled:opacity-50',
@@ -176,15 +177,15 @@ export default function CategoryGrid({
               {isRunning ? (
                 <span className="absolute right-2 top-1.5 text-[10px] opacity-80">running</span>
               ) : (
-                // Cử chỉ giữ-lâu không tự lộ ra. Một dấu mờ ở góc là đủ để người
-                // dùng thử một lần, mà không thành nút thứ hai trên cùng cái nút.
+                // The long-press gesture is not discoverable. A faint mark in the
+                // corner is enough to try once, without a second button on the same button.
                 <span aria-hidden="true" className="absolute right-2 top-1 text-sm text-ink-muted">
                   ⋯
                 </span>
               )}
 
-              {/* Dải tiến độ. Không target thì KHÔNG vẽ - một dải rỗng trông
-                  như "chưa làm gì", trong khi thật ra hôm nay không đặt mục tiêu. */}
+              {/* Progress strip. No target means NO strip - an empty strip looks
+                  like "did nothing", when really no goal was set today. */}
               {t.noTarget ? null : (
                 <span
                   aria-hidden="true"

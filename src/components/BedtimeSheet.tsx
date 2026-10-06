@@ -9,20 +9,22 @@ import { formatDuration } from '@/lib/datetime';
 import type { DayLog } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
-// logi - "Đi ngủ lúc mấy giờ" (Stage 8)
+// logi - "What time did I go to bed" (Stage 8)
 //
-// Nút bedtime cũ ghi thẳng `Date.now()`. Nhớ ra lúc 7:30 sáng thì mốc rơi vào sáng
-// nay, sai hẳn một đêm; mà ghi nhầm rồi cũng không có đường xoá.
+// The old bedtime button wrote `Date.now()` directly. Remembering at 7:30 am
+// put the mark on this morning, a whole night off; and a mistake could not
+// be deleted.
 //
-// Sheet này bày ra CẢ HAI đêm gần nhất, vì 7:30 sáng "đêm qua" với "đêm nay"
-// là hai ngày logic khác nhau - đọc thấy thì hết cãi. Giờ ghi luôn lùi về quá
-// khứ; 00:00 hay 01:00 vẫn thuộc đêm hôm trước, mốc cắt 04:00 lo việc đó.
+// This sheet shows BOTH recent nights, because at 7:30 am "last night" and
+// "tonight" are two different logical days - seeing them settles it. The time
+// always goes back into the past; 00:00 or 01:00 still belongs to the night
+// before, the 04:00 cut handles that.
 // ---------------------------------------------------------------------------
 
-/** Giờ hay đi ngủ. Bốn ô một hàng như sheet Start, ô đầu là "Now". */
+/** Usual bedtimes. Four cells in a row like the Start sheet; the first is "Now". */
 const CHIPS = ['22:00', '23:00', '00:00'] as const;
 
-/** '2026-09-05' → 'Fri, Sep 5'. Có thứ mới nhận ra được đêm nào. */
+/** '2026-09-05' → 'Fri, Sep 5'. The weekday is what tells which night. */
 function nightLabel(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString([], {
@@ -41,9 +43,9 @@ export default function BedtimeSheet({
   onClear,
   onClose,
 }: {
-  /** Ngày logic hôm nay - đêm đang tới. */
+  /** Today's logical day - the coming night. */
   tonight: DayLog;
-  /** Ngày logic hôm qua - đêm vừa rồi. */
+  /** Yesterday's logical day - last night. */
   lastNight: DayLog;
   now: number;
   busy: boolean;
@@ -75,7 +77,7 @@ export default function BedtimeSheet({
       >
         <h2 className="text-base font-semibold">Bedtime</h2>
 
-        {/* Hai đêm gần nhất. Đây là chỗ duy nhất xoá được một mốc ghi nhầm. */}
+        {/* The two latest nights. The only place a mistaken mark can be deleted. */}
         <div className="mt-3 rounded-sm border border-line bg-surface-1">
           {rows.map((r, i) => (
             <div
@@ -106,8 +108,8 @@ export default function BedtimeSheet({
           ))}
         </div>
 
-        {/* Dòng 1 là giờ, dòng 2 là "cách đây bao lâu" - khỏi nhẩm trừ lúc nửa
-            tỉnh nửa mê. */}
+        {/* Line 1 is the time, line 2 is "how long ago" - no subtraction when
+            half asleep. */}
         <div className="mt-3 grid grid-cols-4 gap-2">
           <button
             type="button"
@@ -152,8 +154,8 @@ export default function BedtimeSheet({
                 className="min-h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-base"
               />
             </label>
-            {/* Nói rõ mốc rơi vào đêm nào: 01:00 là đêm hôm trước, không phải
-                sáng nay. */}
+            {/* Say which night the mark lands on: 01:00 is the night before,
+                not this morning. */}
             <p className="mt-2 min-h-5 text-xs tabular-nums text-ink-muted">
               {typed === null
                 ? '-'

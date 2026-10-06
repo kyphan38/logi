@@ -11,12 +11,11 @@ import type { EventItem } from '@/types/logi';
 const EMPTY: EventItem[] = [];
 
 /**
- * Sự kiện sắp tới, đã tách thành hai khối và sắp xong.
+ * Upcoming events, split into two blocks and sorted.
  *
- * Nhịp đồng hồ là 60 GIÂY chứ không phải mỗi phút thật sự cần: chuỗi "In 3
- * days" chỉ đổi lúc 04:00. Nhưng app để mở qua đêm là chuyện thường, và một
- * danh sách nói "Tomorrow" trong khi hôm nay đã là ngày đó thì sai theo kiểu
- * người dùng nhìn là thấy.
+ * The clock ticks every 60 SECONDS, not because every minute matters: "In 3
+ * days" only changes at 04:00. But leaving the app open overnight is common,
+ * and a list saying "Tomorrow" when that day has already come is a visible error.
  */
 export function useEvents() {
   const { user } = useAuth();
@@ -27,7 +26,7 @@ export function useEvents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Đổi user → xoá ngay trong lúc render, không chờ effect.
+  // User changed → clear during render, do not wait for an effect.
   const [prevUid, setPrevUid] = useState(uid);
   if (prevUid !== uid) {
     setPrevUid(uid);

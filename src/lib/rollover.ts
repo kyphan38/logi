@@ -1,13 +1,13 @@
 // ============================================================
-// logi - Chuyển tuần (rollover) + ghép nợ vào target
+// logi - Week rollover + folding debt into the target
 //
-// File thuần: KHÔNG import Firestore, KHÔNG React. Test bằng `node --test`.
-// `targets.ts` chỉ làm hai việc: đọc dữ liệu vào, ghi kết quả ra.
+// Pure file: NO Firestore import, NO React. Tested with `node --test`.
+// `targets.ts` only does two things: read data in, write results out.
 //
-// Không có server cron. Việc chuyển tuần chạy ở client lúc mở app, nên nó
-// bắt buộc phải idempotent: mở app hai lần sáng thứ Hai mà cộng nợ hai lần
-// thì không crash, không báo gì - chỉ là target Learn phình lên vô lý sau
-// vài tuần và không lần ra nguyên nhân.
+// There is no server cron. Rollover runs on the client when the app opens, so
+// it must be idempotent: opening the app twice on Monday morning and adding
+// debt twice would not crash or warn - the Learn target would just swell
+// absurdly over a few weeks with no traceable cause.
 // ============================================================
 
 import { accrueDebt, applyDebt } from '@/lib/balance';
@@ -22,31 +22,31 @@ import {
   type WeekTarget,
 } from '@/types/logi';
 
-/** Lùi xa hơn 8 tuần thì không dựng lại lịch sử nữa - chỉ đặt lại cột mốc. */
+/** Beyond 8 weeks back, history is not rebuilt - only the marker is reset. */
 export const MAX_ROLLOVER_WEEKS = 8;
 
 export type DebtBalance = Partial<Record<Category, number>>;
 export type Weekly = Record<Category, number>;
 
 // ------------------------------------------------------------
-// 1. Trả nợ mà vẫn giữ ngân sách zero-sum
+// 1. Paying debt while keeping the budget zero-sum
 // ------------------------------------------------------------
 
 const sum = (w: Weekly) => CATEGORIES.reduce((a, c) => a + w[c], 0);
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
- * `applyDebt()` CỘNG giờ vào target (Learn +6h) nên tổng vọt lên 95h.
- * Nhưng một tuần vẫn chỉ có 89h để phân bổ - trả nợ Learn thì phải lấy
- * từ Work hoặc Leisure, không thể lấy từ hư không.
+ * `applyDebt()` ADDS hours to the target (Learn +6h), so the total jumps to 95h.
+ * But a week still only has 89h to allocate - paying Learn debt must come from
+ * Work or Leisure, not from thin air.
  *
- * Hàm này cùng ý tưởng với `rebalance()` nhưng khoá được NHIỀU category
- * cùng lúc: mọi category vừa được trả nợ.
- * Không sửa `balance.ts`, không đổi cách `applyDebt` tính ra số tiền trả.
+ * Same idea as `rebalance()` but it can lock SEVERAL categories at once: every
+ * category that just received debt.
+ * Does not touch `balance.ts` or how `applyDebt` computes the payment.
  */
 export function settleWithinBudget(weekly: Weekly, applied: DebtBalance): Weekly {
   const next = { ...weekly };
-  // Bỏ Sleep rồi thì không còn category cố định nào; chỉ khoá bên vừa nhận nợ.
+  // With Sleep gone no category is fixed; only the ones receiving debt are locked.
   const locked = new Set<Category>();
 
   for (const c of CATEGORIES) {
@@ -72,9 +72,9 @@ export function settleWithinBudget(weekly: Weekly, applied: DebtBalance): Weekly
 }
 
 /**
- * Làm tròn 2 số lẻ rồi dồn phần dư vào category lớn nhất, để tổng khớp
- * TOTAL_BUDGET tuyệt đối. Thiếu bước này thì
- * `validateTargets()` thỉnh thoảng báo "thừa 0.03h" vì sai số dấu phẩy động.
+ * Rounds to 2 decimals, then puts the remainder into the largest category, so
+ * the total matches TOTAL_BUDGET exactly. Without it `validateTargets()`
+ * sometimes reports "0.03h unallocated" from floating-point error.
  */
 export function roundToBudget(weekly: Weekly): Weekly {
   const next = {} as Weekly;
@@ -90,8 +90,8 @@ export function roundToBudget(weekly: Weekly): Weekly {
 }
 
 /**
- * Target của một tuần = preset + phần nợ được trả, kéo về đúng 89h.
- * Dùng cho cả `ensureWeekTarget` lẫn `setPreset`.
+ * A week's target = preset + the debt payment, pulled back to exactly 89h.
+ * Used by both `ensureWeekTarget` and `setPreset`.
  */
 export function buildWeekly(
   base: Weekly,
@@ -101,13 +101,13 @@ export function buildWeekly(
   return { weekly: settleWithinBudget(base, applied), applied, remaining };
 }
 
-/** Cộng `debtApplied` đã ghi sẵn của tuần lên một preset khác. Không tiêu thêm nợ. */
+/** Adds the week's already recorded `debtApplied` onto another preset. Spends no more debt. */
 export function reapplyDebt(base: Weekly, debtApplied: DebtBalance): Weekly {
   return settleWithinBudget(base, debtApplied);
 }
 
 // ------------------------------------------------------------
-// 2. Kế hoạch rollover
+// 2. The rollover plan
 // ------------------------------------------------------------
 
 export interface WeekTargetSeed {
@@ -121,32 +121,32 @@ export interface RolloverState {
   currentWeek: string;
   lastProcessedWeek: string | null;
   debt: DebtBalance;
-  /** Đã đọc sẵn trong transaction. Thiếu key = tuần đó không có doc. */
+  /** Already read inside the transaction. Missing key = that week has no doc. */
   targets: Partial<Record<string, WeekTarget | null>>;
   now: number;
 }
 
 export interface RolloverPlan {
-  /** Vì sao ra kế hoạch này - để log và để test đọc cho dễ. */
+  /** Why this plan came out - for logs and readable tests. */
   reason: 'first-run' | 'same-week' | 'processed' | 'too-far';
-  /** Tuần cần đóng sổ hồi tố. */
+  /** Weeks to close retroactively. */
   locks: string[];
-  /** Tuần cần tạo doc mới. */
+  /** Weeks needing a new doc. */
   creates: WeekTargetSeed[];
-  /** `meta/debt` sau cùng. null = không cần ghi. */
+  /** The final `meta/debt`. null = nothing to write. */
   debt: DebtBalance | null;
-  /** Cột mốc mới. null = không cần ghi. */
+  /** The new marker. null = nothing to write. */
   lastProcessedWeek: string | null;
-  /** Các tuần đã đóng sổ và ghi nợ. */
+  /** Weeks closed and turned into debt. */
   processed: string[];
-  /** Tuần đã trôi qua nhưng không có kế hoạch → không có gì để nợ. */
+  /** Weeks that passed with no plan → nothing to owe. */
   skipped: string[];
 }
 
 /**
- * Những tuần cần đọc doc trước khi lập kế hoạch.
- * Firestore bắt mọi read phải đứng trước mọi write trong transaction,
- * nên danh sách này phải biết trước.
+ * Weeks whose docs must be read before planning.
+ * Firestore requires every read before every write in a transaction, so this
+ * list must be known up front.
  */
 export function weeksToRead(currentWeek: string, lastProcessedWeek: string | null): string[] {
   const weeks = new Set<string>([currentWeek]);
@@ -162,10 +162,10 @@ export function weeksToRead(currentWeek: string, lastProcessedWeek: string | nul
 const NORMAL: Weekly = PRESETS.normal.weekly;
 
 /**
- * Thuần hoàn toàn: cùng input luôn ra cùng output, không đụng đồng hồ.
+ * Fully pure: the same input always gives the same output, no clock.
  *
- * Idempotent nằm ở chỗ `lastProcessedWeek`. Chạy lần hai với state đã cập
- * nhật thì `last === currentWeek` → reason 'same-week' → không ghi gì.
+ * Idempotence lives in `lastProcessedWeek`. A second run with the updated
+ * state has `last === currentWeek` → reason 'same-week' → writes nothing.
  */
 export function planRollover(state: RolloverState): RolloverPlan {
   const { currentWeek, lastProcessedWeek: last } = state;
@@ -181,7 +181,7 @@ export function planRollover(state: RolloverState): RolloverPlan {
     skipped: [],
   });
 
-  // Đã chạy cho tuần này rồi. Đây là nhánh chặn cộng nợ hai lần.
+  // Already ran for this week. This branch is what stops double debt.
   if (last === currentWeek) return empty('same-week');
 
   const locks: string[] = [];
@@ -195,12 +195,12 @@ export function planRollover(state: RolloverState): RolloverPlan {
     last === null ? 'first-run' : gap > MAX_ROLLOVER_WEEKS || gap <= 0 ? 'too-far' : 'processed';
 
   if (reason === 'processed' && last !== null) {
-    // Từng tuần một theo đúng thứ tự. Nhảy thẳng thì nợ của tuần giữa mất hẳn.
+    // One week at a time, in order. Jumping ahead would lose the middle weeks' debt.
     for (let i = 1; i <= gap; i++) {
       const prev = addWeeks(last, i - 1);
       const wt = targets[prev] ?? null;
       if (!wt) {
-        // Không mở app tuần đó → không có kế hoạch → không có gì để nợ.
+        // The app was not opened that week → no plan → nothing to owe.
         skipped.push(prev);
         continue;
       }
@@ -211,8 +211,8 @@ export function planRollover(state: RolloverState): RolloverPlan {
     }
   }
 
-  // Tuần hiện tại: chỉ tạo nếu chưa có. Các tuần trống ở giữa để nguyên -
-  // tạo doc giả cho chúng sẽ trừ nợ 50% mỗi tuần và làm loãng crunchStreak.
+  // The current week: only created if missing. Empty weeks in between stay as
+  // they are - fake docs for them would cut debt 50% each week and dilute crunchStreak.
   const creates: WeekTargetSeed[] = [];
   if (!targets[currentWeek]) {
     const { weekly, applied, remaining } = buildWeekly(NORMAL, debt);
@@ -234,7 +234,7 @@ export function planRollover(state: RolloverState): RolloverPlan {
   };
 }
 
-/** Áp kế hoạch lên state - dùng trong test để chạy hai lần liên tiếp. */
+/** Applies a plan to state - used in tests to run twice in a row. */
 export function applyPlan(state: RolloverState, plan: RolloverPlan): RolloverState {
   const targets = { ...state.targets };
   for (const w of plan.locks) {

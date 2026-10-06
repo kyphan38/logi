@@ -1,26 +1,26 @@
 // ---------------------------------------------------------------------------
 // logi - Bedtime (Stage 8)
 //
-// Phiên bản nhẹ của Sleep đã gỡ: ghi MỘT MỐC, không phải một khoảng. Né được
-// toàn bộ rắc rối cũ - start/stop, vắt qua nửa đêm, chia block, ngân sách giờ.
+// A light version of the removed Sleep: log ONE MARK, not a span. Avoids all
+// the old trouble - start/stop, crossing midnight, splitting blocks, the hour budget.
 //
-// Cả file xoay quanh MỘT ý: giờ đi ngủ phải được quy về THANG LIÊN TỤC trước
-// khi tính trung vị hay độ dao động.
+// The whole file turns on ONE idea: bedtimes must be mapped onto a CONTINUOUS
+// SCALE before computing a median or spread.
 //
 //     22:00 → 22.0     00:15 → 24.25     01:30 → 25.5
 //
-// Không làm bước này thì trung vị của 22:00 và 00:15 ra 11 giờ trưa. Hai đêm
-// đó chênh nhau 135 phút, không phải 22 tiếng.
+// Without it, the median of 22:00 and 00:15 is 11 am. Those two nights are
+// 135 minutes apart, not 22 hours.
 //
-// File thuần: không React, không Firestore, không DOM.
+// Pure file: no React, no Firestore, no DOM.
 // ---------------------------------------------------------------------------
 import { DAY_CUTOFF_HOUR } from '@/types/logi';
 
 /**
- * Mốc đi ngủ → số giờ trên thang liên tục của ngày logic.
+ * Bedtime mark → hours on the logical day's continuous scale.
  *
- * Dùng ĐÚNG mốc 04:00 của `logicalDate()`: giờ trước 04:00 thuộc về đêm của
- * ngày hôm trước, nên nó nằm ở phía SAU 24 chứ không phải đầu ngày mới.
+ * Uses the SAME 04:00 cut as `logicalDate()`: times before 04:00 belong to the
+ * previous day's night, so they sit AFTER 24, not at the start of a new day.
  */
 export function bedtimeScale(ts: number): number {
   const d = new Date(ts);
@@ -30,24 +30,24 @@ export function bedtimeScale(ts: number): number {
 
 /** 22.0 → "22:00", 24.25 → "00:15", 25.5 → "01:30". */
 export function formatScale(scale: number): string {
-  // Làm tròn tới phút TRƯỚC khi tách giờ/phút: 23.999h mà tách trước sẽ ra
-  // "23:60".
+  // Round to the minute BEFORE splitting hours/minutes: splitting 23.999h first
+  // gives "23:60".
   const totalMin = Math.round(scale * 60);
   const h = Math.floor(totalMin / 60) % 24;
   const m = totalMin % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/** Mốc epoch → "22:00". Đường tắt cho chỗ chỉ cần hiện giờ đã ghi. */
+/** epoch → "22:00". A shortcut where only the logged time is shown. */
 export function formatBedtime(ts: number): string {
   return formatScale(bedtimeScale(ts));
 }
 
 /**
- * Trung vị. Mảng rỗng → null.
+ * Median. Empty array → null.
  *
- * Chẵn phần tử thì lấy trung bình hai giá trị giữa, đúng định nghĩa. Với thang
- * liên tục ở trên thì phép trung bình này an toàn - trên thang 0..24 thì không.
+ * With an even count, average the two middle values, by definition. On the
+ * continuous scale above that average is safe - on a 0..24 scale it is not.
  */
 export function median(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -57,19 +57,19 @@ export function median(values: number[]): number | null {
 }
 
 export interface BedtimeStats {
-  /** Trung vị trên thang liên tục. */
+  /** Median on the continuous scale. */
   median: number;
   min: number;
   max: number;
-  /** Số đêm đã ghi. */
+  /** Number of nights logged. */
   n: number;
 }
 
 /**
- * Thống kê một nhóm đêm. Không có đêm nào → `null`, KHÔNG phải 0.
+ * Stats for a group of nights. No nights → `null`, NOT 0.
  *
- * Đây là cùng một luật với `sampleSize < 3` ở AI insights và với cột trống ở
- * Trend: thiếu dữ liệu không phải dữ liệu bằng không.
+ * Same rule as `sampleSize < 3` in AI insights and empty Trend columns:
+ * missing data is not zero data.
  */
 export function bedtimeStats(timestamps: number[]): BedtimeStats | null {
   if (timestamps.length === 0) return null;

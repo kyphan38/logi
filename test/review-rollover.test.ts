@@ -1,9 +1,8 @@
 // ============================================================
-// Ràng buộc cứng của Stage 6 Task 1:
-// Weekly Review tạo target tuần sau TRƯỚC khi rollover chạy.
-// Rollover của Stage 4 phải nhìn thấy doc đó và ĐỂ YÊN.
+// Hard rule: Weekly Review creates next week's target BEFORE rollover runs.
+// Rollover must see that doc and LEAVE IT ALONE.
 //
-// Test này dựng lại đúng chuỗi việc thật: review tối CN → rollover sáng T2.
+// This test replays the real sequence: Sunday evening review → Monday morning rollover.
 // ============================================================
 
 import assert from 'node:assert/strict';
@@ -22,10 +21,10 @@ import { at } from './_helpers.ts';
 const W35 = '2026-W35';
 const W36 = '2026-W36';
 
-const SUNDAY = at('2026-08-30', '19:30'); // lúc chạy review
-const MONDAY = at('2026-08-31', '08:00'); // lúc rollover chạy
+const SUNDAY = at('2026-08-30', '19:30'); // when review runs
+const MONDAY = at('2026-08-31', '08:00'); // when rollover runs
 
-/** Doc weekTargets như Firestore sẽ lưu. */
+/** weekTargets doc as Firestore would store it. */
 function target(week: string, wt: Partial<WeekTarget> = {}): WeekTarget {
   return {
     week,
@@ -39,7 +38,7 @@ function target(week: string, wt: Partial<WeekTarget> = {}): WeekTarget {
   };
 }
 
-/** Đúng cái mà `setupNextWeek()` sẽ ghi ra. */
+/** Exactly what `setupNextWeek()` writes. */
 function fromReview(seed: ReturnType<typeof planNextWeek>): WeekTarget {
   return target(seed.week, {
     preset: seed.preset,
@@ -48,14 +47,14 @@ function fromReview(seed: ReturnType<typeof planNextWeek>): WeekTarget {
   });
 }
 
-test('review chọn Deep Learn cho tuần sau → rollover KHÔNG ghi đè', () => {
+test('review picks Deep Learn for next week → rollover does NOT overwrite', () => {
   const debt = { learn: 6 };
   const plan36 = planNextWeek(W35, 'deep_learn', debt);
 
   const state: RolloverState = {
     currentWeek: W36,
     lastProcessedWeek: W35,
-    debt: plan36.remaining, // review đã tiêu 50% nợ
+    debt: plan36.remaining, // review already spent 50% of the debt
     targets: { [W35]: target(W35), [W36]: fromReview(plan36) },
     now: MONDAY,
   };
@@ -64,11 +63,11 @@ test('review chọn Deep Learn cho tuần sau → rollover KHÔNG ghi đè', () 
 
   assert.deepEqual(plan.creates, [] as WeekTargetSeed[]);
   assert.deepEqual(plan.processed, [W35]);
-  assert.deepEqual(plan.locks, [W35]); // tuần cũ vẫn được đóng sổ
+  assert.deepEqual(plan.locks, [W35]); // the old week is still locked
   assert.equal(plan.lastProcessedWeek, W36);
 });
 
-test('preset và debtApplied của review sống sót qua rollover', () => {
+test('review preset and debtApplied survive rollover', () => {
   const plan36 = planNextWeek(W35, 'deep_learn', { learn: 6 });
   const state: RolloverState = {
     currentWeek: W36,
@@ -86,7 +85,7 @@ test('preset và debtApplied của review sống sót qua rollover', () => {
   assert.equal(w36.weekly.learn, plan36.weekly.learn);
 });
 
-test('nợ không bị tiêu hai lần: review tiêu 50%, rollover không tiêu thêm', () => {
+test('debt is not spent twice: review spends 50%, rollover spends no more', () => {
   const plan36 = planNextWeek(W35, 'normal', { learn: 6 });
   assert.equal(plan36.applied.learn, 3);
   assert.equal(plan36.remaining.learn, 3);
@@ -101,13 +100,13 @@ test('nợ không bị tiêu hai lần: review tiêu 50%, rollover không tiêu 
 
   const after = applyPlan(state, planRollover(state));
 
-  // Rollover có accrue nợ MỚI từ tuần W35 (đó là việc của nó),
-  // nhưng không được đụng lại vào 3h còn lại của lần trước.
-  assert.ok((after.debt.learn ?? 0) >= 3, 'phần nợ còn lại phải nguyên vẹn');
+  // Rollover does accrue NEW debt from W35 (that is its job),
+  // but must not touch the 3h left over from before.
+  assert.ok((after.debt.learn ?? 0) >= 3, 'remaining debt must stay intact');
   assert.equal(after.targets[W36]!.debtApplied.learn, 3);
 });
 
-test('chạy rollover lần hai → không làm gì nữa (idempotent)', () => {
+test('running rollover twice → does nothing more (idempotent)', () => {
   const plan36 = planNextWeek(W35, 'crunch', {});
   const state: RolloverState = {
     currentWeek: W36,
@@ -126,7 +125,7 @@ test('chạy rollover lần hai → không làm gì nữa (idempotent)', () => {
   assert.equal(after.targets[W36]!.preset, 'crunch');
 });
 
-test('KHÔNG review → rollover vẫn tự tạo target Normal như cũ', () => {
+test('NO review → rollover still creates a Normal target as before', () => {
   const state: RolloverState = {
     currentWeek: W36,
     lastProcessedWeek: W35,
@@ -141,7 +140,7 @@ test('KHÔNG review → rollover vẫn tự tạo target Normal như cũ', () =>
   assert.equal(plan.creates[0].preset, 'normal');
 });
 
-test('review tuần này rồi bỏ app hai tuần → tuần giữa không bị đè', () => {
+test('review this week then leave the app two weeks → middle week not overwritten', () => {
   const plan36 = planNextWeek(W35, 'recovery', {});
   const state: RolloverState = {
     currentWeek: '2026-W37',
@@ -153,6 +152,6 @@ test('review tuần này rồi bỏ app hai tuần → tuần giữa không bị
 
   const after = applyPlan(state, planRollover(state));
 
-  assert.equal(after.targets[W36]!.preset, 'recovery'); // vẫn nguyên
-  assert.equal(after.targets['2026-W37']!.preset, 'normal'); // tuần mới mới được tạo
+  assert.equal(after.targets[W36]!.preset, 'recovery'); // unchanged
+  assert.equal(after.targets['2026-W37']!.preset, 'normal'); // only the new week is created
 });

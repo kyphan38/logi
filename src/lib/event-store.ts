@@ -1,13 +1,14 @@
 // ---------------------------------------------------------------------------
-// logi - Firestore cho sự kiện sắp tới (Stage 9)
+// logi - Firestore for upcoming events (Stage 9)
 //
-// Quyết định logic nằm hết ở `@/lib/events` (file thuần, test bằng node --test).
-// Ở đây chỉ có đường đọc/ghi.
+// All decisions live in `@/lib/events` (pure, tested with node --test).
+// This file only reads and writes.
 //
-// Hai luật của tầng này:
-//   - Xoá = set `archivedAt`, KHÔNG hard-delete (trừ Undo ngay sau khi tạo).
-//   - Đổi ngày thì XOÁ SẠCH `notified`. Mốc cũ tính theo ngày cũ; giữ lại
-//     nghĩa là dời một việc ra xa rồi không bao giờ được nhắc mốc đó nữa.
+// Two rules of this layer:
+//   - Delete = set `archivedAt`, NO hard delete (except Undo right after creating).
+//   - Changing the date CLEARS `notified`. Old marks were computed from the old
+//     date; keeping them means moving an event further out and never getting
+//     that mark again.
 // ---------------------------------------------------------------------------
 import {
   addDoc,
@@ -42,7 +43,7 @@ const eventCol = (uid: string) => collection(db, 'users', uid, 'events');
 const eventRef = (uid: string, id: string) => doc(db, 'users', uid, 'events', id);
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-/** "09:05" hoặc "23:59". 24 giờ, luôn hai chữ số - dạng <input type="time"> trả về. */
+/** "09:05" or "23:59". 24-hour, always two digits - what <input type="time"> returns. */
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 function toEvent(id: string, d: DocumentData): EventItem {
@@ -53,8 +54,8 @@ function toEvent(id: string, d: DocumentData): EventItem {
     date: (d.date as string) ?? '',
     time: (d.time as string | null) ?? null,
     note: (d.note as string | null) ?? null,
-    // Doc cũ hoặc ghi hỏng → coi như chưa gửi gì. Nhắc thừa một lần còn hơn
-    // để cả danh sách sập vì một field sai kiểu.
+    // An old doc or a bad write → treat as nothing sent. One extra reminder
+    // beats the whole list crashing on one mistyped field.
     notified: raw && typeof raw === 'object' ? (raw as Record<string, number>) : {},
     archivedAt: (d.archivedAt as number | null) ?? null,
     createdAt: (d.createdAt as number) ?? 0,
@@ -63,14 +64,14 @@ function toEvent(id: string, d: DocumentData): EventItem {
 }
 
 // ---------------------------------------------------------------------------
-// Đọc
+// Read
 // ---------------------------------------------------------------------------
 
 /**
- * Sự kiện chưa xoá, theo ngày tăng dần.
+ * Events not deleted, by date ascending.
  *
- * Lọc `archivedAt` ngay trong query chứ không ở client: việc đã xoá tích lại
- * mãi mãi, còn việc đang chờ thì có trần 40. Chỉ cái có trần mới được stream.
+ * `archivedAt` is filtered in the query, not on the client: deleted events pile
+ * up forever, while pending ones are capped at 40. Only the capped set is streamed.
  */
 export function subscribeEvents(
   uid: string,
@@ -91,17 +92,17 @@ export function subscribeEvents(
 export interface EventInput {
   title: string;
   date: string;
-  /** "11:30", hoặc null = cả ngày. */
+  /** "11:30", or null = all day. */
   time: string | null;
   note: string | null;
 }
 
-/** Kiểm ở client cho câu báo lỗi tử tế; rules kiểm lại lần nữa ở tầng DB. */
+/** Checked on the client for a friendly error; the rules check again at the DB layer. */
 function clean(input: EventInput): EventInput {
   const title = input.title.trim().slice(0, EVENT_TITLE_MAX);
   if (!title) throw new EventError('Give the event a name.');
   if (!DATE_RE.test(input.date)) throw new EventError('Pick a date.');
-  // Ô giờ để trống trả về chuỗi rỗng, không phải null. Cả hai đều là "cả ngày".
+  // An empty time field returns an empty string, not null. Both mean "all day".
   const time = input.time || null;
   if (time !== null && !TIME_RE.test(time)) throw new EventError('That time looks wrong.');
   const note = input.note?.trim().slice(0, EVENT_NOTE_MAX) || null;
@@ -109,9 +110,9 @@ function clean(input: EventInput): EventInput {
 }
 
 /**
- * Thêm sự kiện.
+ * Adds an event.
  *
- * @param existing danh sách đang hiện trên màn hình, để kiểm trần.
+ * @param existing the list currently on screen, to check the cap.
  */
 export async function createEvent(
   uid: string,
@@ -133,11 +134,11 @@ export async function createEvent(
 }
 
 /**
- * Sửa sự kiện.
+ * Edits an event.
  *
- * Đổi ngày → `notified` về rỗng. Mốc "đã gửi" chỉ có nghĩa với ngày lúc gửi;
- * dời sự kiện từ còn-3-ngày sang còn-20-ngày mà giữ cờ thì mốc 3 ngày sẽ bị
- * bỏ qua khi nó đến lần nữa.
+ * Changing the date → `notified` is emptied. A "sent" mark only means
+ * something for the date it was sent for; moving an event from 3 days away to
+ * 20 days away while keeping the flag skips the 3-day mark when it comes again.
  */
 export async function updateEvent(
   uid: string,
@@ -152,7 +153,7 @@ export async function updateEvent(
   });
 }
 
-/** Xoá mềm. Doc ở lại để `notified` không bị gửi lại nếu người dùng khôi phục. */
+/** Soft delete. The doc stays so `notified` is not resent if the user restores it. */
 export async function archiveEvent(uid: string, id: string): Promise<void> {
   const now = Date.now();
   await updateDoc(eventRef(uid, id), { archivedAt: now, updatedAt: now });
@@ -163,7 +164,7 @@ export async function restoreEvent(uid: string, id: string): Promise<void> {
   await updateDoc(eventRef(uid, id), { archivedAt: null, updatedAt: Date.now() });
 }
 
-/** Chỉ dùng cho Undo ngay sau khi tạo nhầm. Rules chặn sau 60 giây. */
+/** Only for Undo right after a mistaken create. The rules block it after 60 seconds. */
 export async function hardDeleteEvent(uid: string, id: string): Promise<void> {
   await deleteDoc(eventRef(uid, id));
 }

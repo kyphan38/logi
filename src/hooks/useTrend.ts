@@ -1,14 +1,14 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Dữ liệu cho ô Trend
+// logi - Data for the Trend box
 //
-// Đọc MỘT LẦN (`getDocs`), không mở listener: 6 tháng dữ liệu là hàng nghìn
-// doc, mà số của tháng Tư thì không đổi nữa. Mở listener ở đây là trả tiền
-// realtime cho thứ không bao giờ chạy.
+// Read ONCE (`getDocs`), no listener: 6 months of data is thousands of docs,
+// and April's numbers never change again. A listener here pays for realtime
+// on something that never moves.
 //
-// Đổi span nhỏ hơn (6 tuần ⊂ 6 tháng) vẫn phải đọc lại: khoảng khác nhau thì
-// cache theo khoảng, giữ lại trong phiên để bấm qua bấm lại không tốn thêm.
+// A shorter span (6 weeks ⊂ 6 months) is still reread: different ranges get
+// their own cache entry, kept for the session so switching back is free.
 // ---------------------------------------------------------------------------
 import { useEffect, useRef, useState } from 'react';
 
@@ -23,7 +23,7 @@ import type { Activity, Category, DayLog } from '@/types/logi';
 export interface TrendData {
   activities: Activity[];
   weekTargets: Map<string, Record<Category, number>>;
-  /** Mốc đi ngủ trong cửa sổ. */
+  /** Bedtime marks in the window. */
   dayLogs: DayLog[];
   loading: boolean;
   error: string | null;
@@ -35,16 +35,16 @@ const EMPTY_TARGETS = new Map<string, Record<Category, number>>();
 const EMPTY_LOGS: DayLog[] = [];
 
 interface Cached {
-  /** Khoảng mà số này thuộc về. Thiếu nó thì cột "6 tuần" nằm dưới nhãn "6 tháng". */
+  /** The range these numbers belong to. Without it, "6 weeks" bars sit under a "6 months" label. */
   key: string;
   activities: Activity[];
   weekTargets: Map<string, Record<Category, number>>;
   dayLogs: DayLog[];
 }
 
-// Lấy đủ ba nguồn trong MỘT lượt. Tab Trend hiện cả hai card cùng lúc nên
-// tách theo `extra` chỉ làm activities bị đọc ba lần với ba cache key khác
-// nhau. 26 tuần vẫn là một query trên `logicalDate`, không phải 26 query.
+// Fetch all three sources in ONE go. The Trend tab shows both cards at once, so
+// splitting by `extra` would read activities three times under three cache
+// keys. 26 weeks is still one query on `logicalDate`, not 26 queries.
 export function useTrend(span: TrendSpan, now: number): TrendData {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
@@ -59,13 +59,13 @@ export function useTrend(span: TrendSpan, now: number): TrendData {
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
 
-  // Số cũ chỉ được dùng khi nó đúng là số của khoảng đang xem.
+  // Old numbers are only used when they really belong to the viewed range.
   const fresh = data && data.key === key ? data : null;
 
   useEffect(() => {
     if (!key || !uid) return;
 
-    // Bấm qua bấm lại giữa các span đã xem: lấy từ cache, không query lại.
+    // Switching between spans already seen: take from cache, no new query.
     const hit = cache.current.get(key);
     if (hit) {
       setData(hit);
@@ -80,8 +80,8 @@ export function useTrend(span: TrendSpan, now: number): TrendData {
 
     void (async () => {
       try {
-        // Query song song: activities của cả cửa sổ + target của mọi tuần nó
-        // chạm tới + bedtime. Không bao giờ lặp query theo từng cột.
+        // Parallel queries: activities for the whole window + targets for every
+        // week it touches + bedtime. Never a query loop per column.
         const [activities, targetDocs, dayLogs] = await Promise.all([
           listByRange(uid, win),
           listWeekTargets(uid, weeksOf(win)),
@@ -105,7 +105,7 @@ export function useTrend(span: TrendSpan, now: number): TrendData {
     return () => {
       alive = false;
     };
-    // `win` được dựng lại mỗi render nhưng nội dung đã nằm gọn trong `key`.
+    // `win` is rebuilt every render, but its content is fully captured in `key`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, uid, nonce]);
 

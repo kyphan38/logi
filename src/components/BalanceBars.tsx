@@ -3,12 +3,12 @@
 // ---------------------------------------------------------------------------
 // logi - Balance bars (Stage 5 Task 3)
 //
-// Chart chính. Trả lời hai câu hỏi trong một hình:
-//   "Tôi đã sống bao nhiêu giờ cho mỗi việc?"  → chiều dài thanh
-//   "So với dự định thì lệch bao nhiêu?"       → vạch target + số bên phải
+// The main chart. Answers two questions in one picture:
+//   "How many hours did I spend on each thing?"  → bar length
+//   "How far off the plan is that?"               → target tick + number on the right
 //
-// Div + CSS thuần, KHÔNG Recharts: ở bề rộng 320px thư viện chart hay nuốt mất
-// vạch target hoặc bóp nhãn, mà đây là hai thứ không được sai.
+// Plain div + CSS, NO Recharts: at 320px wide chart libraries tend to swallow
+// the target tick or squeeze labels, and those two must never be wrong.
 // ---------------------------------------------------------------------------
 import { catInk } from '@/lib/category-style';
 import type { RangeDeviation } from '@/lib/range-target';
@@ -16,13 +16,13 @@ import { CATEGORY_COLOR, CATEGORY_LABEL, type Category } from '@/types/logi';
 
 interface Props {
   rows: RangeDeviation[];
-  /** Ẩn cột lệch khi khoảng chưa đủ dữ liệu để so sánh. */
+  /** Hide the gap column when the range lacks data to compare. */
   showDeviation?: boolean;
 }
 
 export default function BalanceBars({ rows, showDeviation = true }: Props) {
-  // MỘT thang đo cho cả 4 thanh. Mỗi thanh một thang thì Fitness 1.5h sẽ trông
-  // dài bằng Work 43h - hình đẹp nhưng nói dối.
+  // ONE scale for all 4 bars. A scale per bar would make Fitness 1.5h look as
+  // long as Work 43h - pretty, but a lie.
   const max = Math.max(1, ...rows.map((r) => Math.max(r.actual, r.expected)));
 
   return (
@@ -60,13 +60,13 @@ function Bar({
       </div>
 
       <div className="relative h-3 w-full overflow-hidden rounded-full bg-surface-1">
-        {/* Phần trong target */}
+        {/* The part within target */}
         <div
           className="absolute inset-y-0 left-0 rounded-full"
           style={{ width: pct(base), background: CATEGORY_COLOR[row.category] }}
         />
-        {/* Phần vượt target: mực đậm kẻ sọc, để phân biệt được với mọi màu
-            category lẫn ở dark mode (chỉ xám, DESIGN.md). */}
+        {/* The part over target: striped strong ink, distinct from every
+            category color, in dark mode too (gray only, DESIGN.md). */}
         {over > 0 && (
           <div
             className="absolute inset-y-0 rounded-r-full"
@@ -79,7 +79,7 @@ function Bar({
             }}
           />
         )}
-        {/* Vạch target. Nằm trên cùng để không bị thanh che. */}
+        {/* Target tick. On top so the bar never hides it. */}
         {row.expected > 0 && (
           <div
             className="absolute inset-y-0 w-0.5 bg-ink"
@@ -98,8 +98,8 @@ function Bar({
 }
 
 function DeviationTag({ row }: { row: RangeDeviation }) {
-  // Deadband kép của balance.ts: dưới ngưỡng thì KHÔNG gắn cờ. Lệch 8% là
-  // nhiễu của việc bấm nút muộn vài phút, không phải tín hiệu.
+  // balance.ts's double deadband: below the threshold, NO flag. An 8% gap is
+  // the noise of tapping a few minutes late, not a signal.
   if (row.flag === 'ok') {
     return <span className="text-[13px] text-ink-muted">·</span>;
   }
@@ -112,6 +112,6 @@ function DeviationTag({ row }: { row: RangeDeviation }) {
 }
 
 export function categoryOrder(): Category[] {
-  // Work trước: nó là thanh dài nhất, đặt trên cùng thì thang đo đọc dễ hơn.
+  // Work first: it is the longest bar, so the scale reads easier on top.
   return ['work', 'learn', 'fitness', 'leisure'];
 }

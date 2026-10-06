@@ -1,13 +1,13 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Khôi phục từ file backup (Stage 6 Task 3)
+// logi - Restore from a backup file (Stage 6 Task 3)
 //
-// Trang ẩn: không có trong thanh điều hướng, phải gõ /settings/restore. Đây là
-// việc làm một lần khi có sự cố, không phải việc hằng ngày, và một nút "import"
-// đặt cạnh các nút thường dùng là một nút chờ để bị bấm nhầm.
+// Hidden page: not in the nav, you type /settings/restore. It is a one-off for
+// emergencies, not a daily task, and an "import" button next to everyday
+// buttons is a button waiting to be tapped by mistake.
 //
-// Nguyên tắc: CHỈ THÊM. Không ghi đè, không xoá. Xem `src/lib/backup.ts`.
+// Rule: ADD ONLY. No overwrite, no delete. See `src/lib/backup.ts`.
 // ---------------------------------------------------------------------------
 
 import { useState } from 'react';
@@ -56,8 +56,8 @@ export default function RestorePage() {
     if (!uid) return;
     setBusy(true);
     try {
-      // Đối chiếu với dữ liệu đang có NGAY LÚC NÀY, để con số trong preview
-      // đúng là số record sẽ được thêm, không phải số record trong file.
+      // Compare with the data as it is RIGHT NOW, so the preview number is the
+      // count that will really be added, not the count in the file.
       const existing = await listAllIds(uid);
       setLoaded({
         file: parsed,
@@ -94,8 +94,7 @@ export default function RestorePage() {
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Restore</h1>
         <p className="text-[13px] text-ink-muted">
-          Load a JSON backup. Only missing records are added - nothing is
-          overwritten or deleted.
+          Adds missing records only. Never overwrites.
         </p>
         <Link href="/settings" className="text-[13px] text-ink-soft underline">
           Back to Settings
@@ -111,7 +110,7 @@ export default function RestorePage() {
           className="sr-only"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            // Reset để chọn lại đúng file đó lần nữa vẫn kích hoạt onChange.
+            // Reset so picking the same file again still fires onChange.
             e.target.value = '';
             if (f) void pickFile(f);
           }}
@@ -153,8 +152,8 @@ export default function RestorePage() {
             <p className="text-sm tabular-nums text-ink">
               {loaded.plan.add.length} new · {loaded.plan.skip} already there
             </p>
-            {/* Target trong file chỉ có số giờ, thiếu preset và sổ nợ, nên dựng
-                lại sẽ ra tuần nửa vời. Để người dùng tự đặt lại ở màn Targets. */}
+            {/* Targets in the file only have hours, no preset or debt ledger, so a
+                rebuild would give a half week. Let the user set it again on Targets. */}
             {loaded.preview.targets > 0 && (
               <p className="text-[13px] text-ink-muted">
                 {loaded.preview.targets} week targets in the file are not restored.

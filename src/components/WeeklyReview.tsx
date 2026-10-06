@@ -3,8 +3,8 @@
 // ------------------------------------------------------------
 // logi - Weekly Review (Stage 6 Task 1)
 //
-// Ba màn, vuốt ngang. Dùng scroll-snap của CSS, không thêm thư viện.
-// Màn 1 dùng lại BalanceBars của Stage 5 - không vẽ lại chart thứ hai.
+// Three screens, swiped sideways. Uses CSS scroll-snap, no extra library.
+// Screen 1 reuses Stage 5's BalanceBars - no second chart drawn.
 // ------------------------------------------------------------
 
 import { useMemo, useRef, useState } from 'react';
@@ -34,15 +34,15 @@ export default function WeeklyReview({ week, onClose }: Props) {
   const uid = user?.uid ?? null;
   const { summary, activities, weekTargets, now, debt, canSetNext, loading } = useReviewData(week);
 
-  // Màn 2 mở ra là chạy luôn - người dùng không phải bấm thêm nút nào.
-  // `weekRange` chốt theo `week`, không theo đồng hồ, để digest không đổi.
+  // Screen 2 runs as soon as it opens - the user taps nothing extra.
+  // `weekRange` is fixed by `week`, not the clock, so the digest does not change.
   const range = useMemo(() => weekRange(week), [week]);
   const insight = useInsight({ activities, range, weekTargets, now, auto: true });
 
   const scroller = useRef<HTMLDivElement>(null);
   const [panel, setPanel] = useState(0);
   const [preset, setPreset] = useState<PresetId>('normal');
-  /** AI gợi ý preset thì đánh dấu sẵn, nhưng người dùng vẫn phải bấm Confirm. */
+  /** An AI-suggested preset is preselected, but the user still taps Confirm. */
   const [tookHint, setTookHint] = useState(false);
   const hinted = insight.result?.suggestion?.preset ?? null;
   if (hinted && !tookHint) {
@@ -106,7 +106,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
           onScroll={onScroll}
           className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {/* --- Màn 1: tuần vừa rồi --- */}
+          {/* --- Screen 1: the past week --- */}
           <Panel label={PANELS[0]}>
             {loading || !summary ? (
               <p className="text-[13px] text-ink-muted">Loading…</p>
@@ -120,9 +120,9 @@ export default function WeeklyReview({ week, onClose }: Props) {
             )}
           </Panel>
 
-          {/* --- Màn 2: điều đáng chú ý ---
-              AI chọn ra ba điều; hỏng hoặc thiếu dữ liệu thì rơi về note
-              cứng của Stage 6. Màn này không bao giờ được để trống. */}
+          {/* --- Screen 2: worth noticing ---
+              The AI picks three things; on failure or missing data it falls back
+              to Stage 6's fixed notes. This screen is never empty. */}
           <Panel label={PANELS[1]}>
             {insight.state === 'loading' ? (
               <p className="text-[13px] text-ink-muted">Reading your week…</p>
@@ -148,7 +148,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
             )}
           </Panel>
 
-          {/* --- Màn 3: tuần tới --- */}
+          {/* --- Screen 3: next week --- */}
           <Panel label={`Set up week ${Number(nextWeek.slice(-2))}`}>
             {canSetNext ? (
               <>
@@ -250,7 +250,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
   );
 }
 
-/** Cùng quy ước với InsightPanel: severity chỉ đổi độ đậm, không dùng màu đỏ. */
+/** Same rule as InsightPanel: severity only changes weight, never red. */
 const WEIGHT = {
   important: 'font-semibold text-ink',
   notable: 'font-medium text-ink',

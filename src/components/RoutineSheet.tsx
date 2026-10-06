@@ -11,7 +11,7 @@ import {
 } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
-// logi - Sheet thêm / sửa nhóm và mục của Routine (Stage 10)
+// logi - Sheet for adding / editing Routine groups and items (Stage 10)
 // ---------------------------------------------------------------------------
 
 const INPUT =
@@ -31,7 +31,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-/** Xoá có một bước xác nhận ngay trong sheet, không mở thêm hộp thoại. */
+/** Delete has one confirm step inside the sheet, no extra dialog. */
 function RemoveRow({
   label,
   question,
@@ -82,7 +82,7 @@ export function GroupSheet({
   onSave,
   onArchive,
 }: {
-  /** null → thêm mới. */
+  /** null → adding. */
   group: RoutineGroup | null;
   busy: boolean;
   onCancel: () => void;
@@ -143,10 +143,10 @@ export function ItemSheet({
   onSave,
   onRemove,
 }: {
-  /** null → thêm mới. */
+  /** null → adding. */
   item: RoutineItem | null;
   groupTitle: string;
-  /** Mục mới bật sẵn ngày đang xem - trường hợp hay gặp nhất. */
+  /** A new item starts on the viewed day - the most common case. */
   defaultDays: number[];
   busy: boolean;
   onCancel: () => void;

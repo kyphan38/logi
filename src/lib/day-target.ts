@@ -1,20 +1,20 @@
 // ---------------------------------------------------------------------------
-// logi - Target của MỘT ngày (Stage 4.5)
+// logi - The target of ONE day (Stage 4.5)
 //
-// `expectedHours()` trong balance.ts cộng dồn cả tuần đã trôi qua. History chỉ
-// cần lát cắt một ngày. File này giữ đúng công thức đó, không đổi đi:
+// `expectedHours()` in balance.ts sums the week so far. History only needs a
+// one-day slice. This file keeps that exact formula, unchanged:
 //
 //     target[c][dow] = BASELINE_DAILY[c][dow] * (weekly[c] / BASELINE_WEEKLY[c])
 //
-// tức là giữ nguyên hình dạng tuần của baseline rồi scale theo target thực tế.
-// Hàm thuần, không đụng React → test bằng `node --test`.
+// i.e. keep the baseline's weekly shape, scaled to the actual target.
+// Pure function, no React → tested with `node --test`.
 // ---------------------------------------------------------------------------
 import { catchUp } from '@/lib/catchup';
 import { BASELINE_DAILY, BASELINE_WEEKLY, CATEGORIES, type Category } from '@/types/logi';
 
 /**
- * @param weekday 0 = CN … 6 = T7 (khớp `logicalWeekday()`)
- * @param weekly  target tuần đang áp dụng (từ `weekTarget.weekly`)
+ * @param weekday 0 = Sun … 6 = Sat (matches `logicalWeekday()`)
+ * @param weekly  the weekly target in effect (from `weekTarget.weekly`)
  */
 export function dailyTargetFor(
   weekday: number,
@@ -29,30 +29,31 @@ export function dailyTargetFor(
   return out;
 }
 
-/** Dưới mức này thì nhãn được làm đậm hơn cho dễ thấy. Không dùng màu đỏ. */
+/** Below this the label is bolder to stand out. Never red. */
 export const LOW_RATIO = 0.5;
 
 export interface DayLine {
   category: Category;
   actual: number;
-  /** Mẫu số của gauge. Có `doneBefore` thì đây là gợi ý bù, không thì standard. */
+  /** The gauge denominator. With `doneBefore` it is the catch-up suggestion, else the standard. */
   target: number;
-  /** Chia theo baseline, không nhìn tuần đã đi tới đâu. */
+  /** Split by baseline, ignoring how far the week has gone. */
   standard: number;
-  /** Xong target tuần rồi, trước cả ngày này. */
+  /** The weekly target was already met before this day. */
   met: boolean;
-  /** Trần ngày đã cắt bớt gợi ý. */
+  /** The daily cap cut the suggestion. */
   capped: boolean;
-  /** actual < 50% target → cần chú ý. */
+  /** actual < 50% of target → needs attention. */
   low: boolean;
 }
 
 /**
- * Dòng tóm tắt: `Learn 1.5 / 3.0 · Work 9.5 / 9.5`.
+ * Summary line: `Learn 1.5 / 3.0 · Work 9.5 / 9.5`.
  *
- * @param doneBefore giờ đã log ở các ngày TRƯỚC ngày này trong cùng tuần logic.
- *   Có thì mẫu số là gợi ý bù (xem `catchUp`); `null` - chưa tải xong dữ liệu
- *   tuần - thì quay về chia theo baseline, thà đứng yên còn hơn nhảy số.
+ * @param doneBefore hours logged on days BEFORE this one in the same logical week.
+ *   With it, the denominator is the catch-up suggestion (see `catchUp`); `null` -
+ *   the week's data is not loaded yet - falls back to the baseline split; still
+ *   beats a jumping number.
  */
 export function daySummary(
   actual: Record<Category, number>,
@@ -71,8 +72,8 @@ export function daySummary(
     const standard = flat[c];
     const target = plan ? plan[c].suggested : standard;
 
-    // Ngày nghỉ của category này (Fitness Chủ nhật) mà cũng chẳng log gì thì ô
-    // đó không mang tin - bỏ hẳn. Đã log thì vẫn hiện, để giờ không biến mất.
+    // A day off for this category (Fitness on Sunday) with nothing logged carries
+    // no information - drop it. If something was logged, still show it so hours never vanish.
     if (a <= 0 && standard <= 0 && target <= 0) continue;
 
     lines.push({
@@ -90,24 +91,24 @@ export function daySummary(
 
 
 // ---------------------------------------------------------------------------
-// Hình dạng một ô gauge ở màn History (Stage 4.6 Task 4).
-// Tách ra khỏi component để test được bằng `node --test`.
+// The shape of one gauge cell on History (Stage 4.6 Task 4).
+// Kept out of the component so it can be tested with `node --test`.
 // ---------------------------------------------------------------------------
 export interface GaugeShape {
-  /** 0..1 - phần thanh được tô. Không bao giờ quá 1. */
+  /** 0..1 - the filled part of the bar. Never above 1. */
   fill: number;
-  /** Vượt target → thanh đầy + vạch hổ phách ở mép phải. */
+  /** Over target → full bar + a strong tick at the right edge. */
   over: boolean;
-  /** Không có target (VD Fitness ngày Chủ nhật) → không vẽ thanh, số là `0.0/-`. */
+  /** No target (e.g. Fitness on Sunday) → no bar drawn, the number is `0.0/-`. */
   noTarget: boolean;
-  /** Không target mà cũng chẳng log gì → ô này không mang tin, làm mờ đi. */
+  /** No target and nothing logged → the cell carries nothing, so it fades. */
   dim: boolean;
 }
 
 export function gaugeShape(actual: number, target: number): GaugeShape {
   const noTarget = target <= 0;
   return {
-    // Kẹp cả hai đầu: width âm là CSS không hợp lệ, thanh sẽ biến mất.
+    // Clamp both ends: a negative width is invalid CSS and the bar disappears.
     fill: noTarget ? 0 : Math.min(1, Math.max(0, actual / target)),
     over: !noTarget && actual > target,
     noTarget,

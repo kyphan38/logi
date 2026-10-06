@@ -2,8 +2,8 @@ import 'server-only';
 
 // ============================================================
 // logi - Firebase Admin SDK
-// CHỈ chạy server-side. 'server-only' ở trên chặn file này lọt
-// vào client bundle (build sẽ fail nếu có ai import nhầm).
+// SERVER-SIDE only. 'server-only' above keeps this file out of the
+// client bundle (the build fails if anyone imports it by mistake).
 // ============================================================
 
 import { cert, getApps, getApp, initializeApp, type App } from 'firebase-admin/app';
@@ -28,7 +28,7 @@ function createAdminApp(): App {
 
   const projectId = readEnv('FIREBASE_ADMIN_PROJECT_ID');
   const clientEmail = readEnv('FIREBASE_ADMIN_CLIENT_EMAIL');
-  // Env var lưu \n dạng hai ký tự literal → đổi lại thành xuống dòng thật.
+  // The env var stores \n as two literal characters → turn them back into newlines.
   const privateKey = readEnv('FIREBASE_ADMIN_PRIVATE_KEY').replace(/\\n/g, '\n');
 
   return initializeApp({

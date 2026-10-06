@@ -30,7 +30,7 @@ export default function StaleSessionModal({
 }: {
   activity: Activity;
   now: number;
-  /** Còn bao nhiêu session stale nữa sau cái này. */
+  /** How many stale sessions remain after this one. */
   remaining: number;
   onResolved: () => void;
 }) {
@@ -41,10 +41,10 @@ export default function StaleSessionModal({
   const [error, setError] = useState<string | null>(null);
   const [custom, setCustom] = useState<string | null>(null);
 
-  // Giờ hợp lệ cuối cùng: không quá 15h sau startAt, và không ở tương lai.
+  // The last valid time: no more than 15h after startAt, and not in the future.
   const maxTs = Math.min(now, activity.startAt + MAX_SESSION_MS);
 
-  // Bỏ các gợi ý sẽ bị `validateTimes` từ chối (quá 15h hoặc trước lúc bắt đầu).
+  // Drop suggestions `validateTimes` would reject (over 15h or before the start).
   const suggestions = useMemo(
     () => suggestedEndTimes(activity).filter((s) => s.ts > activity.startAt && s.ts <= maxTs),
     [activity, maxTs],
@@ -55,7 +55,7 @@ export default function StaleSessionModal({
     setBusy(true);
     setError(null);
     try {
-      // Offline: write nằm trong hàng đợi, modal vẫn phải đóng được.
+      // Offline: the write is queued, the modal must still close.
       await capWait(fn(), () => undefined);
       onResolved();
     } catch (e) {
@@ -79,7 +79,7 @@ export default function StaleSessionModal({
   }
 
   return (
-    // Không đóng được bằng cách bấm ra ngoài - bắt buộc phải xử lý.
+    // Cannot close by tapping outside - it must be handled.
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
       role="dialog"

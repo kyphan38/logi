@@ -21,16 +21,16 @@ export default function BottomNav() {
     <nav
       aria-label="Main"
       className={[
-        // Mobile: thanh nằm cuối cột, KHÔNG `fixed`. `fixed` bám đáy của
-        // layout viewport - trên iOS Safari chỗ đó nằm dưới thanh công cụ khi
-        // trang cuộn được, nên Analytics (trang dài) tụt xuống còn 3 tab ngắn
-        // thì không. Là con của flex column thì cả 4 tab giống hệt nhau.
-        // Nền đục, không blur: blur làm iOS cuộn giật.
+        // Mobile: the bar sits at the end of the column, NOT `fixed`. `fixed`
+        // sticks to the layout viewport bottom - on iOS Safari that is under
+        // the toolbar when the page scrolls, so Analytics (a long page) sank
+        // while the 3 short tabs did not. As a flex column child all 4 tabs match.
+        // Opaque background, no blur: blur makes iOS scrolling stutter.
         'z-40 flex shrink-0 border-t border-zinc-200 bg-white',
         'dark:border-zinc-800 dark:bg-zinc-950',
-        // Chừa chỗ cho home indicator của iPhone.
+        // Room for the iPhone home indicator.
         'pb-[env(safe-area-inset-bottom)]',
-        // Desktop: đổi thành sidebar bên trái.
+        // Desktop: becomes a left sidebar.
         'md:fixed md:inset-y-0 md:left-0 md:w-[180px] md:flex-col md:gap-1 md:border-r md:border-t-0 md:p-3 md:pb-3',
       ].join(' ')}
     >
@@ -42,9 +42,9 @@ export default function BottomNav() {
             href={tab.href}
             aria-current={active ? 'page' : undefined}
             className={[
-              // `relative`: gạch active bên dưới neo vào ĐÚNG tab này. Thiếu nó
-              // thì nó neo vào <nav> (ancestor duy nhất có position), nên mỗi
-              // tab một độ cao khác nhau.
+              // `relative`: the active underline anchors to THIS tab. Without it
+              // the line anchors to <nav> (the only positioned ancestor), so
+              // each tab gets a different height.
               'relative flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition',
               'md:h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:rounded-lg md:px-3 md:text-sm',
               active
@@ -62,7 +62,7 @@ export default function BottomNav() {
               {tab.icon}
             </span>
             <span>{tab.label}</span>
-            {/* Gạch đậm dưới tab đang mở - nhìn là thấy ngay. */}
+            {/* A bold line under the open tab - visible at a glance. */}
             <span
               aria-hidden="true"
               className={[

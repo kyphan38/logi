@@ -1,15 +1,15 @@
 /* eslint-disable */
 // ---------------------------------------------------------------------------
-// logi - Service worker (Stage 6 Task 2)
+// logi - Service worker
 //
-// CHỈ xử lý push. Không cache asset nào: cache là một tầng nữa phải debug, và
-// khi nó giữ bản cũ thì lỗi rất khó hiểu. App vẫn tải từ mạng như bình thường.
+// Handles push ONLY. No asset caching: a cache is one more layer to debug,
+// and stale copies cause confusing bugs. The app loads from the network.
 //
-// Cố ý KHÔNG dùng SDK FCM ở đây:
-//   - đỡ phải nạp script từ CDN mỗi lần SW khởi động
-//   - Cloud Function gửi payload chỉ có `data`, nên trình duyệt không tự hiện
-//     thông báo. Nếu gửi kèm `notification`, trình duyệt hiện một cái và code
-//     dưới đây hiện thêm một cái nữa - người dùng thấy hai thông báo trùng.
+// The FCM SDK is NOT used here on purpose:
+//   - no CDN script load on every SW start
+//   - the Cloud Function sends a `data`-only payload, so the browser shows
+//     nothing itself. With `notification` too, the browser shows one and the
+//     code below shows another: a duplicate.
 // ---------------------------------------------------------------------------
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -20,7 +20,7 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    // Payload lạ thì vẫn hiện một thông báo trống còn hơn im lặng nuốt mất.
+    // An odd payload still shows an empty notification rather than being swallowed.
   }
 
   const d = payload.data || payload;
@@ -29,7 +29,7 @@ self.addEventListener('push', (event) => {
     body: d.body || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    // Cùng một loại nhắc thì thay thế cái cũ, không xếp chồng.
+    // Same reminder type replaces the old one instead of stacking.
     tag: d.tag || 'logi',
     renotify: false,
     data: { url: d.url || '/now' },
@@ -44,7 +44,7 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      // App đang mở sẵn thì đưa cửa sổ đó lên, đừng mở thêm tab thứ hai.
+      // If the app is already open, focus that window instead of a second tab.
       for (const c of list) {
         if (c.url.includes(url) && 'focus' in c) return c.focus();
       }

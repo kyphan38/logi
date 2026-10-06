@@ -1,6 +1,6 @@
 /**
- * Mặt trăng một nét cho nút bedtime. KHÔNG dùng emoji 🌙: trình duyệt vẽ emoji
- * bằng bảng màu riêng (vàng), bỏ qua màu chữ xung quanh (DESIGN.md).
+ * A one-stroke moon for the bedtime button. NOT the 🌙 emoji: browsers draw
+ * emoji with their own palette (yellow), ignoring the surrounding text color (DESIGN.md).
  */
 export default function MoonIcon() {
   return (

@@ -1,47 +1,48 @@
 // ============================================================
-// logi - Sự kiện sắp tới (Stage 9).
+// logi - Upcoming events (Stage 9).
 //
-// KHÁC HẲN `@/lib/reminders`. File đó nhắc thói quen hằng ngày, tự suy ra từ
-// activity. File này là những mốc người dùng tự gõ vào: đám cưới, hạn nộp,
-// lịch khám. Có ngày cụ thể, đếm ngược tới đó, rồi thôi.
+// VERY DIFFERENT from `@/lib/reminders`. That file nudges daily habits,
+// inferred from activities. This one holds dates the user types in: weddings,
+// deadlines, checkups. A specific date, a countdown to it, and done.
 //
-// File thuần, không React → test được bằng `node --test`.
+// Pure file, no React → testable with `node --test`.
 //
-// ĐÂY LÀ BẢN GỐC. `functions/src/events.ts` là bản chép để Cloud Function
-// dùng - sửa ở đây thì PHẢI sửa cả bên đó (`test/events-parity.test.ts` giữ
-// hai bên khớp nhau).
+// THIS IS THE ORIGINAL. `functions/src/events.ts` is a copy for the Cloud
+// Function - change it here and you MUST change it there too
+// (`test/events-parity.test.ts` keeps them in sync).
 // ============================================================
 
 import { logicalDate } from '@/lib/balance';
 import { MILESTONES, type EventItem, type Milestone } from '@/types/logi';
 
 // ------------------------------------------------------------
-// Ngày
+// Dates
 // ------------------------------------------------------------
 
 /**
- * "2026-10-15" → mốc epoch của nửa đêm UTC.
+ * "2026-10-15" → epoch of UTC midnight.
  *
- * Cố ý dùng UTC chứ không phải giờ máy: ở đây chỉ cần HIỆU giữa hai ngày, và
- * UTC thì mỗi ngày luôn đúng 24 giờ. Cloud Function chạy ở UTC còn app chạy ở
- * +07:00 - đi qua giờ địa phương là mở cửa cho hai bên lệch nhau một ngày.
+ * UTC on purpose, not device time: only the DIFFERENCE between two dates is
+ * needed, and in UTC every day is exactly 24 hours. The Cloud Function runs in
+ * UTC while the app runs at +07:00 - going through local time invites the two
+ * to differ by a day.
  */
 function midnightUTC(date: string): number {
   return Date.parse(`${date}T00:00:00Z`);
 }
 
 /**
- * Số ngày từ HÔM NAY (ngày logic) tới `date`. Âm = đã qua.
+ * Days from TODAY (logical day) to `date`. Negative = past.
  *
- * Phải trừ theo ngày lịch, không phải `(target - now) / 86400000`. Trừ theo ms
- * thì lúc 23:00 việc của ngày mai ra 0 ngày - người dùng nhận thông báo
- * "Today" cho một việc còn chưa tới.
+ * Must subtract calendar days, not `(target - now) / 86400000`. Subtracting ms
+ * makes tomorrow's event 0 days away at 23:00 - the user gets a "Today"
+ * notification for something not here yet.
  */
 export function daysUntil(date: string, now: number): number {
   return daysBetween(logicalDate(now), date);
 }
 
-/** Số ngày từ `from` tới `to`. Âm = `to` đã qua. Bản functions chép đúng hàm này. */
+/** Days from `from` to `to`. Negative = `to` is past. The functions copy mirrors this exactly. */
 export function daysBetween(from: string, to: string): number {
   return Math.round((midnightUTC(to) - midnightUTC(from)) / 86_400_000);
 }
@@ -52,9 +53,9 @@ const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'O
 /**
  * "2026-10-15" → "Wed, Oct 15".
  *
- * Tự ghép chuỗi thay vì `toLocaleDateString()`: hàm đó đọc locale và múi giờ
- * của máy đang chạy, nên cùng một ngày sẽ ra thứ khác nhau giữa app (+07:00)
- * và Cloud Function (UTC).
+ * Built by hand, not `toLocaleDateString()`: that reads the running machine's
+ * locale and timezone, so one date gives a different weekday in the app
+ * (+07:00) and the Cloud Function (UTC).
  */
 export function dateLabel(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
@@ -64,32 +65,32 @@ export function dateLabel(date: string): string {
 }
 
 /**
- * Ngày + giờ thành một câu: "Mon, Oct 26 · 11:30", hoặc chỉ ngày khi cả ngày.
+ * Date + time as one phrase: "Mon, Oct 26 · 11:30", or just the date for all day.
  *
- * Giờ giữ nguyên dạng 24 tiếng đã lưu, KHÔNG qua `toLocaleTimeString()`: hàm
- * đó đọc locale máy chạy, nên Cloud Function (UTC, locale mặc định) sẽ in ra
- * một kiểu còn app in ra kiểu khác.
+ * The time keeps its stored 24-hour form, NOT via `toLocaleTimeString()`: that
+ * reads the machine's locale, so the Cloud Function (UTC, default locale) would
+ * print one style and the app another.
  */
 export function whenLabel(date: string, time: string | null): string {
   return time ? `${dateLabel(date)} · ${time}` : dateLabel(date);
 }
 
-/** "2026-10-15" → "Wednesday". Dùng khi đã có ngày tháng ở chỗ khác. */
+/** "2026-10-15" → "Wednesday". When the date is shown elsewhere already. */
 export function weekdayOf(date: string): number {
   const [y, m, d] = date.split('-').map(Number);
   return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay();
 }
 
 // ------------------------------------------------------------
-// Chữ đếm ngược
+// Countdown text
 // ------------------------------------------------------------
 
 /**
- * Số ngày → câu đọc được. Dùng CHUNG cho danh sách trong app và cho push,
- * để thông báo trên màn khoá nói đúng câu người dùng sẽ thấy khi mở app.
+ * Day count → a readable phrase. SHARED by the in-app list and push, so the
+ * Lock Screen notification says exactly what the user sees in the app.
  *
- * Mốc 7 và 14 nói bằng tuần vì đó là cách người ta thật sự nghĩ về chúng.
- * "In 14 days" bắt não phải chia; "In 2 weeks" thì không.
+ * 7 and 14 are said in weeks because that is how people really think of them.
+ * "In 14 days" makes the brain divide; "In 2 weeks" does not.
  */
 export function countdownText(days: number): string {
   if (days < 0) return days === -1 ? 'Yesterday' : `${-days} days ago`;
@@ -103,16 +104,16 @@ export function countdownText(days: number): string {
 }
 
 /**
- * Đếm ngược tách làm hai phần, cho khối số to ở đầu mỗi dòng.
+ * The countdown split in two, for the big number block at the start of each row.
  *
- * Phải khớp `countdownText()` từng mốc một: hai chỗ cùng nói về một sự kiện mà
- * một bên ghi "7 days" còn bên kia ghi "Next week" thì người dùng phải dừng lại
- * đối chiếu. `test/events.test.ts` giữ hai hàm này đồng ý với nhau.
+ * Must match `countdownText()` at every mark: two places about one event, one
+ * saying "7 days" and the other "Next week", makes the user stop and compare.
+ * `test/events.test.ts` keeps these two in agreement.
  */
 export interface CountdownParts {
-  /** Số, hoặc chữ "Today" khi không có số nào để hiện. */
+  /** A number, or "Today" when there is no number to show. */
   value: string;
-  /** Đơn vị. Rỗng khi `value` đã là cả câu. */
+  /** The unit. Empty when `value` is already the whole phrase. */
   unit: string;
 }
 
@@ -126,21 +127,21 @@ export function countdownParts(days: number): CountdownParts {
   return { value: String(Math.round(days / 30)), unit: 'months' };
 }
 
-/** Một dòng đầy đủ: "In 3 days · Thu, Oct 15". */
+/** One full line: "In 3 days · Thu, Oct 15". */
 export function eventLine(date: string, now: number): string {
   return `${countdownText(daysUntil(date, now))} · ${dateLabel(date)}`;
 }
 
 // ------------------------------------------------------------
-// Mốc nhắc
+// Reminder marks
 // ------------------------------------------------------------
 
 /**
- * Mốc đến hạn hôm nay mà CHƯA gửi, hoặc `null`.
+ * The mark due today and NOT yet sent, or `null`.
  *
- * Chỉ khớp ĐÚNG số ngày, không có "gửi bù". Máy tắt mất một ngày thì mốc đó
- * trôi qua luôn: nhận "In 7 days" vào đúng ngày còn 6 ngày là thông báo sai,
- * tệ hơn là không nhận gì.
+ * Only matches the EXACT day count, no "catch-up sends". If the device is off
+ * for a day, that mark simply passes: getting "In 7 days" when 6 days remain
+ * is a wrong notification, worse than none.
  */
 export function dueMilestone(e: EventItem, now: number): Milestone | null {
   const days = daysUntil(e.date, now);
@@ -154,10 +155,10 @@ export function isMilestone(days: number): days is Milestone {
 }
 
 // ------------------------------------------------------------
-// Sắp xếp
+// Sorting
 // ------------------------------------------------------------
 
-/** Mức gấp, để tô màu. Không dính gì tới logic gửi. */
+/** Urgency level, for styling. Unrelated to sending. */
 export type Urgency = 'past' | 'today' | 'soon' | 'near' | 'far';
 
 export function urgency(days: number): Urgency {
@@ -169,10 +170,10 @@ export function urgency(days: number): Urgency {
 }
 
 /**
- * Tách thành hai khối theo đúng thứ tự hiển thị.
+ * Splits into two blocks in display order.
  *
- * `upcoming` gần nhất lên đầu - việc sắp tới là việc cần nhìn thấy trước.
- * `past` mới nhất lên đầu, vì việc vừa qua mới là việc còn nhớ.
+ * `upcoming` nearest first - what is coming is what needs to be seen first.
+ * `past` newest first, since what just passed is what is still remembered.
  */
 export function splitEvents(
   list: EventItem[],
@@ -187,11 +188,11 @@ export function splitEvents(
 }
 
 /**
- * Ngày → giờ → lúc tạo.
+ * Date → time → creation time.
  *
- * Việc cả ngày (`time === null`) đứng TRƯỚC việc có giờ trong cùng ngày: nó
- * không có mốc nào để xếp vào, và đẩy nó xuống cuối ngày là nói sai.
- * Chốt cuối bằng `createdAt` để thứ tự ổn định giữa các lần render.
+ * All-day events (`time === null`) come BEFORE timed events on the same day:
+ * they have no time to sort by, and pushing them to the end of the day is wrong.
+ * `createdAt` breaks the final tie so the order is stable across renders.
  */
 function cmp(a: EventItem, b: EventItem): number {
   if (a.date !== b.date) return a.date < b.date ? -1 : 1;

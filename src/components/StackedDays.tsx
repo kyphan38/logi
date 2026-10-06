@@ -1,10 +1,10 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Stacked bar theo ngày / theo tuần (Stage 5 Task 4)
+// logi - Stacked bars by day / by week (Stage 5 Task 4)
 //
-// Trục Y là GIỜ, không phải % của 24h: có overlap nên tổng một ngày hoàn toàn
-// có thể vượt 24. Ép về % sẽ phải cắt bớt, tức là nói dối.
+// The Y axis is HOURS, not % of 24h: with overlap a day's total can exceed 24.
+// Forcing it into % would mean cutting, i.e. lying.
 // ---------------------------------------------------------------------------
 import {
   Bar,
@@ -34,7 +34,7 @@ interface Props {
   activities: Activity[];
   range: Range;
   weekTargets: Map<string, Record<Category, number>>;
-  /** Tuần bị đổi target muộn - số liệu vẫn đúng nhưng target thì đã đổi giữa chừng. */
+  /** A week whose target changed late - the numbers are right, but the target moved midway. */
   lateWeeks: Set<string>;
   now: number;
 }
@@ -51,19 +51,19 @@ export default function StackedDays({ activities, range, weekTargets, lateWeeks,
     };
   });
 
-  // Đường ngang = trung bình target của MỘT cột trong khoảng này. Không lấy
-  // 89/7 cứng: khoảng có thể toàn ngày thường hoặc toàn cuối tuần.
+  // The horizontal line = the average target of ONE column in this range. Not a
+  // fixed 89/7: a range may be all weekdays or all weekend.
   const avg = averageTarget(buckets, weekTargets, now);
   const hasLate = buckets.some((b) => lateWeeks.has(b.key));
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Chiều cao cố định: ResponsiveContainer cần cha có chiều cao thật,
-          nếu để nó tự co thì trên iOS chart sẽ ra 0px và biến mất. */}
+      {/* Fixed height: ResponsiveContainer needs a parent with a real height;
+          left to shrink, the chart becomes 0px on iOS and disappears. */}
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          {/* `left: -20` kéo nhãn trục Y ra ngoài khung, "4h" bị cắt còn "ih".
-              Để 0 và tự đặt `width` cho YAxis (AMENDMENT-remove-sleep mục 7). */}
+          {/* `left: -20` pushed Y-axis labels out of the frame, "4h" became "ih".
+              Use 0 and set the YAxis `width` (AMENDMENT-remove-sleep section 7). */}
           <BarChart data={rows} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="var(--border)" vertical={false} />
             <XAxis

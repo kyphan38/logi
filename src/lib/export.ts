@@ -1,14 +1,14 @@
 // ---------------------------------------------------------------------------
 // logi - Export CSV / JSON (Stage 5 Task 7)
 //
-// Dữ liệu là của người dùng. Xuất được ra file nghĩa là không bị khoá vào app.
+// The data belongs to the user. Exporting means never being locked into the app.
 //
-// File thuần: không React, không Firestore, không DOM.
+// Pure file: no React, no Firestore, no DOM.
 // ---------------------------------------------------------------------------
 import type { Range } from '@/lib/range';
 import type { Activity, Category } from '@/types/logi';
 
-/** Thứ tự cột là hợp đồng - đổi thứ tự sẽ làm hỏng script của người khác. */
+/** Column order is a contract - changing it breaks other people's scripts. */
 export const CSV_COLUMNS = [
   'id',
   'category',
@@ -23,16 +23,16 @@ export const CSV_COLUMNS = [
 ] as const;
 
 /**
- * Excel trên Windows đọc CSV theo bảng mã hệ thống, nên tiếng Việt sẽ thành ký
- * tự lạ. Ba byte BOM ở đầu file bảo nó "đây là UTF-8".
+ * Excel on Windows reads CSV in the system code page, so Vietnamese becomes
+ * garbage. Three BOM bytes at the start tell it "this is UTF-8".
  */
 export const BOM = '﻿';
 
 /**
- * Bọc một field theo RFC 4180.
+ * Quotes a field per RFC 4180.
  *
- * `label` do giọng nói sinh ra ("worked on devops, then lunch") nên dấu phẩy là
- * chuyện thường, không phải ngoại lệ hiếm.
+ * `label` comes from voice ("worked on devops, then lunch"), so commas are
+ * normal, not a rare exception.
  */
 export function csvField(v: string | number | null | undefined): string {
   if (v === null || v === undefined) return '';
@@ -44,14 +44,14 @@ export function csvField(v: string | number | null | undefined): string {
 /**
  * epoch ms → "2026-08-26T09:30:00+07:00".
  *
- * Dùng giờ ĐỊA PHƯƠNG kèm offset chứ không phải UTC: mở file lên phải thấy
- * đúng giờ mình đã sống, không phải giờ lệch 7 tiếng.
+ * LOCAL time with offset, not UTC: opening the file must show the hours you
+ * actually lived, not hours 7 hours off.
  */
 export function isoWithOffset(ts: number): string {
   const d = new Date(ts);
   const p = (n: number, w = 2) => String(Math.abs(n)).padStart(w, '0');
 
-  // getTimezoneOffset() trả về số PHÚT phải cộng để ra UTC → dấu bị ngược.
+  // getTimezoneOffset() returns the MINUTES to add to get UTC → the sign is reversed.
   const off = -d.getTimezoneOffset();
   const sign = off < 0 ? '-' : '+';
 
@@ -72,7 +72,7 @@ export function toCsv(activities: Activity[]): string {
         csvField(a.category),
         csvField(a.label),
         csvField(isoWithOffset(a.startAt)),
-        // Session đang chạy chưa có kết thúc - để trống chứ không bịa ra `now`.
+        // A running session has no end yet - leave it empty instead of inventing `now`.
         csvField(a.endAt === null ? '' : isoWithOffset(a.endAt)),
         csvField(a.durationMin),
         csvField(a.logicalDate),
@@ -83,37 +83,36 @@ export function toCsv(activities: Activity[]): string {
     );
   }
 
-  // CRLF theo RFC 4180; Excel cũ trên Windows cần đúng cặp này.
+  // CRLF per RFC 4180; old Excel on Windows needs exactly this pair.
   return BOM + lines.join('\r\n') + '\r\n';
 }
 
 /**
- * Ngày ngưng category 'sleep' (AMENDMENT-remove-sleep mục 4.4).
- * File export CŨ tải về trước ngày này là bản duy nhất còn giữ lịch sử sleep.
+ * The date the 'sleep' category was retired (AMENDMENT-remove-sleep section 4.4).
+ * OLD export files from before this date are the only copy of sleep history.
  */
 export const SLEEP_RETIRED_ON = '2026-08-29';
 
 export interface JsonExport {
   exportedAt: string;
   /**
-   * Vì sao file mới không còn record 'sleep' nào.
-   * Không bắt buộc: file export CŨ không có field này, mà Restore vẫn
-   * phải đọc được chúng.
+   * Why new files no longer contain any 'sleep' record.
+   * Optional: OLD export files lack this field, and Restore must still read them.
    */
   note?: string;
   range: { from: string; to: string };
   weekTargets: { week: string; weekly: Record<Category, number> }[];
   activities: Activity[];
   /**
-   * Sổ nợ lúc export. Chỉ kèm ở bản "All time": file theo một khoảng ngày
-   * không nói lên được sổ nợ của khoảng đó, ghi vào sẽ gây hiểu nhầm.
+   * The debt ledger at export time. Only in the "All time" export: a file for a
+   * date range cannot describe that range's ledger, and including it would mislead.
    */
   debt?: Partial<Record<Category, number>>;
 }
 
 /**
- * Kèm `weekTargets` chứ không chỉ activities: thiếu target thì người phân tích
- * ngoài app không có cách nào dựng lại "đã lệch bao nhiêu so với dự định".
+ * Includes `weekTargets`, not just activities: without targets, analysis
+ * outside the app cannot rebuild "how far off the plan it was".
  */
 export function toJson(
   activities: Activity[],

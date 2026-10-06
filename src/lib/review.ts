@@ -1,12 +1,12 @@
 // ============================================================
 // logi - Weekly Review (Stage 6 Task 1)
 //
-// Đóng vòng lặp: nhìn lại tuần vừa rồi → chọn preset tuần tới.
+// Closes the loop: look back at the past week → pick next week's preset.
 //
-// File thuần: không React, không Firestore. Test bằng `node --test`.
-// Toàn bộ số liệu đi qua range-target.ts của Stage 5 - KHÔNG tự tính lại,
-// vì `expectedHours()` pro-rate theo tuần đang chạy, dùng cho tuần đã xong
-// sẽ ra sai (nó lấy weekday của tuần MỚI).
+// Pure file: no React, no Firestore. Tested with `node --test`.
+// All numbers go through Stage 5's range-target.ts - NEVER recomputed here,
+// since `expectedHours()` pro-rates by the running week, and using it for a
+// finished week is wrong (it takes the NEW week's weekday).
 // ============================================================
 
 import {
@@ -38,16 +38,16 @@ import {
 } from '@/types/logi';
 
 // ------------------------------------------------------------
-// Kích hoạt
+// Trigger
 // ------------------------------------------------------------
 
-/** Chủ nhật 19:00 giờ logic. */
+/** Sunday 19:00 logical time. */
 export const REVIEW_HOUR = 19;
 
 /**
- * Lỡ tối Chủ nhật thì thứ Hai và thứ Ba vẫn còn mở.
- * Không có cửa sổ này thì bỏ một tuần là mất luôn tuần đó - mà tuần bận
- * (đúng tuần đáng review nhất) lại chính là tuần dễ quên nhất.
+ * Missed Sunday evening, Monday and Tuesday are still open.
+ * Without this window, skipping one week loses it - and a busy week (the one
+ * most worth reviewing) is exactly the easiest to forget.
  */
 export const GRACE_WEEKDAY_MAX = 2; // 1 = T2, 2 = T3
 
@@ -56,8 +56,8 @@ function markAt(date: string, hour: number): number {
 }
 
 /**
- * Tuần đang cần review, hoặc null.
- * `isReviewed` tra cờ trong `meta/reviews` - đã review rồi thì không hiện lại.
+ * The week needing review, or null.
+ * `isReviewed` checks the flag in `meta/reviews` - once reviewed it never shows again.
  */
 export function reviewDueWeek(
   now: number,
@@ -77,14 +77,14 @@ export function reviewDueWeek(
 }
 
 // ------------------------------------------------------------
-// Màn 1 - số liệu tuần
+// Screen 1 - the week's numbers
 // ------------------------------------------------------------
 
 /**
- * Khoảng ngày logic của một tuần ISO.
- * `isPartial` chỉ bật khi hôm nay đúng là Chủ nhật của tuần đó và ngày chưa hết -
- * đúng lúc banner 19:00 kích hoạt. Nhờ vậy target Chủ nhật được pro-rate,
- * không báo thiếu 8h chỉ vì còn 5 tiếng nữa mới hết ngày.
+ * The logical day range of an ISO week.
+ * `isPartial` is only on when today is that week's Sunday and the day is not
+ * over - exactly when the 19:00 banner fires. So Sunday's target is pro-rated,
+ * not reported 8h short just because 5 hours of the day remain.
  */
 export function weekRange(week: string, now: number = Date.now()): Range {
   const from = logicalDate(weekStart(week));
@@ -99,11 +99,11 @@ export function weekRange(week: string, now: number = Date.now()): Range {
 
 export interface ReviewInput {
   week: string;
-  /** Record của tuần đó (đã lọc sẵn theo logicalWeek). */
+  /** That week's records (already filtered by logicalWeek). */
   activities: Activity[];
-  /** key = logicalWeek. Thiếu tuần nào thì range-target lùi về PRESETS.normal. */
+  /** key = logicalWeek. A missing week makes range-target fall back to PRESETS.normal. */
   weekTargets: Map<string, Weekly>;
-  /** Lịch sử preset để tính streak - tăng dần theo tuần. */
+  /** Preset history for the streak - by week, ascending. */
   history: { preset: PresetId }[];
   now: number;
 }
@@ -115,7 +115,7 @@ export interface ReviewSummary {
   range: Range;
   rows: RangeDeviation[];
   quality: LogQuality;
-  /** Tối đa hai dòng. */
+  /** At most two lines. */
   notes: string[];
 }
 
@@ -146,7 +146,7 @@ export function buildReview(input: ReviewInput): ReviewSummary {
 }
 
 // ------------------------------------------------------------
-// Màn 2 - điều đáng chú ý
+// Screen 2 - worth noticing
 // ------------------------------------------------------------
 
 export interface NoteInput {
@@ -159,23 +159,23 @@ export interface NoteInput {
   now: number;
 }
 
-/** Không có gì đáng nói cũng là một kết quả - đừng bịa ra chuyện để nói. */
+/** Nothing worth saying is a result too - do not invent something to say. */
 export const BALANCED = 'A balanced week.';
 
 /**
- * Tối đa hai dòng, theo đúng thứ tự ưu tiên của plan.
- * Nêu số, không khuyên bảo.
+ * At most two lines, in the plan's exact priority order.
+ * State numbers, no advice.
  */
 export function pickNotes(input: NoteInput): string[] {
   const { activities, rows, quality, weekTargets, week, history } = input;
   const out: string[] = [];
 
-  // 1. OT cuối tuần ăn vào giờ học - thứ đáng nói nhất.
+  // 1. Weekend OT eating study time - the most worth saying.
   const target = weekTargets.get(week) ?? PRESETS.normal.weekly;
   const conflict = weekendConflict(activities, target, input.now);
   if (conflict) out.push(conflict);
 
-  // 2. Lệch lớn nhất theo giờ tuyệt đối. Chỉ lấy cái đã qua deadband kép.
+  // 2. The largest gap in absolute hours. Only ones past the double deadband.
   const worst = rows
     .filter((r) => r.flag !== 'ok')
     .sort((a, b) => Math.abs(b.deltaHours) - Math.abs(a.deltaHours))[0];
@@ -187,12 +187,12 @@ export function pickNotes(input: NoteInput): string[] {
     );
   }
 
-  // 3. Log quá thưa thì mấy con số trên không đáng tin - phải nói ra.
+  // 3. Very sparse logs make the numbers above untrustworthy - say so.
   if (isThin(quality) && out.length < 2) {
     out.push(`Only ${quality.loggedDays} of ${quality.totalDays} days are logged well enough.`);
   }
 
-  // 4. Crunch liên tục là dấu hiệu baseline sai, không phải tuần bận.
+  // 4. Repeated Crunch signals a wrong baseline, not a busy week.
   const streak = crunchStreak(history);
   if (streak.count >= 4 && out.length < 2) {
     out.push(`Crunch: ${streak.count} of the last ${streak.of} weeks.`);
@@ -202,24 +202,24 @@ export function pickNotes(input: NoteInput): string[] {
 }
 
 // ------------------------------------------------------------
-// Màn 3 - tuần tới
+// Screen 3 - next week
 // ------------------------------------------------------------
 
 export interface NextWeekPlan {
   week: string;
   preset: PresetId;
   weekly: Weekly;
-  /** Nợ sẽ cộng vào target tuần sau. */
+  /** Debt to be added to next week's target. */
   applied: DebtBalance;
   remaining: DebtBalance;
-  /** "Carrying over: Learn +6.0h debt" - rỗng nếu không nợ gì. */
+  /** "Carrying over: Learn +6.0h debt" - empty when nothing is owed. */
   debtNote: string;
 }
 
 /**
- * Xem trước tuần kế tiếp. Thuần - chưa ghi gì cả.
- * Dùng `buildWeekly()` của rollover.ts để con số y hệt cái rollover sẽ tạo,
- * không phải một phép tính thứ hai chạy song song.
+ * Preview of next week. Pure - nothing is saved yet.
+ * Uses rollover.ts's `buildWeekly()` so the numbers are exactly what rollover
+ * will create, not a second calculation running alongside.
  */
 export function planNextWeek(
   week: string,
@@ -243,7 +243,7 @@ export function planNextWeek(
   };
 }
 
-/** Tuần đã qua thì chỉ xem. Không cho đổi preset của quá khứ. */
+/** A past week is view-only. A past preset cannot be changed. */
 export function canSetNextWeek(week: string, now: number = Date.now()): boolean {
   return addWeeks(week, 1) >= logicalWeek(now);
 }

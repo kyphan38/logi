@@ -29,11 +29,11 @@ import {
 import type { RoutineGroup, RoutineItem } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
-// logi - Chỉnh Routine trong tab Targets (Stage 10)
+// logi - Editing the Routine in the Targets tab (Stage 10)
 //
-// Template lặp lại mỗi tuần, không có điều hướng tuần: sửa ở đây là áp dụng
-// từ lúc đó trở đi. Chọn một thứ ở hàng chip để xem và thêm mục của ngày đó;
-// "All" hiện mọi mục kèm các thứ của nó.
+// A template repeating every week, no week navigation: edits here apply from
+// now on. Pick a weekday in the chip row to see and add that day's items;
+// "All" shows every item with its weekdays.
 // ---------------------------------------------------------------------------
 
 type ItemTarget = { group: RoutineGroup; item: RoutineItem | null };
@@ -65,7 +65,7 @@ export default function RoutineSection() {
   const { groups, loading } = useRoutines();
   const { toasts, push, dismiss } = useToasts();
 
-  /** `null` = xem tất cả. Mặc định là thứ của hôm nay (ngày logic, cắt 04:00). */
+  /** `null` = show all. Default is today's weekday (logical day, 04:00 cut). */
   const [todayDow] = useState(() => logicalWeekday(Date.now()));
   const [dow, setDow] = useState<number | null>(todayDow);
   const [busy, setBusy] = useState(false);
@@ -159,7 +159,7 @@ export default function RoutineSection() {
         <span className="text-xs text-ink-muted">Repeats every week</span>
       </div>
 
-      {/* Hàng chip chọn thứ. "All" để thấy cả những mục không thuộc ngày nào đang xem. */}
+      {/* Weekday chip row. "All" shows items not on the day being viewed too. */}
       <div className="mb-3 grid grid-cols-8 gap-1" role="tablist" aria-label="Day">
         {[null, ...GRID_DOWS].map((d) => {
           const on = d === dow;

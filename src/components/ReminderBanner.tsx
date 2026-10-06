@@ -1,10 +1,10 @@
 'use client';
 
 // ============================================================
-// logi - Một nhắc, có nút làm ngay.
+// logi - One reminder, with a do-it-now button.
 //
-// Nút gọi thẳng `startActivity()`, không mở sheet. Nhắc mà còn phải
-// bấm thêm ba bước nữa thì không ai dùng.
+// The button calls `startActivity()` directly, no sheet. A reminder that
+// needs three more taps is a reminder nobody uses.
 // ============================================================
 
 import type { Reminder } from '@/lib/reminders';

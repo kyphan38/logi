@@ -29,42 +29,42 @@ function ev(o: Partial<EventItem> & { date: string }): EventItem {
   };
 }
 
-// --- daysUntil: mốc cắt 04:00 ------------------------------------------
+// --- daysUntil: 04:00 cutoff --------------------------------------------
 
-test('trong cùng ngày logic thì số ngày không đổi, dù mấy giờ', () => {
+test('within one logical day the day count stays the same at any hour', () => {
   const target = '2026-10-15';
   for (const t of ['04:00', '09:30', '18:00', '23:59']) {
-    assert.equal(daysUntil(target, at('2026-10-12', t)), 3, `sai lúc ${t}`);
+    assert.equal(daysUntil(target, at('2026-10-12', t)), 3, `wrong at ${t}`);
   }
 });
 
-test('01:00 vẫn thuộc ngày hôm trước - KHÔNG được nhảy sang mốc mới', () => {
-  // 2026-10-13 lúc 01:00 vẫn là ngày logic 2026-10-12 → còn 3 ngày.
+test('01:00 still belongs to the previous day - must NOT jump to the next mark', () => {
+  // 2026-10-13 at 01:00 is still logical day 2026-10-12 → 3 days left.
   assert.equal(daysUntil('2026-10-15', at('2026-10-13', '01:00')), 3);
-  // 04:00 mới sang ngày mới.
+  // The new day starts at 04:00.
   assert.equal(daysUntil('2026-10-15', at('2026-10-13', '04:00')), 2);
 });
 
-test('23:00 hôm trước ngày diễn ra vẫn là "còn 1 ngày", không phải 0', () => {
+test('23:00 the day before is still "1 day left", not 0', () => {
   assert.equal(daysUntil('2026-10-15', at('2026-10-14', '23:00')), 1);
   assert.equal(countdownText(daysUntil('2026-10-15', at('2026-10-14', '23:00'))), 'Tomorrow');
 });
 
-test('hôm nay = 0, đã qua = âm', () => {
+test('today = 0, past = negative', () => {
   assert.equal(daysUntil('2026-10-15', at('2026-10-15', '12:00')), 0);
   assert.equal(daysUntil('2026-10-15', at('2026-10-18', '12:00')), -3);
 });
 
-test('vắt qua tháng và qua năm', () => {
+test('across months and years', () => {
   assert.equal(daysUntil('2026-11-01', at('2026-10-31', '12:00')), 1);
   assert.equal(daysUntil('2027-01-01', at('2026-12-25', '12:00')), 7);
-  // 2028 là năm nhuận: 29/02 phải tồn tại.
+  // 2028 is a leap year: 29/02 must exist.
   assert.equal(daysUntil('2028-03-01', at('2028-02-28', '12:00')), 2);
 });
 
-// --- Chữ ---------------------------------------------------------------
+// --- Text ----------------------------------------------------------------
 
-test('mốc 7 và 14 nói bằng tuần', () => {
+test('the 7 and 14 marks are said in weeks', () => {
   assert.equal(countdownText(14), 'In 2 weeks');
   assert.equal(countdownText(7), 'Next week');
   assert.equal(countdownText(3), 'In 3 days');
@@ -72,26 +72,26 @@ test('mốc 7 và 14 nói bằng tuần', () => {
   assert.equal(countdownText(0), 'Today');
 });
 
-test('việc đã qua', () => {
+test('past events', () => {
   assert.equal(countdownText(-1), 'Yesterday');
   assert.equal(countdownText(-5), '5 days ago');
 });
 
-test('xa thì đổi đơn vị, không bao giờ in ra "In 400 days"', () => {
+test('far dates switch units, never printing "In 400 days"', () => {
   assert.equal(countdownText(21), 'In 3 weeks');
   assert.equal(countdownText(90), 'In 3 months');
 });
 
-test('dateLabel không phụ thuộc múi giờ máy chạy', () => {
-  // 2026-10-15 là thứ Tư.
+test('dateLabel does not depend on the machine time zone', () => {
+  // 2026-10-15 is a Wednesday.
   assert.equal(dateLabel('2026-10-15'), 'Thu, Oct 15');
   assert.equal(dateLabel('2026-01-01'), 'Thu, Jan 1');
   assert.equal(dateLabel('2026-12-31'), 'Thu, Dec 31');
 });
 
-// --- Mốc nhắc ----------------------------------------------------------
+// --- Reminder marks ------------------------------------------------------
 
-test('đúng mốc và chưa gửi → đến hạn', () => {
+test('on a mark and not sent yet → due', () => {
   const e = ev({ date: '2026-10-15' });
   assert.equal(dueMilestone(e, at('2026-10-01', '06:00')), 14);
   assert.equal(dueMilestone(e, at('2026-10-08', '06:00')), 7);
@@ -100,35 +100,35 @@ test('đúng mốc và chưa gửi → đến hạn', () => {
   assert.equal(dueMilestone(e, at('2026-10-15', '06:00')), 0);
 });
 
-test('đã gửi mốc đó rồi → im', () => {
+test('that mark already sent → silent', () => {
   const e = ev({ date: '2026-10-15', notified: { '3': 1 } });
   assert.equal(dueMilestone(e, at('2026-10-12', '06:00')), null);
-  // Mốc khác vẫn gửi bình thường.
+  // Other marks still send as usual.
   assert.equal(dueMilestone(e, at('2026-10-14', '06:00')), 1);
 });
 
-test('KHÔNG gửi bù: lỡ mất một ngày thì mốc đó trôi luôn', () => {
+test('NO catch-up: a missed day means that mark is gone', () => {
   const e = ev({ date: '2026-10-15' });
-  // Còn 2 ngày, 6 ngày, 13 ngày đều không phải mốc.
+  // 2, 6 and 13 days left are not marks.
   assert.equal(dueMilestone(e, at('2026-10-13', '06:00')), null);
   assert.equal(dueMilestone(e, at('2026-10-09', '06:00')), null);
   assert.equal(dueMilestone(e, at('2026-10-02', '06:00')), null);
 });
 
-test('việc đã qua không bao giờ đến hạn', () => {
+test('a past event is never due', () => {
   const e = ev({ date: '2026-10-15' });
   assert.equal(dueMilestone(e, at('2026-10-16', '06:00')), null);
 });
 
-test('MILESTONES giảm dần và có đủ 14/7/3/1/0', () => {
+test('MILESTONES are descending and include 14/7/3/1/0', () => {
   assert.deepEqual([...MILESTONES], [14, 7, 3, 1, 0]);
   for (const m of MILESTONES) assert.ok(isMilestone(m));
   assert.equal(isMilestone(2), false);
 });
 
-// --- Sắp xếp -----------------------------------------------------------
+// --- Sorting -------------------------------------------------------------
 
-test('sắp tới: gần nhất lên đầu. Đã qua: mới nhất lên đầu', () => {
+test('upcoming: nearest first. Past: most recent first', () => {
   const now = at('2026-10-10', '12:00');
   const list = [
     ev({ id: 'far', date: '2026-11-20' }),
@@ -142,13 +142,13 @@ test('sắp tới: gần nhất lên đầu. Đã qua: mới nhất lên đầu'
   assert.deepEqual(past.map((e) => e.id), ['yesterday', 'old']);
 });
 
-test('hôm nay nằm ở khối SẮP TỚI, không phải đã qua', () => {
+test('today is in the UPCOMING block, not past', () => {
   const { upcoming, past } = splitEvents([ev({ date: '2026-10-10' })], at('2026-10-10', '23:00'));
   assert.equal(upcoming.length, 1);
   assert.equal(past.length, 0);
 });
 
-test('cùng ngày thì thứ tự ổn định theo lúc tạo', () => {
+test('same day keeps a stable order by creation time', () => {
   const now = at('2026-10-10', '12:00');
   const list = [
     ev({ id: 'b', date: '2026-10-12', createdAt: 200 }),
@@ -158,7 +158,7 @@ test('cùng ngày thì thứ tự ổn định theo lúc tạo', () => {
   assert.deepEqual(splitEvents([...list].reverse(), now).upcoming.map((e) => e.id), ['a', 'b']);
 });
 
-test('urgency đổi đúng chỗ', () => {
+test('urgency changes at the right points', () => {
   assert.equal(urgency(-1), 'past');
   assert.equal(urgency(0), 'today');
   assert.equal(urgency(1), 'soon');
@@ -166,14 +166,14 @@ test('urgency đổi đúng chỗ', () => {
   assert.equal(urgency(4), 'far');
 });
 
-// --- Khối số trên mỗi dòng ---------------------------------------------
+// --- Number block on each row -------------------------------------------
 
-test('countdownParts khớp countdownText ở mọi mốc, không nói hai kiểu', () => {
-  // "7 days" ở danh sách trong khi push ghi "Next week" là bắt người dùng
-  // dừng lại đối chiếu. Hai hàm phải cùng chọn một đơn vị.
+test('countdownParts matches countdownText at every mark, never two styles', () => {
+  // "7 days" in the list while the push says "Next week" makes the user
+  // stop and compare. Both functions must pick the same unit.
   const unitOf = (n: number) => {
     const t = countdownText(n);
-    // "Today" chứa chuỗi con "day" - phải xét trước mọi phép includes().
+    // "Today" contains "day" - check it before any includes().
     if (t === 'Today') return 'today';
     if (t.includes('week')) return 'week';
     if (t.includes('month')) return 'month';
@@ -184,11 +184,11 @@ test('countdownParts khớp countdownText ở mọi mốc, không nói hai kiể
     const { value, unit } = countdownParts(n);
     const expect = unitOf(n);
     const got = unit === '' ? 'today' : unit.startsWith('week') ? 'week' : unit.startsWith('month') ? 'month' : 'day';
-    assert.equal(got, expect, `lệch đơn vị tại ${n} ngày: "${value} ${unit}" vs "${countdownText(n)}"`);
+    assert.equal(got, expect, `unit differs at ${n} days: "${value} ${unit}" vs "${countdownText(n)}"`);
   }
 });
 
-test('khối số ở các mốc chính', () => {
+test('number block at the main marks', () => {
   assert.deepEqual(countdownParts(14), { value: '2', unit: 'weeks' });
   assert.deepEqual(countdownParts(7), { value: '1', unit: 'week' });
   assert.deepEqual(countdownParts(3), { value: '3', unit: 'days' });
@@ -197,30 +197,30 @@ test('khối số ở các mốc chính', () => {
   assert.deepEqual(countdownParts(-1), { value: '1', unit: 'day ago' });
 });
 
-test('số trong khối luôn ngắn - không bao giờ tràn ô', () => {
+test('the block number is always short - never overflows', () => {
   for (let n = -400; n <= 400; n++) {
     const { value } = countdownParts(n);
-    assert.ok(value.length <= 5, `"${value}" quá dài tại ${n} ngày`);
+    assert.ok(value.length <= 5, `"${value}" too long at ${n} days`);
   }
 });
 
-// --- Giờ trong ngày ----------------------------------------------------
+// --- Time of day ---------------------------------------------------------
 
-test('có giờ thì ghép vào sau ngày; không có thì chỉ ngày', () => {
+test('a time is appended after the date; without one, date only', () => {
   assert.equal(whenLabel('2026-10-26', '11:30'), 'Mon, Oct 26 · 11:30');
   assert.equal(whenLabel('2026-10-26', null), 'Mon, Oct 26');
-  // Chuỗi rỗng phải được coi như cả ngày, không in ra dấu chấm cụt.
+  // An empty string means all day, with no dangling dot.
   assert.equal(whenLabel('2026-10-26', ''), 'Mon, Oct 26');
 });
 
-test('giờ KHÔNG đổi số ngày còn lại - mốc vẫn tính theo ngày', () => {
+test('a time does NOT change the days left - marks still count by day', () => {
   const e = ev({ date: '2026-10-15', time: '23:30' });
   assert.equal(dueMilestone(e, at('2026-10-14', '06:00')), 1);
   const allDay = ev({ date: '2026-10-15' });
   assert.equal(daysUntil(e.date, at('2026-10-14', '06:00')), daysUntil(allDay.date, at('2026-10-14', '06:00')));
 });
 
-test('cùng ngày: cả ngày đứng trước, rồi xếp theo giờ', () => {
+test('same day: all-day first, then by time', () => {
   const now = at('2026-10-10', '12:00');
   const list = [
     ev({ id: 'evening', date: '2026-10-12', time: '19:00' }),
@@ -231,7 +231,7 @@ test('cùng ngày: cả ngày đứng trước, rồi xếp theo giờ', () => {
   assert.deepEqual(upcoming.map((e) => e.id), ['allday', 'morning', 'evening']);
 });
 
-test('giờ so sánh theo chuỗi được vì luôn hai chữ số', () => {
+test('times compare as strings since they are always two digits', () => {
   const now = at('2026-10-10', '12:00');
   const list = [
     ev({ id: 'ten', date: '2026-10-12', time: '10:00' }),

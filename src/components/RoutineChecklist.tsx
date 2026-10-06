@@ -6,13 +6,14 @@ import type { RoutineDayGroup } from '@/lib/routine';
 import { MOVE_LIMIT_PX, isRealTap, type Press } from '@/lib/tap-guard';
 
 // ---------------------------------------------------------------------------
-// logi - Routine hôm nay ở màn Now (Stage 10)
+// logi - Today's routine on the Now screen (Stage 10)
 //
-// Nằm dưới lưới 4 nút. Mỗi nhóm một khối: tiêu đề + đếm "2/3", rồi mỗi mục
-// một dòng có ô tick. Chạm lại để bỏ tick. Không Undo: bấm nhầm thì bấm lại.
+// Below the 4-button grid. One block per group: title + a "2/3" count, then
+// one row per item with a checkbox. Tap again to untick. No Undo: a mistap
+// is undone by tapping again.
 //
-// Chạm dùng chung lớp chống bấm nhầm khi cuộn với lưới nút - danh sách này
-// dài, nên cú vuốt dừng trên một dòng là chuyện thường.
+// Taps share the scroll mistap guard with the button grid - this list is
+// long, so a swipe ending on a row is common.
 // ---------------------------------------------------------------------------
 
 export default function RoutineChecklist({
@@ -99,7 +100,7 @@ export default function RoutineChecklist({
                     onPointerUp={(e) => press(item.id, e)}
                     onPointerCancel={() => (down.current = null)}
                     onKeyDown={(e) => {
-                      // Bàn phím không đi qua pointer events.
+                      // The keyboard does not go through pointer events.
                       if (e.key === ' ' || e.key === 'Enter') {
                         e.preventDefault();
                         onToggle(item.id);

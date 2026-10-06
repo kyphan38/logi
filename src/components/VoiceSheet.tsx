@@ -3,13 +3,13 @@
 import type { ReactNode } from 'react';
 
 /**
- * Khung cho card voice (confirm / clarify) ở Task 7.
+ * Frame for the voice card (confirm / clarify) in Task 7.
  *
- * - Trượt lên từ đáy, đè lên nội dung, nhưng KHÔNG che cả màn hình:
- *   phía trên vẫn thấy session đang chạy.
- * - Nằm trên bottom nav (z-50) và dưới modal (z-[60]).
- * - Chừa chỗ cho bottom nav + safe area của iPhone.
- * - Card cao quá thì cuộn trong chính nó, không kéo cả trang.
+ * - Slides up from the bottom over the content, but does NOT cover the whole
+ *   screen: running sessions stay visible above.
+ * - Sits above the bottom nav (z-50) and below modals (z-[60]).
+ * - Leaves room for the bottom nav + the iPhone safe area.
+ * - A tall card scrolls inside itself, never dragging the whole page.
  */
 export default function VoiceSheet({ children }: { children: ReactNode }) {
   return (

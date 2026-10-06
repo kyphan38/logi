@@ -30,11 +30,11 @@ const GENERIC = 'Sign-in failed. Please try again.';
 
 type AuthState = {
   user: User | null;
-  /** true khi chưa biết đã đăng nhập hay chưa (lần kiểm tra đầu tiên). */
+  /** true while sign-in state is unknown (first check). */
   loading: boolean;
-  /** true khi người dùng vừa bấm nút đăng nhập. */
+  /** true right after the user taps sign in. */
   signingIn: boolean;
-  /** true khi server đã có session cookie cho user hiện tại. */
+  /** true once the server has a session cookie for the current user. */
   sessionReady: boolean;
   error: string | null;
   signIn: () => Promise<void>;
@@ -45,7 +45,7 @@ const AuthContext = createContext<AuthState | null>(null);
 
 function newProvider() {
   const provider = new GoogleAuthProvider();
-  // Luôn cho chọn tài khoản - quan trọng khi cần thử email ngoài allowlist.
+  // Always let the user pick an account - matters when testing an email outside the allowlist.
   provider.setCustomParameters({ prompt: 'select_account' });
   return provider;
 }
@@ -57,10 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
-  // Tránh gọi POST /api/auth/session nhiều lần cho cùng một user.
+  // Avoid calling POST /api/auth/session several times for the same user.
   const syncedUid = useRef<string | null>(null);
 
-  /** Đổi ID token lấy session cookie. Trả true nếu server chấp nhận. */
+  /** Exchange an ID token for a session cookie. Returns true if the server accepts. */
   const exchangeToken = useCallback(
     async (current: User): Promise<boolean> => {
       const idToken = await current.getIdToken();
@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const body = await res.json();
           if (typeof body?.error === 'string') message = body.error;
         } catch {
-          // giữ message mặc định
+          // keep the default message
         }
         setError(message);
         return false;
@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // Kết quả của signInWithRedirect (đường lui khi popup bị chặn trên iOS).
+  // Result of signInWithRedirect (fallback when iOS blocks the popup).
   useEffect(() => {
     let cancelled = false;
     getRedirectResult(auth)
@@ -108,14 +108,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (ok) router.replace('/now');
       })
       .catch(() => {
-        // onAuthStateChanged vẫn sẽ chạy; không chặn app vì lỗi ở đây.
+        // onAuthStateChanged still runs; an error here does not block the app.
       });
     return () => {
       cancelled = true;
     };
   }, [exchangeToken, router]);
 
-  // Nguồn sự thật cho user phía client.
+  // Source of truth for the client-side user.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (next) => {
       setUser(next);
@@ -128,8 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (syncedUid.current === next.uid) return;
 
-      // Client còn user nhưng cookie server có thể đã hết hạn (sau 14 ngày)
-      // → làm mới cookie.
+      // The client still has a user but the server cookie may have expired
+      // (after 14 days) → refresh the cookie.
       try {
         const res = await fetch('/api/auth/session', { method: 'GET' });
         const body = await res.json();
@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
       } catch {
-        // Offline: giữ nguyên trạng thái, không đá người dùng ra ngoài.
+        // Offline: keep the current state, do not kick the user out.
         return;
       }
       await exchangeToken(next);
@@ -151,13 +151,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     setSigningIn(true);
 
-    // App Add to Home Screen trên iOS: popup mở ra một trang riêng, đăng nhập
-    // xong không báo kết quả về được, nút cứ "Signing in…" mãi. Đi thẳng
-    // redirect (chạy được nhờ authDomain cùng domain, xem firebase-client.ts).
+    // iOS Home Screen app: the popup opens a separate page that cannot report
+    // back after sign-in, so the button stays on "Signing in…". Go straight to
+    // redirect (works thanks to the same-domain authDomain, see firebase-client.ts).
     if (isStandalone()) {
       try {
         await signInWithRedirect(auth, newProvider());
-        return; // trang sẽ điều hướng đi, giữ signingIn = true
+        return; // the page will navigate away, keep signingIn = true
       } catch {
         setError(GENERIC);
         setSigningIn(false);
@@ -173,12 +173,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const code = (err as { code?: string })?.code ?? '';
 
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        // Người dùng tự đóng - im lặng.
+        // The user closed it - stay quiet.
       } else if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
-        // iOS Safari/Edge hay chặn popup → chuyển sang redirect.
+        // iOS Safari/Edge often block popups → switch to redirect.
         try {
           await signInWithRedirect(auth, newProvider());
-          return; // trang sẽ điều hướng đi, giữ signingIn = true
+          return; // the page will navigate away, keep signingIn = true
         } catch {
           setError(GENERIC);
         }
@@ -201,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await firebaseSignOut(auth);
     } finally {
-      // Thiếu bước này thì cookie vẫn còn và server vẫn coi là đã đăng nhập.
+      // Without this step the cookie stays and the server still sees a signed-in user.
       try {
         await fetch('/api/auth/session', { method: 'DELETE' });
       } catch {

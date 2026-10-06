@@ -1,53 +1,53 @@
 // ---------------------------------------------------------------------------
-// logi - Chống click nhầm khi cuộn (AMENDMENT-remove-sleep 6c)
+// logi - Blocking mistaken clicks while scrolling (AMENDMENT-remove-sleep 6c)
 //
-// Trên iOS, một cú vuốt kết thúc bằng `click` nếu ngón dừng lại trên nút. Nút
-// Start chỉ cần một chạm nên không có bước xác nhận nào đỡ cho nó - phải chặn
-// ngay ở tầng cử chỉ.
+// On iOS, a swipe ends with a `click` if the finger stops on a button. Start
+// is one tap with no confirm step to catch it - so it must be blocked at the
+// gesture layer.
 //
-// Ba lớp, tất cả đều rẻ:
-//   1. ngón di chuyển dưới 10px
-//   2. tổng thời gian dưới 500ms
-//   3. không nằm trong 300ms sau lần scroll gần nhất
+// Three layers, all cheap:
+//   1. the finger moved under 10px
+//   2. total time under 500ms
+//   3. not within 300ms after the last scroll
 //
-// Lớp thứ tư (Undo 5 giây) nằm ở tầng UI vì nó cần toast.
+// The fourth layer (a 5-second Undo) lives in the UI since it needs a toast.
 //
-// File thuần: không React, không DOM - test bằng `node --test`.
+// Pure file: no React, no DOM - tested with `node --test`.
 // ---------------------------------------------------------------------------
 
-/** Ngón di quá chừng này là đang vuốt, không phải chạm. */
+/** A finger moving further than this is swiping, not tapping. */
 export const MOVE_LIMIT_PX = 10;
 
-/** Giữ lâu hơn chừng này là cố ý làm gì khác, không phải chạm. */
+/** Holding longer than this means something else on purpose, not a tap. */
 export const PRESS_LIMIT_MS = 500;
 
-/** Vừa cuộn xong thì mọi chạm đều đáng ngờ. */
+/** Right after a scroll every tap is suspect. */
 export const SCROLL_BLOCK_MS = 300;
 
 export interface Press {
-  /** Toạ độ lúc `pointerdown`. */
+  /** Coordinates at `pointerdown`. */
   downX: number;
   downY: number;
   downAt: number;
-  /** Toạ độ lúc `pointerup`. */
+  /** Coordinates at `pointerup`. */
   upX: number;
   upY: number;
   upAt: number;
-  /** Lần `scroll` gần nhất. Chưa cuộn lần nào → null. */
+  /** The last `scroll`. Never scrolled → null. */
   lastScrollAt: number | null;
 }
 
-/** Khoảng cách thẳng, không phải theo trục - vuốt chéo cũng là vuốt. */
+/** Straight-line distance, not per axis - a diagonal swipe is still a swipe. */
 export function pressDistance(p: Press): number {
   return Math.hypot(p.upX - p.downX, p.upY - p.downY);
 }
 
 /**
- * Chạm này có được tính là một cú bấm thật không?
+ * Does this touch count as a real tap?
  *
- * Mọi điều kiện đều là "phải nằm trong ngưỡng" - nghi ngờ thì bỏ qua. Bỏ sót
- * một cú bấm thật thì người dùng bấm lại; nhận nhầm một cú vuốt thì tự nhiên
- * mọc ra một session.
+ * Every condition is "must be within the threshold" - when in doubt, skip. A
+ * missed real tap means tapping again; a swipe taken as a tap means a session
+ * appears out of nowhere.
  */
 export function isRealTap(p: Press): boolean {
   if (pressDistance(p) > MOVE_LIMIT_PX) return false;

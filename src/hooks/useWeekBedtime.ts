@@ -1,11 +1,10 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Mốc đi ngủ của MỘT khoảng ngắn (tab Week)
+// logi - Bedtime marks for ONE short range (Week tab)
 //
-// `getDocs` một lượt chứ không mở listener: 7 đêm đã qua thì không đổi nữa, mở
-// listener ở đây là trả tiền realtime cho thứ đứng yên. Cùng lý do với
-// `useTrend`.
+// One `getDocs`, no listener: 7 past nights do not change, so a listener pays
+// for realtime on something still. Same reason as `useTrend`.
 // ---------------------------------------------------------------------------
 import { useEffect, useState } from 'react';
 
@@ -25,15 +24,15 @@ export function useWeekBedtime(from: string, to: string): { logs: DayLog[]; load
     if (!uid) return;
     let alive = true;
     void (async () => {
-      // Đặt trong callback async, không đặt thẳng ở thân effect: eslint
-      // `set-state-in-effect` cấm gọi setState đồng bộ ở thân effect vì gây
-      // render nối tầng. Trong callback thì chỉ chạy khi fetch thật sự bắt đầu.
+      // Inside the async callback, not the effect body: eslint
+      // `set-state-in-effect` forbids sync setState in the effect body since it
+      // causes cascading renders. In the callback it only runs once the fetch starts.
       if (alive) setLoading(true);
       try {
         const out = await listDayLogs(uid, from, to);
         if (alive) setLogs(out);
       } catch {
-        // Card tự hiện trạng thái rỗng. Một lỗi ở ô phụ không nên nuốt cả trang.
+        // The card shows its own empty state. An error in a side box should not swallow the page.
         if (alive) setLogs(EMPTY);
       } finally {
         if (alive) setLoading(false);

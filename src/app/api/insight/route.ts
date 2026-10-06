@@ -3,13 +3,14 @@ import 'server-only';
 // ============================================================
 // POST /api/insight   (Stage 7 Task 3)
 // Body: { from, to, digest, digestHash }
-// Trả:  InsightResult đã sanitize
+// Returns: the sanitized InsightResult
 //
-// Digest được tính ở client vì mọi mốc giờ (04:00 cắt ngày, 20:00 "làm khuya")
-// phải theo múi giờ của máy người dùng. Server không tin nội dung đó cho việc
-// gì khác ngoài việc gửi cho Gemini và đối chiếu ngược lại chính nó.
+// The digest is computed on the client because every time mark (04:00 day
+// cut, 20:00 "late work") must use the user's device timezone. The server
+// trusts its content for nothing except sending it to Gemini and checking
+// the answer against it.
 //
-// Digest KHÔNG được log ra đâu cả - đây là dữ liệu sinh hoạt cá nhân.
+// The digest is NEVER logged anywhere - it is personal daily-life data.
 // ============================================================
 
 import { analyseDigest } from '@/lib/gemini-insight';
@@ -21,13 +22,13 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
 
-/** Digest thật ~4KB. Lớn hơn nhiều lần nghĩa là có ai đó đang tuồn record thô. */
+/** A real digest is ~4KB. Many times bigger means someone is smuggling raw records. */
 const MAX_DIGEST_CHARS = 24 * 1024;
 const GEMINI_TIMEOUT_MS = 25_000;
 
-// --- Rate limit: 10 request mỗi giờ -------------------------------
-// Kết quả được cache theo digestHash ở client, nên dùng bình thường một ngày
-// chỉ vài lần. Hạn này chỉ để chặn bấm liên tục.
+// --- Rate limit: 10 requests per hour -------------------------------
+// Results are cached by digestHash on the client, so normal use is a few
+// calls a day. This limit only stops repeated tapping.
 const RL_WINDOW_MS = 60 * 60_000;
 const RL_MAX = 10;
 const hits = new Map<string, number[]>();
@@ -96,12 +97,12 @@ export async function POST(req: Request): Promise<Response> {
   try {
     raw = await withTimeout(analyseDigest(digest as Digest, apiKey), GEMINI_TIMEOUT_MS);
   } catch (e) {
-    // Chỉ log tên lỗi, không log digest.
+    // Log the error name only, never the digest.
     console.error('[api/insight] gemini failed', e instanceof Error ? e.message : 'unknown');
     return json(502, { error: 'Could not analyse right now.' });
   }
 
-  // Không có đường nào đi vòng qua bước này.
+  // There is no path around this step.
   const result = sanitizeInsight(raw, digest as Digest);
 
   return json(200, {

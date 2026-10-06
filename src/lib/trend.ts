@@ -1,15 +1,14 @@
 // ---------------------------------------------------------------------------
-// logi - Trend: MỘT category, nhiều kỳ liên tiếp
+// logi - Trend: ONE category across consecutive periods
 //
-// Khác `bucket.ts`: ở đó các cột được cắt ra từ khoảng đang xem trên màn hình.
-// Ở đây cửa sổ tự dựng từ hôm nay lùi về sau, KHÔNG phụ thuộc picker chọn khoảng -
-// câu hỏi "mấy tuần nay Learn đi lên hay đi xuống" không liên quan gì tới
-// khoảng đang xem.
+// Unlike `bucket.ts`: there columns are cut from the range on screen. Here the
+// window is built back from today, NOT tied to the range picker - "has Learn
+// gone up or down these weeks" has nothing to do with the viewed range.
 //
-// Kỳ cuối luôn là kỳ ĐANG chạy và bị đánh dấu `partial`: tuần này mới tới thứ
-// Tư thì cột của nó thấp là chuyện đương nhiên, không phải xu hướng.
+// The last period is always the RUNNING one, marked `partial`: if this week is
+// only at Wednesday, a low bar is expected, not a trend.
 //
-// File thuần: không React, không Firestore.
+// Pure file: no React, no Firestore.
 // ---------------------------------------------------------------------------
 import { logicalDate } from '@/lib/balance';
 import { daysBetween, weekOf, type Range } from '@/lib/range';
@@ -18,13 +17,13 @@ import { addWeeks, weekLabel, weekStart } from '@/lib/week';
 
 export type TrendSpan = '6w' | '12w' | '26w';
 
-// Nhãn gọn để chip vừa một hàng ở 375px. Bỏ chữ "Last" mà nghĩa không đổi:
-// "12 weeks" vẫn hiểu là 12 tuần gần nhất.
+// Short labels so the chips fit one row at 375px. Dropping "Last" keeps the
+// meaning: "12 weeks" still reads as the last 12 weeks.
 //
-// Không còn span theo THÁNG. Tháng có 4 hoặc 5 tuần nên cột tháng dài tự nhiên
-// cao hơn - đó là lịch, không phải xu hướng. Cả app chạy theo tuần (weekTargets,
-// WeeklyReview, ngân sách 89h/tuần) nên trend cũng phải đếm bằng tuần thì cột
-// mới so được với cột.
+// No MONTH spans anymore. Months have 4 or 5 weeks, so long months naturally
+// stand taller - that is the calendar, not a trend. The whole app runs on
+// weeks (weekTargets, WeeklyReview, the 89h/week budget), so trends count in
+// weeks too, to keep columns comparable.
 export const TREND_SPANS: readonly { value: TrendSpan; label: string }[] = [
   { value: '6w', label: '6 weeks' },
   { value: '12w', label: '12 weeks' },
@@ -39,20 +38,20 @@ export function spanWeeks(span: TrendSpan): number {
 }
 
 export interface TrendBucket {
-  /** Khoá ổn định cho React/Recharts: "2026-W35". */
+  /** A stable key for React/Recharts: "2026-W35". */
   key: string;
-  /** Nhãn trục X: "W35". */
+  /** X-axis label: "W35". */
   label: string;
   range: Range;
-  /** Kỳ chưa kết thúc - cột thấp không có nghĩa là làm ít. */
+  /** An unfinished period - a low bar does not mean little was done. */
   partial: boolean;
 }
 
 /**
- * Các cột của một span, cũ → mới. Cột cuối cùng là kỳ đang chạy.
+ * A span's columns, old → new. The last column is the running period.
  *
- * Kỳ đang chạy dừng ở HÔM NAY chứ không kéo tới cuối tuần: ngày chưa tới thì
- * không có dữ liệu, mà target vẫn cộng đủ → cột sẽ trông hụt.
+ * The running period stops TODAY, not at the end of the week: future days
+ * have no data while the target still counts in full → the bar would look short.
  */
 export function trendBuckets(span: TrendSpan, now: number = Date.now()): TrendBucket[] {
   const today = logicalDate(now);
@@ -75,15 +74,15 @@ export function trendBuckets(span: TrendSpan, now: number = Date.now()): TrendBu
   return out;
 }
 
-/** Cửa sổ bao cả span - MỘT query duy nhất cho mọi cột. */
+/** The window covering the whole span - ONE query for every column. */
 export function trendWindow(buckets: TrendBucket[]): { from: string; to: string } {
   return { from: buckets[0].range.from, to: buckets[buckets.length - 1].range.to };
 }
 
 /**
- * Bao nhiêu phần của kỳ đang chạy đã trôi qua, 0..1.
- * Dùng để nói "tuần này mới đi được 3/7" chứ không dùng để phóng to cột lên -
- * ngoại suy là bịa số.
+ * How much of the running period has passed, 0..1.
+ * Used to say "this week is only 3/7 through", never to scale the bar up -
+ * extrapolating is making numbers up.
  */
 export function elapsedFraction(b: TrendBucket, now: number = Date.now()): number {
   if (!b.partial) return 1;
@@ -91,26 +90,26 @@ export function elapsedFraction(b: TrendBucket, now: number = Date.now()): numbe
 }
 
 // ---------------------------------------------------------------------------
-// Kỳ trống ≠ kỳ bằng 0
+// An empty period ≠ a zero period
 //
-// Trước Stage 8, tuần chưa dùng app bị vẽ thành cột 0 và lọt vào dòng so sánh,
-// nên chart đọc lên là "W31 0.0h → W35 7.3h · up +7.3h". Người đó không học 0
-// giờ tuần W31 - lúc đó app còn chưa có. Cùng lỗi với `sampleSize < 3` bên AI
-// insights: thiếu dữ liệu không phải dữ liệu bằng không.
+// Before Stage 8, weeks before using the app were drawn as 0 bars and fed into
+// the comparison, so the chart read "W31 0.0h → W35 7.3h · up +7.3h". That
+// person did not study 0 hours in W31 - the app did not exist yet. Same bug as
+// `sampleSize < 3` in AI insights: missing data is not zero data.
 // ---------------------------------------------------------------------------
 
-/** Chỉ cần các field quyết định "kỳ này có ai ghi gì không". */
+/** Only the fields that decide "did anyone log anything this period". */
 interface Logged {
   status: string;
   startAt: number;
 }
 
 /**
- * Kỳ có ít nhất một session THẬT hay không.
+ * Whether the period has at least one REAL session.
  *
- * `abandoned` là session bỏ dở nên không tính là dữ liệu; `scheduled` là dự
- * định chưa xảy ra. Cả hai mà tính thì một cái hẹn lỡ cũng đủ biến tuần trống
- * thành tuần "có dữ liệu, 0 giờ" - đúng cái cột sai mà ta đang bỏ.
+ * `abandoned` sessions were dropped, so they are not data; `scheduled` ones
+ * have not happened. Counting either, one missed booking would turn an empty
+ * week into "has data, 0 hours" - exactly the wrong bar being removed.
  */
 export function hasLogged(
   activities: readonly Logged[],
@@ -125,29 +124,29 @@ export function hasLogged(
 
 export interface TrendPoint {
   label: string;
-  /** `null` = kỳ chưa có dữ liệu. Không vẽ cột, không đưa vào so sánh. */
+  /** `null` = no data for the period. No bar drawn, not compared. */
   hours: number | null;
-  /** Kỳ đang chạy - cột thấp là vì chưa hết kỳ. */
+  /** The running period - the bar is low because the period is not over. */
   partial: boolean;
 }
 
 export interface TrendCompare {
   from: TrendPoint;
   to: TrendPoint;
-  /** Dương = đi lên. */
+  /** Positive = going up. */
   diff: number;
   word: 'up' | 'down' | 'flat';
 }
 
 /**
- * Dòng so sánh đầu ↔ cuối, hoặc `null` khi không đủ căn cứ.
+ * The first ↔ last comparison line, or `null` without enough basis.
  *
- * Bỏ kỳ dở dang và kỳ trống. Dưới 2 kỳ dùng được thì ẩn hẳn dòng chữ - thà
- * không nói còn hơn nói một xu hướng dựng từ một điểm.
+ * Drops the unfinished and empty periods. Under 2 usable periods the line is
+ * hidden entirely - silence beats a trend built from one point.
  *
- * `flatBelow` là ngưỡng coi như đứng yên, tính theo cùng đơn vị với `hours`.
- * Mặc định 0.5 (giờ). Khi điểm là phần trăm thì chỗ gọi truyền 5 - lệch 5 điểm
- * phần trăm qua nhiều tuần là nhiễu, không phải chuyển biến.
+ * `flatBelow` is the "no change" threshold, in the same unit as `hours`.
+ * Default 0.5 (hours). For percentage points the caller passes 5 - a 5-point
+ * drift over many weeks is noise, not a change.
  */
 export function trendCompare(
   points: readonly TrendPoint[],
@@ -168,29 +167,29 @@ export function trendCompare(
 }
 
 // ---------------------------------------------------------------------------
-// Cắt kỳ trống ở ĐẦU
+// Trimming empty periods at the START
 //
-// "26 tuần" nghĩa là TỐI ĐA 26 tuần. Tài khoản mới chỉ có 3 tuần dữ liệu mà vẽ
-// đủ 26 ô thì 23 ô đầu là chỗ chết - chart trông như hỏng. Cắt phần đầu rồi thì
-// chip không phải chạy theo tuổi tài khoản nữa: bấm 26w hôm nay ra 3 cột, vài
-// tháng nữa nó tự đầy lên.
+// "26 weeks" means AT MOST 26 weeks. A new account with 3 weeks of data drawn
+// as 26 cells has 23 dead cells up front - the chart looks broken. With the
+// start trimmed, chips no longer depend on account age: 26w gives 3 columns
+// today and fills up over the months.
 //
-// CHỈ cắt ở đầu. Tuần trống ở GIỮA phải giữ - đó là tuần bạn thật sự nghỉ, là
-// thông tin, không phải chỗ thừa.
+// ONLY trim the start. Empty weeks in the MIDDLE stay - those are weeks you
+// really took off; that is information, not waste.
 // ---------------------------------------------------------------------------
 
 /**
- * Sàn số cột. Một chart 1 cột trông như lỗi render chứ không như dữ liệu; 3 cột
- * là mức tối thiểu để mắt thấy được một hình dạng.
+ * Minimum column count. A 1-column chart looks like a render bug, not data;
+ * 3 columns is the least for the eye to see a shape.
  */
 export const MIN_TREND_BUCKETS = 3;
 
 /**
- * Bỏ các kỳ trống ở đầu mảng. Không kỳ nào có dữ liệu → `[]` (chỗ gọi tự hiện
- * trạng thái rỗng của nó).
+ * Drops empty periods at the start of the array. No period with data → `[]`
+ * (the caller shows its own empty state).
  *
- * Nếu cắt xong còn dưới `MIN_TREND_BUCKETS` thì nhả bớt ra cho đủ sàn: mấy ô
- * trống thêm vào là tuần có thật, để trống là đúng.
+ * If trimming leaves fewer than `MIN_TREND_BUCKETS`, give some back to reach
+ * the floor: the extra empty cells are real weeks, empty is right.
  */
 export function trimLeadingEmpty<T>(buckets: readonly T[], hasData: (b: T) => boolean): T[] {
   const first = buckets.findIndex(hasData);
@@ -200,12 +199,12 @@ export function trimLeadingEmpty<T>(buckets: readonly T[], hasData: (b: T) => bo
 }
 
 // ---------------------------------------------------------------------------
-// Bar hay line
+// Bar or line
 //
-// Bar trả lời "nhiều hay ít so với target" nhưng trên 375px chỉ đẹp tới ~13 cột;
-// quá đó thì cột mảnh và nhãn trục X chồng nhau. Line trả lời "đang lên hay
-// xuống" và chịu được nhiều điểm - đổi bởi SỐ CỘT, không phải bởi span, vì span
-// đã bị cắt đầu nên không đoán được số cột từ tên span.
+// Bars answer "more or less than target" but at 375px only look good up to
+// ~13 columns; beyond that bars get thin and X labels overlap. A line answers
+// "going up or down" and handles many points - the switch depends on COLUMN
+// COUNT, not span, since the span is trimmed and its name does not tell the count.
 // ---------------------------------------------------------------------------
 
 export const MAX_BARS = 13;
@@ -215,20 +214,20 @@ export function chartKind(bucketCount: number): 'bars' | 'line' {
 }
 
 /**
- * Nhãn trục X thưa ra khi nhiều cột: 1 nhãn / 4 cột. Trả về giá trị cho prop
- * `interval` của Recharts XAxis (0 = hiện hết, 3 = bỏ 3 hiện 1).
+ * X-axis labels thin out with many columns: 1 label per 4 columns. Returns the
+ * value for Recharts XAxis's `interval` prop (0 = show all, 3 = skip 3 show 1).
  */
 export function labelInterval(bucketCount: number): number {
   return bucketCount > MAX_BARS ? 3 : 0;
 }
 
 /**
- * Phần trăm so với target của cùng kỳ đó. `null` khi kỳ không có dữ liệu hoặc
- * target bằng 0 - chia cho 0 ra Infinity, mà "không đặt target" không phải là
- * "trượt target".
+ * Percent of that same period's target. `null` when the period has no data or
+ * the target is 0 - dividing by 0 gives Infinity, and "no target set" is not
+ * "missed target".
  *
- * Span dài vẽ tỉ lệ chứ không vẽ giờ: qua 26 tuần target có thể đổi nhiều lần,
- * đường chuẩn sẽ nhấp nhô khó đọc, còn mốc 100% thì luôn nằm một chỗ.
+ * Long spans plot ratios, not hours: over 26 weeks the target may change many
+ * times, an hours line would wobble, while the 100% mark stays put.
  */
 export function onTrackPct(actual: number | null, expected: number): number | null {
   if (actual === null || expected <= 0) return null;

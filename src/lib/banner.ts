@@ -1,10 +1,10 @@
 // ============================================================
-// logi - Chọn MỘT dòng cho balance banner.
+// logi - Picks ONE line for the balance banner.
 //
-// File thuần, không React → test được bằng `node --test`.
+// Pure file, no React → testable with `node --test`.
 //
-// Luật quan trọng nhất: tối đa một dòng. Hiện ba cảnh báo cùng lúc là
-// cách nhanh nhất để người dùng học cách phớt lờ cả ba.
+// The key rule: at most one line. Three warnings at once is the fastest way
+// to teach the user to ignore all three.
 // ============================================================
 
 import {
@@ -18,8 +18,8 @@ import type { Deviation } from '@/lib/balance';
 import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
 
 export interface BannerLine {
-  /** 'conflict' = OT cuối tuần nuốt Learn. Ưu tiên cao nhất.
-   *  'sparse'   = tuần gần như trống, chưa đủ dữ liệu để so sánh. */
+  /** 'conflict' = weekend OT eating Learn. Highest priority.
+   *  'sparse'   = an almost empty week, not enough data to compare. */
   kind: 'conflict' | 'over' | 'under' | 'sparse';
   text: string;
   category: Category | null;
@@ -27,16 +27,16 @@ export interface BannerLine {
 }
 
 /**
- * Dưới ngần này thì mọi category đều ra -99% và banner chỉ gây nản chứ không
- * mang tin. Đầu tuần hay tuần mới nghỉ phép đều rơi vào đây.
+ * Below this, every category reads -99% and the banner only discourages
+ * without informing. Early week or a week back from leave both land here.
  */
 export const MIN_LOGGED_RATIO = 0.2;
 
 /**
- * Đã log được bao nhiêu phần so với lượng lẽ ra phải có TỚI LÚC NÀY.
+ * How much has been logged versus what should exist BY NOW.
  *
- * Mẫu số là target của chính người dùng, không phải 24h/ngày - nên nó vẫn có
- * nghĩa sau khi bỏ Sleep, khác với hàm chia cứng cho 168h đã xoá (mục 3.2).
+ * The denominator is the user's own target, not 24h/day - so it still means
+ * something after Sleep was removed, unlike the deleted fixed 168h divide (section 3.2).
  */
 export function loggedRatio(
   activities: Activity[],
@@ -46,20 +46,20 @@ export function loggedRatio(
   const exp = expectedHours(weekly, now);
   const act = actualHours(activities, now);
   const total = CATEGORIES.reduce((a, c) => a + exp[c], 0);
-  if (total <= 0) return 1; // chưa tới hạn nào cả → đừng vì thế mà giấu banner
+  if (total <= 0) return 1; // nothing due yet → do not hide the banner for that
   return CATEGORIES.reduce((a, c) => a + (act[c] ?? 0), 0) / total;
 }
 
 /**
  * `Work 0.4h · 31.0h expected by now this week (-99%)`
  *
- * KHÔNG dùng `formatDeviation()` của `balance.ts`: nó viết `0.4h / 31.0h`, mà
- * dấu `/` khiến 31.0h đọc lên như thể đó là target tuần của Work - trong khi
- * màn Targets ghi 40h. `balance.ts` là file cấm sửa nên đổi cách viết ở đây.
+ * Does NOT use `balance.ts`'s `formatDeviation()`: it writes `0.4h / 31.0h`,
+ * and the `/` makes 31.0h read like Work's weekly target - while the Targets
+ * screen says 40h.
  *
- * Chữ "this week" cố ý có mặt: nút ở màn Now báo số HÔM NAY với đúng tên
- * category này, nên banner mà thiếu "this week" là hai con số vênh nhau không
- * nhãn nào phân biệt (Stage 8 mục 7).
+ * "this week" is there on purpose: the button on Now shows TODAY's number with
+ * the same category name, so a banner without "this week" gives two
+ * disagreeing numbers with no label to tell them apart (Stage 8 section 7).
  */
 function phrase(d: Deviation): string {
   const label = CATEGORY_LABEL[d.category];
@@ -81,9 +81,9 @@ function conflictPhrase(
 }
 
 /**
- * `null` = ẩn hẳn banner. Cố ý không có trạng thái "you're on track":
- * một dòng khen mỗi ngày sẽ dạy mắt bỏ qua đúng chỗ đó trên màn hình,
- * và hôm có cảnh báo thật thì cũng không ai đọc.
+ * `null` = hide the banner entirely. Deliberately no "you're on track" state:
+ * a daily line of praise trains the eye to skip that spot on the screen, and
+ * on a day with a real warning nobody reads it either.
  */
 export function pickBalance(
   activities: Activity[],
@@ -92,8 +92,8 @@ export function pickBalance(
 ): BannerLine | null {
   if (!weekly) return null;
 
-  // Tuần gần như trống: nói thẳng là chưa đủ dữ liệu, đừng bắn -99% vào mặt
-  // người dùng. Kiểm tra TRƯỚC conflict vì conflict cũng vô nghĩa khi trống.
+  // An almost empty week: say plainly there is not enough data, never fire -99%
+  // at the user. Checked BEFORE conflict, since conflict means nothing when empty.
   if (loggedRatio(activities, weekly, now) < MIN_LOGGED_RATIO) {
     return {
       kind: 'sparse',
@@ -103,10 +103,9 @@ export function pickBalance(
     };
   }
 
-  // Xung đột thắng mọi thứ: nó nối hai category lại với nhau nên nói được
-  // nhiều hơn bất kỳ con số lệch đơn lẻ nào.
-  // LUẬT vẫn do balance.ts quyết; ở đây chỉ viết lại câu cho ra tiếng Anh,
-  // vì Stage 4.6 cấm sửa balance.ts.
+  // Conflict beats everything: it links two categories, so it says more than
+  // any single gap.
+  // The RULE still lives in balance.ts; this only words the sentence.
   if (weekendConflict(activities, weekly, now)) {
     return {
       kind: 'conflict',
@@ -116,8 +115,8 @@ export function pickBalance(
     };
   }
 
-  // `deviations()` gọi `expectedHours()` - pro-rate THEO LỊCH, cộng dồn target
-  // từng ngày đã qua. Không bao giờ là `weekly × ngày/7`.
+  // `deviations()` calls `expectedHours()` - pro-rated BY CALENDAR, summing
+  // each past day's target. Never `weekly × days/7`.
   const bad = deviations(activities, weekly, now).filter((d) => d.flag !== 'ok');
   if (bad.length === 0) return null;
 

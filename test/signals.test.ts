@@ -12,8 +12,8 @@ import {
 import { PRESETS, type Activity, type Category } from '@/types/logi';
 import { act, at } from './_helpers.ts';
 
-// Tuần 2026-W35: thứ Hai 24/08 → Chủ nhật 30/08. Chấm lúc 31/08 nên
-// không ngày nào còn dở dang - số kỳ vọng tính tay được.
+// Week 2026-W35: Monday 24/08 → Sunday 30/08. Scored on 31/08 so
+// no day is unfinished - expected numbers can be worked out by hand.
 const MON = '2026-08-24';
 const TUE = '2026-08-25';
 const WED = '2026-08-26';
@@ -41,7 +41,7 @@ function sig(activities: Activity[], previous?: PreviousPeriod, range: Range = W
   );
 }
 
-/** Giúp đọc test: session xong xuôi từ giờ này tới giờ kia. */
+/** Test helper: a finished session from one time to another. */
 function s(
   category: Category,
   date: string,
@@ -61,10 +61,10 @@ const near = (a: number | null, b: number, msg?: string) =>
   assert.ok(a !== null && Math.abs(a - b) < 0.001, `${msg ?? ''} ${a} ≠ ${b}`);
 
 // ------------------------------------------------------------
-// Nhóm A - chung
+// Group A - general
 // ------------------------------------------------------------
 
-test('A: đếm session, trung vị và block dài nhất theo từng category', () => {
+test('A: session count, median and longest block per category', () => {
   const g = sig([
     s('learn', MON, '05:00', '05:20'),
     s('learn', TUE, '20:00', '21:00'),
@@ -77,17 +77,17 @@ test('A: đếm session, trung vị và block dài nhất theo từng category',
   near(learn.actual, 20 / 60 + 1 + 100 / 60);
 });
 
-test('A: zeroDays chỉ đếm ngày đã sống, và deviationPct so với target', () => {
+test('A: zeroDays counts only lived days, deviationPct is vs target', () => {
   const g = sig([s('learn', MON, '05:00', '07:00'), s('learn', TUE, '05:00', '07:00')]);
   assert.equal(g.dayCount, 7);
   assert.equal(g.elapsedDays, 7);
   assert.equal(g.byCategory.learn.zeroDays, 5);
   assert.equal(g.byCategory.fitness.zeroDays, 7);
-  // Normal: Learn 31h/tuần. Log 4h → lệch (4 − 31)/31.
+  // Normal: Learn 31h/week. Log 4h → deviation (4 − 31)/31.
   near(g.byCategory.learn.deviationPct!, (4 - 31) / 31);
 });
 
-test('A: không có kỳ trước thì deltaVsPrevious là null, có thì ra hiệu số', () => {
+test('A: no previous period gives null deltaVsPrevious, otherwise the difference', () => {
   const none = sig([s('work', MON, '08:00', '12:00')]);
   assert.equal(none.byCategory.work.deltaVsPrevious, null);
   assert.equal(none.hasPrevious, false);
@@ -104,57 +104,57 @@ test('A: không có kỳ trước thì deltaVsPrevious là null, có thì ra hi�
 });
 
 // ------------------------------------------------------------
-// Nhóm B - Nhịp ngày (thay Sleep, AMENDMENT-remove-sleep mục 10)
+// Group B - Day rhythm (replaces Sleep, AMENDMENT-remove-sleep section 10)
 // ------------------------------------------------------------
 
-test('B: lastActivityMedian lấy giờ kết thúc muộn nhất của từng ngày', () => {
+test('B: lastActivityMedian uses the latest end time of each day', () => {
   const g = sig([
     s('work', MON, '08:00', '17:00'),
-    s('learn', MON, '20:00', '21:00'), // MON kết thúc 21:00
-    s('learn', TUE, '20:00', '22:00'), // TUE kết thúc 22:00
-    s('leisure', WED, '20:00', '23:30'), // WED kết thúc 23:30
+    s('learn', MON, '20:00', '21:00'), // MON ends 21:00
+    s('learn', TUE, '20:00', '22:00'), // TUE ends 22:00
+    s('leisure', WED, '20:00', '23:30'), // WED ends 23:30
   ]);
   assert.equal(g.night.daysWithActivity, 3);
-  // 1260, 1320, 1410 → trung vị 1320 = 22:00
+  // 1260, 1320, 1410 → median 1320 = 22:00
   assert.equal(g.night.lastActivityMedian, 22 * 60);
   assert.equal(g.night.lastActivitySpreadMin, 1410 - 1260);
 });
 
-test('B: activity qua nửa đêm nằm trên trục ngày logic, thuộc ngày bắt đầu', () => {
+test('B: activity past midnight sits on the logical-day axis, in its start day', () => {
   const g = sig([
     s('learn', MON, '05:00', '06:00'),
     s('leisure', MON, '22:00', '01:00', TUE),
   ]);
-  // Cả hai cùng ngày logic MON: session 22:00 → 01:00 gán trọn cho MON.
+  // Both on logical day MON: session 22:00 → 01:00 goes fully to MON.
   assert.equal(g.night.daysWithActivity, 1);
-  // 01:00 trên trục ngày logic là 25:00 = 1500, không phải 60.
+  // 01:00 on the logical-day axis is 25:00 = 1500, not 60.
   assert.equal(g.night.lastActivityMedian, 25 * 60);
   assert.equal(g.night.lateNightActivityDays, 1);
-  // Một ngày thì không có dao động.
+  // One day has no spread.
   assert.equal(g.night.lastActivitySpreadMin, null);
 });
 
-test('B: lateNightActivityDays đếm ngày, không đếm session', () => {
+test('B: lateNightActivityDays counts days, not sessions', () => {
   const g = sig([
     s('leisure', MON, '23:10', '23:50'),
-    s('work', MON, '21:00', '23:30'), // cùng ngày → vẫn tính 1
-    s('learn', TUE, '20:00', '22:00'), // dừng trước 23:00 → không tính
+    s('work', MON, '21:00', '23:30'), // same day → still counts as 1
+    s('learn', TUE, '20:00', '22:00'), // stops before 23:00 → not counted
     s('work', WED, '22:00', '00:30', THU),
   ]);
   assert.equal(g.night.lateNightActivityDays, 2);
 });
 
-test('B: earlyStartDays đếm ngày mở màn trước 06:00', () => {
+test('B: earlyStartDays counts days starting before 06:00', () => {
   const g = sig([
     s('learn', MON, '04:30', '06:30'),
     s('learn', TUE, '05:59', '07:00'),
-    s('learn', WED, '06:00', '07:00'), // đúng mốc → không tính
+    s('learn', WED, '06:00', '07:00'), // exactly on the mark → not counted
     s('work', THU, '08:00', '17:00'),
   ]);
   assert.equal(g.night.earlyStartDays, 2);
 });
 
-test('B: không có log thì mọi chỉ số nhịp ngày về 0 hoặc null', () => {
+test('B: with no logs every day-rhythm metric is 0 or null', () => {
   const g = sig([]);
   assert.equal(g.night.daysWithActivity, 0);
   assert.equal(g.night.lateNightActivityDays, 0);
@@ -164,30 +164,30 @@ test('B: không có log thì mọi chỉ số nhịp ngày về 0 hoặc null', 
 });
 
 // ------------------------------------------------------------
-// Nhóm C - Work
+// Group C - Work
 // ------------------------------------------------------------
 
-test('C: otHours chỉ tính phần ngoài 08:00–17:00 của thứ Hai–thứ Sáu', () => {
+test('C: otHours counts only time outside 08:00–17:00 on Monday–Friday', () => {
   const g = sig([
-    s('work', MON, '07:00', '19:00'), // 3h ngoài khung
-    s('work', SAT, '09:00', '12:00'), // cuối tuần, không vào otHours
+    s('work', MON, '07:00', '19:00'), // 3h outside the window
+    s('work', SAT, '09:00', '12:00'), // weekend, not in otHours
   ]);
   near(g.work.otHours, 3);
   near(g.work.weekendWorkHours, 3);
   assert.equal(g.work.officeDaysLogged, 1);
 });
 
-test('C: lateWorkHours tính từ 20:00, kể cả phần tràn qua nửa đêm', () => {
+test('C: lateWorkHours counts from 20:00, including time past midnight', () => {
   const g = sig([
     s('work', TUE, '18:00', '21:30'),
     s('work', THU, '19:00', '00:30', FRI),
   ]);
-  // T5: 20:00–24:00 = 4h, cộng 00:00–00:30 của T6 = 0.5h.
+  // Thu: 20:00–24:00 = 4h, plus 00:00–00:30 of Fri = 0.5h.
   near(g.work.lateWorkHours, 1.5 + 4.5);
   assert.equal(g.work.officeDaysLogged, 0);
 });
 
-test('C: ngày Work dài nhất và số ngày trên 10h', () => {
+test('C: longest Work day and number of days over 10h', () => {
   const g = sig([
     s('work', MON, '08:00', '19:00'), // 11h
     s('work', TUE, '08:00', '17:00'), // 9h
@@ -195,19 +195,19 @@ test('C: ngày Work dài nhất và số ngày trên 10h', () => {
   assert.equal(g.work.longestWorkDay!.date, MON);
   near(g.work.longestWorkDay!.hours, 11);
   assert.equal(g.work.daysOver10hWork, 1);
-  // Kết thúc 19:00 và 17:00 → dao động 120 phút.
+  // Ends at 19:00 and 17:00 → spread of 120 minutes.
   assert.equal(g.work.workEndSpreadMin, 120);
 });
 
 // ------------------------------------------------------------
-// Nhóm D - Learn
+// Group D - Learn
 // ------------------------------------------------------------
 
-test('D: khối sáng và khối tối tách riêng', () => {
+test('D: morning and evening blocks are split', () => {
   const g = sig([
     s('learn', TUE, '05:00', '06:30'),
     s('learn', TUE, '20:30', '22:00'),
-    s('learn', WED, '09:00', '10:00'), // không thuộc khối nào
+    s('learn', WED, '09:00', '10:00'), // in neither block
   ]);
   assert.equal(g.learn.morningLearnDays, 1);
   near(g.learn.morningLearnHours, 1.5);
@@ -216,17 +216,17 @@ test('D: khối sáng và khối tối tách riêng', () => {
   assert.equal(g.learn.longestLearnBlockMin, 90);
 });
 
-test('D: giờ học cuối tuần và target cuối tuần của preset Normal', () => {
+test('D: weekend learn hours and the Normal preset weekend target', () => {
   const g = sig([s('learn', SAT, '08:00', '12:00'), s('learn', MON, '05:00', '06:00')]);
   near(g.learn.weekendLearnHours, 4);
   near(g.learn.weekendLearnTarget, 16);
   assert.equal(g.learn.daysWithZeroLearn, 5);
 });
 
-test('D: learnStreak đứt ở ngày dưới 50% target ngày đó', () => {
-  // Target Normal: ngày thường 3h (mốc 1.5h), cuối tuần 8h (mốc 4h).
+test('D: learnStreak breaks on a day under 50% of the target for that day', () => {
+  // Normal target: weekdays 3h (mark 1.5h), weekend 8h (mark 4h).
   const g = sig([
-    s('learn', THU, '20:00', '21:00'), // 1h < 1.5h → đứt ở đây
+    s('learn', THU, '20:00', '21:00'), // 1h < 1.5h → breaks here
     s('learn', FRI, '20:00', '22:00'), // 2h ✓
     s('learn', SAT, '08:00', '12:00'), // 4h ✓
     s('learn', SUN, '08:00', '12:00'), // 4h ✓
@@ -234,7 +234,7 @@ test('D: learnStreak đứt ở ngày dưới 50% target ngày đó', () => {
   assert.equal(g.learn.learnStreak, 3);
 });
 
-test('D: thứ tệ nhất cho Learn chỉ hiện khi khoảng đủ 7 ngày', () => {
+test('D: worst weekday for Learn shows only when the range covers 7 days', () => {
   const short: Range = { from: MON, to: WED, kind: 'custom', isPartial: false };
   assert.equal(sig([], undefined, short).learn.weekdayWorstForLearn, null);
 
@@ -246,23 +246,23 @@ test('D: thứ tệ nhất cho Learn chỉ hiện khi khoảng đủ 7 ngày', (
     s('learn', SAT, '05:00', '07:00'),
     s('learn', SUN, '05:00', '07:00'),
   ]);
-  // Chỉ thứ Tư không học → thứ Tư là 3.
+  // Only Wednesday has no learning → Wednesday is 3.
   assert.equal(g.learn.weekdayWorstForLearn!.weekday, 3);
   near(g.learn.weekdayWorstForLearn!.hours, 0);
 });
 
 // ------------------------------------------------------------
-// Nhóm E - Fitness
+// Group E - Fitness
 // ------------------------------------------------------------
 
-test('E: longestGapDays là số ngày cách nhau giữa hai buổi', () => {
+test('E: longestGapDays is the number of days between two sessions', () => {
   const g = sig([
     s('fitness', MON, '18:00', '19:00'),
     s('fitness', WED, '18:00', '19:00'),
     s('fitness', SUN, '18:00', '19:00'),
   ]);
   assert.equal(g.fitness.sessions, 3);
-  // 26/08 → 30/08 là bốn ngày.
+  // 26/08 → 30/08 is four days.
   assert.equal(g.fitness.longestGapDays, 4);
   assert.equal(g.fitness.daysSinceLast, 1);
   near(g.fitness.sessionsPerWeek, 3);
@@ -270,17 +270,17 @@ test('E: longestGapDays là số ngày cách nhau giữa hai buổi', () => {
   assert.deepEqual(g.fitness.weekdayDistribution, [1, 1, 0, 1, 0, 0, 0]);
 });
 
-test('E: skippedAfterWorkDays chỉ đếm ngày Work > 9h mà không tập', () => {
+test('E: skippedAfterWorkDays counts only Work days > 9h with no workout', () => {
   const g = sig([
-    s('work', MON, '08:00', '19:00'), // 11h, không tập
-    s('work', TUE, '08:00', '19:00'), // 11h, có tập
+    s('work', MON, '08:00', '19:00'), // 11h, no workout
+    s('work', TUE, '08:00', '19:00'), // 11h, with workout
     s('fitness', TUE, '19:30', '20:30'),
-    s('work', WED, '08:00', '16:00'), // 8h, không tập → không tính
+    s('work', WED, '08:00', '16:00'), // 8h, no workout → not counted
   ]);
   assert.equal(g.fitness.skippedAfterWorkDays, 1);
 });
 
-test('E: chưa tập buổi nào thì không bịa ra khoảng cách', () => {
+test('E: no workouts yet means no made-up gap', () => {
   const g = sig([s('work', MON, '08:00', '17:00')]);
   assert.equal(g.fitness.longestGapDays, null);
   assert.equal(g.fitness.daysSinceLast, null);
@@ -288,10 +288,10 @@ test('E: chưa tập buổi nào thì không bịa ra khoảng cách', () => {
 });
 
 // ------------------------------------------------------------
-// Nhóm F - Leisure
+// Group F - Leisure
 // ------------------------------------------------------------
 
-test('F: lateLeisureHours tính từ 22:00, gồm cả phần sau nửa đêm', () => {
+test('F: lateLeisureHours counts from 22:00, including time past midnight', () => {
   const g = sig([
     s('leisure', MON, '21:00', '23:30'),
     s('leisure', TUE, '23:00', '01:00', WED),
@@ -301,17 +301,17 @@ test('F: lateLeisureHours tính từ 22:00, gồm cả phần sau nửa đêm', 
   assert.equal(g.leisure.longestBlockMin, 150);
 });
 
-test('F: tách giờ giải trí ngày thường và cuối tuần', () => {
+test('F: weekday and weekend leisure hours are split', () => {
   const g = sig([s('leisure', TUE, '20:00', '21:00'), s('leisure', SAT, '14:00', '17:00')]);
   near(g.leisure.weekdayLeisureHours, 1);
   near(g.leisure.weekendLeisureHours, 3);
 });
 
 // ------------------------------------------------------------
-// Nhóm G - liên hệ chéo
+// Group G - cross links
 // ------------------------------------------------------------
 
-test('G: dưới 3 mẫu thì trả null, không suy diễn', () => {
+test('G: under 3 samples returns null, no guessing', () => {
   const g = sig([
     s('work', MON, '08:00', '18:30'), // 10.5h
     s('work', TUE, '08:00', '18:30'),
@@ -320,21 +320,21 @@ test('G: dưới 3 mẫu thì trả null, không suy diễn', () => {
   assert.equal(g.links.learnOnHighWorkDays, null);
 });
 
-test('G: đủ 3 mẫu thì có giá trị kèm sampleSize', () => {
+test('G: 3 samples gives a value with sampleSize', () => {
   const g = sig([
     s('work', MON, '08:00', '18:30'),
     s('work', TUE, '08:00', '18:30'),
     s('work', WED, '08:00', '18:30'),
     s('learn', MON, '20:00', '21:00'), // 1h
     s('learn', TUE, '20:00', '20:30'), // 0.5h
-    s('learn', THU, '20:00', '22:00'), // ngày Work bình thường
+    s('learn', THU, '20:00', '22:00'), // normal Work day
   ]);
   assert.equal(g.links.learnOnHighWorkDays!.sampleSize, 3);
   near(g.links.learnOnHighWorkDays!.value, 0.5);
   assert.equal(g.links.learnOnNormalDays!.sampleSize, 4);
 });
 
-test('G: ngày SAU một ngày còn hoạt động sau 23:00 mới được tính', () => {
+test('G: only the day AFTER a day active past 23:00 counts', () => {
   const g = sig([
     s('leisure', MON, '22:00', '23:30'),
     s('leisure', TUE, '22:00', '23:30'),
@@ -344,11 +344,11 @@ test('G: ngày SAU một ngày còn hoạt động sau 23:00 mới được tín
   ]);
   assert.equal(g.night.lateNightActivityDays, 3);
   assert.equal(g.links.learnAfterLateNights!.sampleSize, 3);
-  // Ngày sau ba ngày thức khuya: T3 1h, T4 0h, T5 2h → trung bình 1h.
+  // Days after three late nights: Tue 1h, Wed 0h, Thu 2h → average 1h.
   near(g.links.learnAfterLateNights!.value, 1);
 });
 
-test('G: dưới 3 ngày thức khuya thì learnAfterLateNights là null', () => {
+test('G: under 3 late nights gives null learnAfterLateNights', () => {
   const g = sig([
     s('leisure', MON, '22:00', '23:30'),
     s('leisure', TUE, '22:00', '23:30'),
@@ -357,7 +357,7 @@ test('G: dưới 3 ngày thức khuya thì learnAfterLateNights là null', () =>
   assert.equal(g.links.learnAfterLateNights, null);
 });
 
-test('G: displacedBy khớp với chênh lệch so với kỳ trước', () => {
+test('G: displacedBy matches the change vs the previous period', () => {
   const prev = previousRange(WEEK);
   const g = sig([s('learn', MON, '08:00', '13:00'), s('work', TUE, '08:00', '10:00')], {
     activities: [
@@ -374,9 +374,9 @@ test('G: displacedBy khớp với chênh lệch so với kỳ trước', () => {
   assert.equal(d.sampleSize, 7);
 });
 
-test('G: cuối tuần chỉ có 2 ngày trong một tuần → chỉ số cặp bị ẩn', () => {
+test('G: a week has only 2 weekend days → paired metrics are hidden', () => {
   const g = sig([s('learn', SAT, '08:00', '12:00')]);
   assert.equal(g.links.weekendLearnVsWeekendWork, null);
-  // Nhưng tổng giờ cuối tuần (nhóm D) vẫn còn, vì đó không phải suy diễn.
+  // But weekend total hours (group D) stay, since they are not a guess.
   near(g.learn.weekendLearnHours, 4);
 });

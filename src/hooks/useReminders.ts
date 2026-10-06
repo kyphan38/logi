@@ -1,9 +1,9 @@
 'use client';
 
 // ============================================================
-// logi - Nhắc trong app. Không push notification.
+// logi - In-app reminders. No push notification.
 //
-// Kiểm tra lúc mount, lúc quay lại foreground, và mỗi 60 giây.
+// Checked on mount, on return to the foreground, and every 60 seconds.
 // ============================================================
 
 import { useCallback, useMemo, useState } from 'react';
@@ -16,11 +16,11 @@ const PREFIX = 'reminder:';
 const EMPTY: ReadonlySet<string> = new Set();
 
 /**
- * Dismiss lưu ở `localStorage` - mỗi thiết bị riêng. Chấp nhận được:
- * đổi lấy việc không tốn write Firestore cho một thứ chỉ sống trong ngày.
+ * Dismissals live in `localStorage` - per device. Acceptable: it saves a
+ * Firestore write for something that only lives for a day.
  *
- * Đọc hết một lượt thay vì tra từng key, để `dismissed` là state React
- * thật - hook không phải tự ép render lại bằng biến đếm giả.
+ * Reads everything at once instead of key by key, so `dismissed` is real
+ * React state - the hook does not force re-renders with a fake counter.
  */
 function readAll(): ReadonlySet<string> {
   if (typeof window === 'undefined') return EMPTY;
@@ -32,7 +32,7 @@ function readAll(): ReadonlySet<string> {
     }
     return out;
   } catch {
-    // Safari private mode ném ở đây. Thà nhắc thừa còn hơn crash.
+    // Safari private mode throws here. Better to remind twice than crash.
     return EMPTY;
   }
 }
@@ -44,10 +44,10 @@ export function useReminders(
 ): { reminder: Reminder | null; dismiss: () => void } {
   const now = useTick(60_000, true);
 
-  // Khởi tạo lười: chạy trên client ở lần render đầu, server thì ra rỗng.
+  // Lazy init: runs on the client at first render; the server gets empty.
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(readAll);
 
-  // Thiết bị khác dismiss thì không thấy, nhưng tab khác thì có.
+  // Another device's dismissal is not seen, but another tab's is.
   useOnForeground(useCallback(() => setDismissed(readAll()), []));
 
   const reminder = useMemo(
@@ -60,8 +60,8 @@ export function useReminders(
     try {
       window.localStorage.setItem(reminder.key, '1');
     } catch {
-      // Không ghi được thì nhắc sẽ hiện lại sau khi tải lại trang.
-      // Không đáng để chen một toast lỗi vào màn hình.
+      // If the write fails, the reminder shows again after a reload.
+      // Not worth pushing an error toast onto the screen.
     }
     setDismissed((prev) => new Set(prev).add(reminder.key));
   }, [reminder]);

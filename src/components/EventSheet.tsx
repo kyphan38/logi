@@ -6,20 +6,21 @@ import { countdownText, daysUntil, whenLabel } from '@/lib/events';
 import { EVENT_NOTE_MAX, EVENT_TITLE_MAX, type EventItem } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
-// logi - Thêm / sửa / xoá một sự kiện (Stage 9)
+// logi - Add / edit / delete an event (Stage 9)
 //
-// Ngày là bắt buộc, giờ thì không. Mốc nhắc vẫn tính bằng NGÀY và push vẫn gửi
-// lúc 06:00 - giờ ở đây chỉ để hiển thị, không đổi lịch gửi.
+// The date is required, the time is not. Reminder marks still count in DAYS
+// and push still sends at 06:00 - the time here is display only, it does not
+// change the send schedule.
 // ---------------------------------------------------------------------------
 
-/** Nút ngày nhanh: hôm nay + N. Ba mốc người ta hay gõ nhất. */
+/** Quick date buttons: today + N. The three offsets people type most. */
 const QUICK = [
   { label: 'Tomorrow', days: 1 },
   { label: 'In a week', days: 7 },
   { label: 'In a month', days: 30 },
 ] as const;
 
-/** ts → "YYYY-MM-DD" giờ địa phương, đúng thứ <input type="date"> cần. */
+/** ts → "YYYY-MM-DD" in local time, exactly what <input type="date"> needs. */
 function toDateInput(ts: number): string {
   const d = new Date(ts);
   const p = (n: number) => String(n).padStart(2, '0');
@@ -35,9 +36,9 @@ export default function EventSheet({
   onSave,
   onArchive,
 }: {
-  /** null → thêm mới. */
+  /** null → adding. */
   event: EventItem | null;
-  /** Ngày logic hôm nay - chặn dưới cho ô chọn ngày khi thêm mới. */
+  /** Today's logical day - the lower bound of the date field when adding. */
   today: string;
   now: number;
   busy: boolean;
@@ -104,15 +105,15 @@ export default function EventSheet({
           id="event-date"
           type="date"
           value={date}
-          // Sự kiện mới thì không cho chọn ngày đã qua - gõ nhầm năm là lỗi
-          // hay gặp nhất, và một việc "đã qua 300 ngày" thì không nhắc được gì.
-          // Sửa việc cũ thì bỏ chặn, vì ngày của nó vốn đã ở quá khứ.
+          // A new event cannot pick a past date - a wrong year is the most common
+          // typo, and something "300 days ago" can remind nothing.
+          // Editing an old event drops the limit, since its date is already past.
           min={event ? undefined : today}
           onChange={(e) => setDate(e.target.value)}
           className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-100"
         />
-        {/* Giờ là TUỲ CHỌN - để trống nghĩa là cả ngày. Không đặt giá trị mặc
-            định: một giờ app tự điền là một giờ sai mà người dùng không để ý. */}
+        {/* The time is OPTIONAL - empty means all day. No default value: a time
+            the app fills in is a wrong time the user does not notice. */}
         <input
           aria-label="Time (optional)"
           type="time"
@@ -135,8 +136,8 @@ export default function EventSheet({
           ))}
         </div>
 
-        {/* Xác nhận lại bằng chữ. Ô <input type="date"> trên iOS hiện bánh xe
-            số - rất dễ chọn nhầm một tháng mà không nhận ra. */}
+        {/* Confirm it in words. <input type="date"> on iOS shows a number wheel -
+            very easy to pick the wrong month without noticing. */}
         <p className="mb-4 min-h-5 text-[13px] text-zinc-500" aria-live="polite">
           {ok ? `${countdownText(days)} · ${whenLabel(date, time || null)}` : ' '}
         </p>

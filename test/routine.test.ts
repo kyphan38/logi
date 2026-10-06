@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// Stage 10 - Routine: checklist hằng ngày theo thứ.
+// Routine: daily checklist by weekday.
 //
-// Bài test quan trọng nhất: đúng mục hiện đúng thứ, và thứ tính theo NGÀY
-// LOGIC (cắt 04:00). 01:00 sáng thứ Ba vẫn phải thấy checklist của thứ Hai.
+// Key test: the right items show on the right weekday, and the weekday uses
+// the LOGICAL day (cutoff 04:00). 01:00 Tuesday must still show Monday's list.
 // ---------------------------------------------------------------------------
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -45,7 +45,7 @@ describe('itemsForDay / routineForDay', () => {
   });
 
   it('counts only visible items as done', () => {
-    // `ssh` được tick nhưng hôm nay là thứ Hai - không được đếm.
+    // `ssh` is ticked but today is Monday - it must not count.
     const checked = new Set(['a', 'ssh']);
     const mon = routineForDay([exercise, it_], 1, (id) => checked.has(id));
     assert.equal(mon[0].done, 1);
@@ -63,7 +63,7 @@ describe('itemsForDay / routineForDay', () => {
 
 describe('day boundary (04:00)', () => {
   it('01:00 on Tuesday still reads Monday', () => {
-    const t = at('2026-09-29', '01:00'); // thứ Ba
+    const t = at('2026-09-29', '01:00'); // Tuesday
     assert.equal(logicalDate(t), '2026-09-28');
     assert.equal(logicalWeekday(t), 1);
   });
@@ -88,7 +88,7 @@ describe('editing', () => {
   });
 
   it('move skips items of other days', () => {
-    // Thứ Hai thấy a, c. `b` thuộc thứ Ba nằm xen giữa.
+    // Monday sees a, c. `b` belongs to Tuesday and sits between them.
     const list = [item('a', [1]), item('b', [2]), item('c', [1])];
     assert.deepEqual(moveItem(list, 'c', -1, 1).map((i) => i.id), ['c', 'b', 'a']);
     assert.deepEqual(moveItem(list, 'c', -1, null).map((i) => i.id), ['a', 'c', 'b']);

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import BottomNav from '@/components/BottomNav';
 import { useOnline } from '@/hooks/useActivities';
 
-/** Banner mảnh trên cùng. Không chặn thao tác - Firestore vẫn ghi vào cache. */
+/** A thin banner on top. Blocks nothing - Firestore still writes to the cache. */
 function OfflineBanner() {
   const online = useOnline();
   if (online) return null;
@@ -21,14 +21,14 @@ function OfflineBanner() {
 
 export default function AppShell({ children }: { children: ReactNode }) {
   return (
-    // h-dvh: khung cao đúng bằng màn hình. Tài liệu không bao giờ dài hơn
-    // viewport -> trang không tự cuộn -> thanh công cụ Safari không thu/nhả ->
-    // thanh tab đứng yên. Mọi thứ cuộn bên trong <main>.
+    // h-dvh: the frame is exactly the screen height. The document is never
+    // taller than the viewport -> the page never scrolls -> the Safari toolbar
+    // does not collapse/expand -> the tab bar stays put. Everything scrolls in <main>.
     <div className="flex h-dvh min-h-0 flex-col md:pl-[180px]">
       <OfflineBanner />
-      {/* Đây là NƠI DUY NHẤT cuộn được. Nav là anh em phía dưới, không phải
-          `fixed` nữa, nên nó nằm đúng một chỗ dù trang dài hay ngắn.
-          content-width: mọi màn hình giới hạn 720px và căn giữa. */}
+      {/* The ONLY scrollable place. The nav is a sibling below, no longer
+          `fixed`, so it stays in one place whether the page is long or short.
+          content-width: every screen is capped at 720px and centered. */}
       <main
         id="app-scroll"
         className="content-width flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain px-5 pb-6 pt-6"

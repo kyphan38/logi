@@ -8,7 +8,7 @@ import type { RoutineChecks, RoutineGroup } from '@/types/logi';
 
 const EMPTY_GROUPS: RoutineGroup[] = [];
 
-/** Nhóm routine đang dùng (đã lọc archive), theo thứ tự. */
+/** Active routine groups (archived filtered out), in order. */
 export function useRoutines() {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
@@ -45,13 +45,13 @@ export function useRoutines() {
 }
 
 /**
- * Tick của MỘT ngày logic, kèm bật/tắt.
+ * Ticks for ONE logical day, with toggling.
  *
- * `date` đổi lúc 04:00 (người gọi tính từ `logicalDate`) → hook đọc doc của
- * ngày mới, đang trống. Đó là toàn bộ cơ chế "reset".
+ * `date` changes at 04:00 (the caller derives it from `logicalDate`) → the
+ * hook reads the new day's empty doc. That is the whole "reset" mechanism.
  *
- * Chạm đi trước, Firestore theo sau: `optimistic` thắng snapshot cho tới khi
- * snapshot bắt kịp, nếu không thì dấu tick nháy tắt rồi bật lại.
+ * The tap goes first, Firestore follows: `optimistic` beats the snapshot until
+ * the snapshot catches up, otherwise the tick would flicker off and on again.
  */
 export function useRoutineChecks(date: string) {
   const { user } = useAuth();
@@ -72,7 +72,7 @@ export function useRoutineChecks(date: string) {
     if (!uid) return;
     return subscribeChecks(uid, date, (c) => {
       setChecks(c);
-      // Server đã khớp với chạm nào thì thả chạm đó ra.
+      // Once the server matches a tap, release that tap.
       setOptimistic((o) => {
         let changed = false;
         const next: Record<string, boolean> = {};
@@ -98,7 +98,7 @@ export function useRoutineChecks(date: string) {
       try {
         await setChecked(uid, date, id, on);
       } catch (e) {
-        // Ghi hỏng → trả về đúng những gì Firestore đang giữ.
+        // Write failed → go back to exactly what Firestore holds.
         setOptimistic((o) => {
           const next = { ...o };
           delete next[id];

@@ -1,10 +1,10 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// logi - Chọn độ dài trend, dùng chung cho cả ba card
+// logi - Trend length picker, shared by all three cards
 //
-// Chip chứ không dropdown: chỉ ba lựa chọn, và ba card phải đổi cùng lúc thì
-// mới so được với nhau. Bước nhảy gấp đôi (6 → 12 → 26): gần / trung / dài.
+// Chips, not a dropdown: only three choices, and all three cards must change
+// together to stay comparable. Doubling steps (6 → 12 → 26): near / mid / long.
 // ---------------------------------------------------------------------------
 import { TREND_SPANS, type TrendSpan } from '@/lib/trend';
 

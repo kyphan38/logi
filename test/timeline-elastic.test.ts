@@ -14,11 +14,11 @@ import {
 } from '@/lib/timeline';
 import { act, at } from './_helpers.ts';
 
-const DATE = '2026-08-27'; // thứ Năm
+const DATE = '2026-08-27'; // Thursday
 const win = dayWindow(DATE);
 const END_OF_DAY = at('2026-08-28', '04:00');
 
-/** layoutDay → dayGaps → elasticRows, đúng như màn hình đang chạy. */
+/** layoutDay → dayGaps → elasticRows, same as the live screen. */
 function rowsFor(activities: Parameters<typeof layoutDay>[0], now = END_OF_DAY): Row[] {
   const { segments } = layoutDay(activities, win, now);
   const { gaps } = dayGaps(segments, win, now);
@@ -28,38 +28,38 @@ function rowsFor(activities: Parameters<typeof layoutDay>[0], now = END_OF_DAY):
 const blocks = (rows: Row[]) => rows.filter((r): r is BlockRow => r.kind === 'blocks');
 const gapRows = (rows: Row[]) => rows.filter((r) => r.kind === 'gap');
 
-// --- Chiều cao block --------------------------------------------------------
+// --- Block height --------------------------------------------------------
 
-test('blockHeight: block 5 phút → 44px (chạm được bằng ngón tay)', () => {
+test('blockHeight: 5-minute block → 44px (finger tappable)', () => {
   assert.equal(blockHeight(5 * 60_000), ELASTIC_MIN_PX);
   assert.equal(blockHeight(0), ELASTIC_MIN_PX);
 });
 
-test('blockHeight: block 9h → 132px (chạm trần)', () => {
+test('blockHeight: 9h block → 132px (hits the cap)', () => {
   assert.equal(blockHeight(9 * 3_600_000), ELASTIC_MAX_PX);
-  assert.equal(blockHeight(24 * 3_600_000), ELASTIC_MAX_PX, 'không được vượt trần');
+  assert.equal(blockHeight(24 * 3_600_000), ELASTIC_MAX_PX, 'must not exceed the cap');
 });
 
-test('blockHeight: ở giữa vẫn thấy được cái nào dài hơn', () => {
+test('blockHeight: in between, the longer one still looks longer', () => {
   const h1 = blockHeight(60 * 60_000);
   const h2 = blockHeight(180 * 60_000);
   assert.ok(h1 > ELASTIC_MIN_PX && h1 < h2 && h2 < ELASTIC_MAX_PX, `${h1} → ${h2}`);
 });
 
-// --- Khoảng trống -----------------------------------------------------------
+// --- Gaps -----------------------------------------------------------
 
-test('khoảng trống 45 phút → tạo dòng untracked', () => {
+test('45-minute gap → untracked row', () => {
   const rows = rowsFor([
     act({ id: 'a', category: 'work', startAt: at(DATE, '09:00'), endAt: at(DATE, '10:00') }),
     act({ id: 'b', category: 'work', startAt: at(DATE, '10:45'), endAt: at(DATE, '12:00') }),
   ]);
   assert.ok(
     gapRows(rows).some((g) => g.start === at(DATE, '10:00') && g.end === at(DATE, '10:45')),
-    'phải có dòng untracked giữa hai block'
+    'there must be an untracked row between the two blocks'
   );
 });
 
-test('khoảng trống 20 phút → không tạo dòng', () => {
+test('20-minute gap → no row', () => {
   const rows = rowsFor([
     act({ id: 'a', category: 'work', startAt: at(DATE, '09:00'), endAt: at(DATE, '10:00') }),
     act({ id: 'b', category: 'work', startAt: at(DATE, '10:20'), endAt: at(DATE, '12:00') }),
@@ -67,30 +67,30 @@ test('khoảng trống 20 phút → không tạo dòng', () => {
   assert.equal(
     gapRows(rows).some((g) => g.start === at(DATE, '10:00')),
     false,
-    'dưới 30 phút thì chỉ để 8px khoảng cách'
+    'under 30 minutes only leaves an 8px space'
   );
 });
 
-// --- Block chồng nhau -------------------------------------------------------
+// --- Overlapping blocks -------------------------------------------------------
 
-test('2 record chồng giờ → CÙNG một hàng, 2 lane, cả hai bấm được', () => {
+test('2 overlapping records → SAME row, 2 lanes, both tappable', () => {
   const rows = rowsFor([
     act({ id: 'w', category: 'work', startAt: at(DATE, '09:00'), endAt: at(DATE, '12:00') }),
     act({ id: 'l', category: 'learn', startAt: at(DATE, '10:00'), endAt: at(DATE, '11:00') }),
   ]);
   const bs = blocks(rows);
-  assert.equal(bs.length, 1, 'chồng giờ thì gộp thành một hàng');
+  assert.equal(bs.length, 1, 'overlaps merge into one row');
   assert.equal(bs[0].blocks.length, 2);
   assert.deepEqual(
     bs[0].blocks.map((b) => b.lane),
     [0, 1],
-    'hai lane riêng → nằm cạnh nhau, không đè lên nhau'
+    'two separate lanes → side by side, not on top of each other'
   );
-  // Chiều cao hàng = block cao nhất trong nhóm.
+  // Row height = the tallest block in the group.
   assert.equal(bs[0].height, blockHeight(3 * 3_600_000));
 });
 
-test('không chồng giờ → mỗi record một hàng, mỗi hàng 1 lane', () => {
+test('no overlap → one row per record, one lane per row', () => {
   const rows = rowsFor([
     act({ id: 'a', category: 'work', startAt: at(DATE, '09:00'), endAt: at(DATE, '10:00') }),
     act({ id: 'b', category: 'learn', startAt: at(DATE, '11:00'), endAt: at(DATE, '12:00') }),
@@ -100,7 +100,7 @@ test('không chồng giờ → mỗi record một hàng, mỗi hàng 1 lane', ()
   for (const r of bs) assert.deepEqual(r.blocks.map((b) => b.lane), [0]);
 });
 
-test('layoutDay: ngày không chồng giờ thì laneCount = 1 (không sinh sliver)', () => {
+test('layoutDay: a day with no overlap has laneCount = 1 (no slivers)', () => {
   const day = [
     act({ id: 's', category: 'work', startAt: at(DATE, '23:00'), endAt: at('2026-08-28', '06:00') }),
     act({ id: 'w1', category: 'work', startAt: at(DATE, '08:00'), endAt: at(DATE, '12:00') }),
@@ -111,9 +111,9 @@ test('layoutDay: ngày không chồng giờ thì laneCount = 1 (không sinh sliv
   assert.equal(layoutDay(day, win, END_OF_DAY).laneCount, 1);
 });
 
-// --- Ngày hôm nay -----------------------------------------------------------
+// --- Today -----------------------------------------------------------
 
-test('ngày hôm nay → không tạo dòng untracked cho phần tương lai', () => {
+test('today → no untracked row for the future part', () => {
   const now = at(DATE, '12:00');
   const rows = rowsFor(
     [act({ id: 'a', category: 'work', startAt: at(DATE, '09:00'), endAt: at(DATE, '11:00') })],
@@ -122,18 +122,18 @@ test('ngày hôm nay → không tạo dòng untracked cho phần tương lai', (
   const gs = gapRows(rows);
   assert.ok(gs.length > 0);
   for (const g of gs) {
-    assert.ok(g.end <= now, `dòng untracked kết thúc lúc ${new Date(g.end)} - quá "bây giờ"`);
+    assert.ok(g.end <= now, `untracked row ends at ${new Date(g.end)} - past "now"`);
   }
   assert.equal(
     gs.some((g) => g.end === win.end),
     false,
-    'không được kéo dòng untracked tới 04:00 hôm sau'
+    'the untracked row must not stretch to 04:00 next day'
   );
 });
 
-// --- Thứ tự & tổng chiều cao ------------------------------------------------
+// --- Order & total height ------------------------------------------------
 
-test('các hàng xếp đúng thứ tự thời gian', () => {
+test('rows are in time order', () => {
   const rows = rowsFor([
     act({ id: 'a', category: 'work', startAt: at(DATE, '09:00'), endAt: at(DATE, '10:00') }),
     act({ id: 'b', category: 'learn', startAt: at(DATE, '14:00'), endAt: at(DATE, '15:00') }),
@@ -143,7 +143,7 @@ test('các hàng xếp đúng thứ tự thời gian', () => {
   assert.deepEqual(starts, [...starts].sort((x, y) => x - y));
 });
 
-test('ngày thưa co lại nhỏ hơn nhiều so với khung 1440px cũ', () => {
+test('a sparse day is much shorter than the old 1440px frame', () => {
   const rows = rowsFor(
     [
       act({ id: 's', category: 'leisure', startAt: at(DATE, '04:00'), endAt: at(DATE, '06:40') }),
@@ -156,10 +156,10 @@ test('ngày thưa co lại nhỏ hơn nhiều so với khung 1440px cũ', () => 
     at(DATE, '23:30')
   );
   const total = rows.reduce((sum, r) => sum + (r.kind === 'gap' ? 32 : r.height) + 8, 0);
-  assert.ok(total < 800, `6 record vẫn cao ${total}px - phải vừa một màn hình`);
+  assert.ok(total < 800, `6 records are still ${total}px tall - must fit one screen`);
 });
 
-test('block kéo sang từ hôm trước vẫn vẽ được, cắt đầu tại 04:00', () => {
+test('a block from the previous day still draws, cut at 04:00', () => {
   const rows = rowsFor([
     act({
       id: 's',
@@ -169,6 +169,6 @@ test('block kéo sang từ hôm trước vẫn vẽ được, cắt đầu tại
     }),
   ]);
   const first = blocks(rows)[0].blocks[0];
-  assert.equal(first.start, win.start, 'phải cắt gọn về 04:00');
+  assert.equal(first.start, win.start, 'must be cut to 04:00');
   assert.equal(first.crossesMidnight, true);
 });

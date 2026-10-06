@@ -1,9 +1,9 @@
 'use client';
 
 // ============================================================
-// Thẻ xác nhận sau khi nói.
-// Hiện khi máy chưa đủ chắc, hoặc thiếu field bắt buộc.
-// Sửa được ngay tại chỗ - không bắt người dùng nói lại.
+// Confirm card after speaking.
+// Shown when the parser is not sure enough, or a required field is missing.
+// Editable in place - never makes the user say it again.
 // ============================================================
 
 import { useState } from 'react';
@@ -35,10 +35,10 @@ export default function ParseConfirmCard({
   onCancel,
 }: {
   cmd: ParsedCommand;
-  /** Session đang chạy - để chọn khi câu "I'm done" không rõ dừng cái nào. */
+  /** Running sessions - to pick from when "I'm done" does not say which one stops. */
   active: Activity[];
   busy: boolean;
-  /** Trả về lệnh đã sửa, không phải lệnh gốc. */
+  /** Returns the edited command, not the original. */
   onConfirm: (edited: ParsedCommand) => void;
   onCancel: () => void;
 }) {
@@ -51,22 +51,22 @@ export default function ParseConfirmCard({
 
   const isBedtime = cmd.intent === 'bedtime';
   const needsTime = cmd.intent !== 'stop' && !isBedtime;
-  // 'start' = đang chạy. Không có giờ kết thúc, và không được hỏi giờ kết thúc.
+  // 'start' = running. No end time, and never ask for one.
   const running = cmd.intent === 'start';
   const needsEnd = cmd.intent === 'log_past';
   const needsStart = cmd.intent === 'log_past' || cmd.intent === 'schedule';
   const needsCategory = cmd.intent !== 'stop';
   const needsTarget = cmd.intent === 'stop' || cmd.intent === 'edit';
-  // "Change it to 9 AM" không nhắc category - đừng bắt chọn thứ họ không muốn đổi.
+  // "Change it to 9 AM" names no category - do not force a choice they do not want to change.
   const categoryRequired = needsCategory && cmd.intent !== 'edit';
 
   const startAt = fromLocalInput(startStr);
   const endAt = running ? null : fromLocalInput(endStr);
   const bedAt = fromLocalInput(bedStr);
 
-  // Thiếu field nào thì tính TẠI ĐÂY, theo đúng thứ đang hiện trên card.
-  // Danh sách `missing` lúc mở card cũ ngay khi người dùng chọn xong, nên
-  // trước đây câu lỗi hiện lên mà không ô nào đỏ - và ngược lại.
+  // Missing fields are computed HERE, from what the card shows right now.
+  // The `missing` list from when the card opened goes stale once the user
+  // picks something, so an error used to show with no field in red - and back.
   const gaps: { field: MissingField; name: string }[] = [];
   if (isBedtime && bedAt === null) gaps.push({ field: 'bedtimeAt', name: 'Bedtime' });
   if (needsTarget && target === '') gaps.push({ field: 'target', name: 'Session' });
@@ -76,10 +76,10 @@ export default function ParseConfirmCard({
 
   const backwards = startAt !== null && endAt !== null && endAt <= startAt;
 
-  // Nút Confirm chỉ mở khi đủ field. Đỡ phải bắt lỗi sau khi ghi.
+  // Confirm only unlocks when all fields are filled. Saves catching errors after saving.
   const ready = gaps.length === 0 && !backwards;
 
-  // Nêu đích danh ô nào thiếu - "ô được tô đỏ" là câu vô dụng khi có 2 ô đỏ.
+  // Name the missing field - "the red field" is useless when two are red.
   const problem = gaps.length
     ? `${gaps.map((g) => g.name).join(' and ')} ${gaps.length > 1 ? 'are' : 'is'} missing.`
     : backwards
@@ -212,7 +212,7 @@ export default function ParseConfirmCard({
                 />
               </label>
             ) : running ? (
-              // Ô trống ở đây làm người ta tưởng phải điền. Nói thẳng là đang chạy.
+              // An empty field here makes people think they must fill it. Say plainly it is running.
               <div className="flex flex-1 flex-col gap-1">
                 <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">End</span>
                 <p className={`${FIELD} flex items-center text-zinc-400 dark:text-zinc-500`}>

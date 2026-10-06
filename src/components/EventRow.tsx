@@ -4,20 +4,21 @@ import { countdownParts, daysUntil, urgency, whenLabel, type Urgency } from '@/l
 import { MILESTONES, type EventItem } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
-// logi - Một dòng trong danh sách sự kiện (Stage 9)
+// logi - One row in the event list (Stage 9)
 //
-// Thứ to nhất trên dòng là ĐẾM NGƯỢC, không phải tên việc. Người ta mở tab này
-// để biết "còn bao lâu"; tên việc chỉ để nhận ra là việc nào.
+// The biggest thing on the row is the COUNTDOWN, not the name. People open
+// this tab to know "how long left"; the name only identifies which one.
 //
-// Bản đầu để đếm ngược thành một dòng chữ 13px màu xám nằm DƯỚI tên việc - thứ
-// quan trọng nhất lại là thứ mờ nhất trên màn hình. Nay nó là một khối số bên
-// trái, và ngày tháng lấy lại màu chữ đầy đủ.
+// The first version put the countdown as a 13px gray line UNDER the name - the
+// most important thing was the faintest on screen. Now it is a number block on
+// the left, and the date gets full text color back.
 // ---------------------------------------------------------------------------
 
-/** Viền của cả dòng + nền và chữ của khối số. Một mức gấp, một bộ ba. */
+/** Row border + number block fill and text. One urgency level, one set of three. */
 const TONE: Record<Urgency, { row: string; chip: string; num: string }> = {
-  // Chỉ xám (DESIGN.md): gấp thì đậm hơn. Hôm nay là khối số đảo màu (nền
-  // mực), rồi viền mực, rồi viền mờ. Chữ "Today" / số ngày nói phần còn lại.
+  // Gray only (DESIGN.md): more urgent = stronger. Today is an inverted number
+  // block (ink fill), then an ink border, then a faint border. The words
+  // "Today" / the day count say the rest.
   today: {
     row: 'border-ink',
     chip: 'bg-ink',
@@ -35,7 +36,7 @@ const TONE: Record<Urgency, { row: string; chip: string; num: string }> = {
   },
   far: {
     row: 'border-line-strong',
-    // Xa thì viền nhạt - độ đậm là để nói "gấp". Đủ to và đủ đậm là đọc được.
+    // Far away = a light border - weight is what says "urgent". Big and bold enough to read.
     chip: 'bg-surface-1',
     num: 'text-ink',
   },
@@ -59,11 +60,11 @@ export default function EventRow({
   const tone = urgency(days);
   const c = TONE[tone];
   const { value, unit } = countdownParts(days);
-  // "Today" là cả một câu, không phải con số - thu nhỏ lại cho vừa khối.
+  // "Today" is a whole word, not a number - shrink it to fit the block.
   const wide = value.length > 2;
 
-  // Mốc còn lại ở phía trước. Cho người dùng thấy app SẼ nhắc, nên họ không
-  // phải tự nhớ thêm ở chỗ khác nữa.
+  // The remaining marks ahead. Show the user that the app WILL remind them, so
+  // they do not need to remember it elsewhere too.
   const ahead = MILESTONES.filter((m) => m < days).length;
 
   return (
@@ -99,8 +100,8 @@ export default function EventRow({
         >
           {event.title}
         </span>
-        {/* Ngày tháng dùng màu chữ ĐẦY ĐỦ. Trước đây nó là ink-muted, mà đó là
-            thông tin người dùng tới đây để đọc - không phải chú thích. */}
+        {/* The date uses FULL text color. It used to be ink-muted, but it is the
+            info people come here to read - not a footnote. */}
         <span className="text-[13px] font-medium tabular-nums text-ink-soft">
           {whenLabel(event.date, event.time)}
         </span>
@@ -114,9 +115,9 @@ export default function EventRow({
           className="flex shrink-0 select-none items-center gap-1 self-start text-[11px] tabular-nums text-ink-muted"
           title={`${ahead} reminder${ahead === 1 ? '' : 's'} still to come`}
         >
-          {/* SVG một nét, KHÔNG emoji. Trình duyệt vẽ 🔔 bằng bảng màu riêng
-              của nó - vàng chói, không theo được màu chữ, và sai tông ở dark
-              mode. Hình này trùng khít icon tab dưới cùng. */}
+          {/* A one-stroke SVG, NOT an emoji. Browsers draw 🔔 with their own
+              palette - bright yellow, ignores text color, wrong tone in dark
+              mode. This shape matches the bottom tab icon exactly. */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
