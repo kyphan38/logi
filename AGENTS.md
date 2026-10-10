@@ -1,5 +1,10 @@
 # Agent instructions (logi)
 
+## Git: no co-author
+
+Never add `Co-Authored-By:` (or any other author line) to a commit message
+or a PR description. Git already records the author.
+
 ## Writing: no em dash
 
 Never write the em dash `—` (U+2014), and never its escapes `&mdash;`,
