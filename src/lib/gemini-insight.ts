@@ -116,7 +116,7 @@ Write in English. Be brief. No preamble, no closing summary.`;
 // ------------------------------------------------------------
 
 // Same model as the voice parse path: known to work with the current key.
-const MODEL = 'gemini-3.8-flash';
+const MODEL = 'gemini-4-argon';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 /**
@@ -147,9 +147,8 @@ export async function analyseDigest(digest: Digest, apiKey: string): Promise<unk
         // Low to stick to the numbers, but not 0: the same week read again
         // should still read like a person wrote it, not a template.
         temperature: 0.4,
-        // gemini-3.8-flash thinks before answering, and thinking COUNTS toward
-        // `maxOutputTokens`. By default it spends ~800 thinking tokens, so the
-        // old 700 cap always returned cut-off JSON → "Unexpected end of JSON input".
+        // Thinking counts toward `maxOutputTokens`: with default thinking the
+        // old 700 cap returned cut-off JSON → "Unexpected end of JSON input".
         // The job here is picking a few lines from a ready digest; no deep thinking needed.
         thinkingConfig: { thinkingLevel: 'low' },
         maxOutputTokens: MAX_OUTPUT_TOKENS,

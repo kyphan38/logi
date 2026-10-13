@@ -219,9 +219,9 @@ ${ctx.recentActivities.length
 export const AUTO_COMMIT_THRESHOLD = 0.85;
 
 // Google stopped granting gemini-2.5-flash to new keys (the API returns 404).
-// Every app in the workspace shares gemini-3.8-flash. The ~1.3s/sentence below
-// was measured on the old 3.5 lite - re-measure the roadmap's 10 sentences on the new model.
-const MODEL = 'gemini-3.8-flash';
+// Every app in the workspace shares gemini-4-argon. The ~1.3s/sentence below
+// was measured on the old 3.5 lite.
+const MODEL = 'gemini-4-argon';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 /**
