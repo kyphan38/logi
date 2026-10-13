@@ -368,7 +368,7 @@ export default function NowPage() {
       </header>
 
       {reviewWeek && (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-line-strong bg-surface-1 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 border-l-2 border-line-strong py-1 pl-3">
           <p className="text-sm text-ink">Review your week</p>
           <button
             type="button"

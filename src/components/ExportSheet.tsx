@@ -93,7 +93,7 @@ export default function ExportSheet({
         role="dialog"
         aria-modal="true"
         aria-label="Export"
-        className="relative flex w-full max-w-[var(--content-max)] flex-col gap-4 rounded-t-lg bg-surface-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg sm:rounded-lg sm:pb-4"
+        className="relative flex w-full max-w-[var(--content-max)] flex-col gap-4 rounded-t-lg border-t border-line bg-surface-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:rounded-lg sm:pb-4"
       >
         <h2 className="text-base font-semibold">Export</h2>
 

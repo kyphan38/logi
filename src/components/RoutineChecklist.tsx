@@ -86,7 +86,7 @@ export default function RoutineChecklist({
             </span>
           </div>
 
-          <ul className="flex flex-col overflow-hidden rounded-md border border-line bg-surface-1">
+          <ul className="flex flex-col border-y border-line">
             {items.map((item, i) => {
               const on = isChecked(item.id);
               return (
@@ -107,7 +107,7 @@ export default function RoutineChecklist({
                       }
                     }}
                     onContextMenu={(e) => e.preventDefault()}
-                    className="flex min-h-11 w-full select-none items-center gap-3 px-3 text-left touch-manipulation transition active:bg-surface-2"
+                    className="flex min-h-11 w-full select-none items-center gap-3 px-1 text-left touch-manipulation transition active:bg-surface-2"
                   >
                     <span
                       aria-hidden="true"

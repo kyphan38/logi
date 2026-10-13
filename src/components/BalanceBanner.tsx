@@ -12,11 +12,11 @@ import Link from 'next/link';
 import type { BannerLine } from '@/lib/banner';
 
 const TONE: Record<BannerLine['kind'], string> = {
-  conflict: 'border-line-strong bg-surface-1 font-medium text-ink',
-  over: 'border-line-strong bg-surface-1 font-medium text-ink',
-  under: 'border-line-strong bg-surface-1 text-ink',
+  conflict: 'border-ink font-medium text-ink',
+  over: 'border-ink font-medium text-ink',
+  under: 'border-line-strong text-ink',
   // Not enough data: a faint line, no colored frame - it is a note, not a warning.
-  sparse: 'border-transparent bg-surface-1 text-ink-muted',
+  sparse: 'border-line text-ink-muted',
 };
 
 export default function BalanceBanner({ line }: { line: BannerLine | null }) {
@@ -26,7 +26,8 @@ export default function BalanceBanner({ line }: { line: BannerLine | null }) {
     <Link
       href="/targets"
       className={[
-        'flex items-center justify-between gap-3 rounded-md border px-4 py-2.5 text-sm transition active:scale-[0.99]',
+        // A left rule, not a box: ink when it is a warning (over, conflict).
+        'flex items-center justify-between gap-3 border-l-2 py-1 pl-3 text-sm transition active:scale-[0.99]',
         TONE[line.kind],
       ].join(' ')}
     >

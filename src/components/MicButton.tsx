@@ -83,7 +83,7 @@ export default function MicButton({
       {error ? (
         <p
           role="alert"
-          className="pointer-events-auto max-w-xs rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900"
+          className="pointer-events-auto max-w-xs rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
         >
           {error}
         </p>
@@ -92,7 +92,7 @@ export default function MicButton({
       {label ? (
         <span
           className={[
-            'rounded-full px-3 py-1 text-xs font-medium tabular-nums shadow-lg',
+            'rounded-full px-3 py-1 text-xs font-medium tabular-nums',
             armed
               ? 'bg-white text-zinc-900 ring-1 ring-zinc-900 dark:bg-zinc-900 dark:text-white dark:ring-zinc-100'
               : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900',
@@ -147,7 +147,7 @@ export default function MicButton({
       </div>
 
       {state === 'processing' || thinking ? (
-        <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
+        <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs text-white dark:bg-zinc-100 dark:text-zinc-900">
           Thinking…
         </span>
       ) : null}

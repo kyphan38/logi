@@ -23,7 +23,7 @@ export default function ReminderBanner({
   if (!reminder) return null;
 
   return (
-    <div className="rounded-md border border-zinc-300 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900">
+    <div className="border-l-2 border-line-strong py-1 pl-3">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm text-zinc-900 dark:text-zinc-100">{reminder.text}</p>
         <button

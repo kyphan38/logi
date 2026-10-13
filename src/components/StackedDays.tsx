@@ -139,7 +139,7 @@ function StackTooltip({
   const total = payload.reduce((a, p) => a + (p.value ?? 0), 0);
 
   return (
-    <div className="rounded-md border border-line bg-surface-2 p-2 text-[12px] shadow-sm">
+    <div className="rounded-md border border-line bg-surface-2 p-2 text-[12px]">
       <p className="mb-1 font-medium text-ink">{label}</p>
       {payload
         .filter((p) => (p.value ?? 0) > 0.05)

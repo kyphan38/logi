@@ -46,7 +46,7 @@ export default function ActiveSessionCard({
     return (
       <div
         id={`session-${activity.category}`}
-        className="flex h-14 items-center gap-2 rounded-md border border-l-4 border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-900"
+        className="flex h-14 items-center gap-2 border-l-4 pl-3"
         style={{ borderLeftColor: color }}
       >
         <div className="flex min-w-0 flex-1 items-center gap-2" aria-label={hint} {...tap}>
@@ -86,7 +86,7 @@ export default function ActiveSessionCard({
   return (
     <div
       id={`session-${activity.category}`}
-      className="flex items-center gap-3 rounded-md border border-l-4 border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+      className="flex items-center gap-3 border-l-4 py-2 pl-4"
       style={{ borderLeftColor: color }}
     >
       <div className="min-w-0 flex-1" aria-label={hint} {...tap}>

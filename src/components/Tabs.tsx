@@ -68,7 +68,7 @@ export default function Tabs<T extends string>({
             tabIndex={on ? 0 : -1}
             onClick={() => onChange(t.value)}
             className={`min-h-9 flex-1 rounded-sm text-[13px] transition active:scale-[0.98] ${
-              on ? 'bg-surface-2 font-medium text-ink shadow-sm' : 'text-ink-soft'
+              on ? 'bg-surface-2 font-medium text-ink' : 'text-ink-soft'
             }`}
           >
             {t.label}

@@ -26,8 +26,7 @@ export default function BottomNav() {
         // the toolbar when the page scrolls, so Analytics (a long page) sank
         // while the 3 short tabs did not. As a flex column child all 4 tabs match.
         // Opaque background, no blur: blur makes iOS scrolling stutter.
-        'z-40 flex shrink-0 border-t border-zinc-200 bg-white',
-        'dark:border-zinc-800 dark:bg-zinc-950',
+        'z-40 flex shrink-0 border-t border-line bg-surface-0',
         // Room for the iPhone home indicator.
         'pb-[env(safe-area-inset-bottom)]',
         // Desktop: becomes a left sidebar.
@@ -48,8 +47,8 @@ export default function BottomNav() {
               'relative flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition',
               'md:h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:rounded-lg md:px-3 md:text-sm',
               active
-                ? 'text-zinc-900 md:bg-zinc-100 dark:text-zinc-100 dark:md:bg-zinc-800'
-                : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100',
+                ? 'text-ink md:font-semibold'
+                : 'text-ink-muted hover:text-ink',
             ].join(' ')}
           >
             <span
@@ -67,7 +66,7 @@ export default function BottomNav() {
               aria-hidden="true"
               className={[
                 'absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full md:hidden',
-                active ? 'bg-zinc-900 dark:bg-zinc-100' : 'bg-transparent',
+                active ? 'bg-ink' : 'bg-transparent',
               ].join(' ')}
             />
           </Link>

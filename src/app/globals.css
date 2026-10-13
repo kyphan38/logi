@@ -45,9 +45,9 @@
   --select: rgb(23 23 23 / 0.14);
 
   /* --- Radius --- */
-  --radius-sm: 8px;    /* button, input, chip */
-  --radius-md: 12px;   /* card, timeline block, sheet row */
-  --radius-lg: 16px;   /* bottom sheet, modal */
+  --radius-sm: 6px;    /* button, input, chip */
+  --radius-md: 8px;    /* card, timeline block, sheet row */
+  --radius-lg: 12px;   /* bottom sheet, modal */
   --radius-full: 9999px;
 
   /* --- Surfaces & borders --- */

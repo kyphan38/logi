@@ -88,7 +88,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label="Weekly review"
-        className="relative flex w-full max-w-[var(--content-max)] flex-col gap-3 rounded-t-lg bg-surface-2 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg sm:rounded-lg sm:pb-4"
+        className="relative flex w-full max-w-[var(--content-max)] flex-col gap-3 rounded-t-lg border-t border-line bg-surface-2 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:rounded-lg sm:pb-4"
       >
         <header className="flex items-baseline justify-between gap-2 px-4">
           <h2 className="text-base font-semibold">{summary?.title ?? 'Weekly review'}</h2>
