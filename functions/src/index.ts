@@ -15,9 +15,12 @@ import { initializeApp } from 'firebase-admin/app';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onDocumentWritten } from 'firebase-functions/v2/firestore';
+import { defineSecret, defineString } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 
 import { countdownText, daysBetween, isMilestone, whenLabel } from './events';
+import { moraStopFor } from './mora';
 import { dayStart, logicalDate, logicalWeek, logicalWeekday, markAt } from './time';
 
 initializeApp();
@@ -310,4 +313,33 @@ export const pushEvents = onSchedule(
       }
     }
   }
+);
+
+// ---------------------------------------------------------------------------
+// mora live link: a running mora record stopped in logi stops mora too.
+// ---------------------------------------------------------------------------
+
+const LOGI_CONTROL_TOKEN = defineSecret('LOGI_CONTROL_TOKEN');
+const MORA_STOP_URL = defineString('MORA_STOP_URL', {
+  default: 'https://asia-southeast1-kyphan38-mora-app.cloudfunctions.net/stopFromLogi',
+});
+
+export const moraStopped = onDocumentWritten(
+  { document: 'users/{uid}/activities/{activityId}', region: 'asia-southeast1', secrets: [LOGI_CONTROL_TOKEN], retry: true },
+  async (event) => {
+    const stop = moraStopFor(event.params.activityId, event.data?.before.data(), event.data?.after.data(), Date.now());
+    if (!stop) return;
+    let res: Response;
+    try {
+      res = await fetch(MORA_STOP_URL.value(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LOGI_CONTROL_TOKEN.value()}` },
+        body: JSON.stringify(stop),
+      });
+    } catch (err) {
+      throw new Error(`mora unreachable: ${String(err)}`); // retried
+    }
+    if (res.status >= 500) throw new Error(`mora ${res.status}`); // retried
+    if (!res.ok) logger.warn('mora refused the stop', { status: res.status });
+  },
 );
