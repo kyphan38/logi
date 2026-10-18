@@ -21,7 +21,7 @@ export const CATEGORY_COLOR: Record<Category, string> = {
 };
 
 export type ActivityStatus = 'scheduled' | 'active' | 'done' | 'abandoned';
-export type ActivitySource = 'voice' | 'manual' | 'quick';
+export type ActivitySource = 'voice' | 'manual' | 'quick' | 'mora';
 
 /** Firestore: users/{uid}/activities/{id} */
 export interface Activity {

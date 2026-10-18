@@ -32,7 +32,12 @@ export function logicalWeekday(ts: number): number {
 
 /** ISO week, e.g. "2026-W35". Weeks start on Monday. */
 export function logicalWeek(ts: number): string {
-  const [y, m, d] = logicalDate(ts).split('-').map(Number);
+  return isoWeekOf(logicalDate(ts));
+}
+
+/** ISO week of a "YYYY-MM-DD" day, e.g. "2026-W35". */
+export function isoWeekOf(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   const dayNum = dt.getUTCDay() || 7;          // CN = 7
   dt.setUTCDate(dt.getUTCDate() + 4 - dayNum); // move to Thursday
