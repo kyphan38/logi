@@ -9,6 +9,7 @@ import CategoryGrid from '@/components/CategoryGrid';
 import ClarifyCard from '@/components/ClarifyCard';
 import StaleSessionModal from '@/components/StaleSessionModal';
 import MicButton from '@/components/MicButton';
+import NextEventBanner from '@/components/NextEventBanner';
 import ParseConfirmCard from '@/components/ParseConfirmCard';
 import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
@@ -392,6 +393,8 @@ export default function NowPage() {
       ) : (
         <BalanceBanner line={balanceLine} />
       )}
+
+      <NextEventBanner />
 
       {scheduled.length > 0 ? (
         <section className="flex flex-col gap-3" aria-label="Scheduled sessions">

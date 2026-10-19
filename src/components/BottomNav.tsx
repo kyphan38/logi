@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-type Tab = { href: string; label: string; icon: ReactNode };
+/** `paths`: every page that lights up this tab. `href` is the first one. */
+type Tab = { href: string; paths: string[]; label: string; icon: ReactNode };
 
+// Grouped by time: today, looking back, looking forward.
 const TABS: Tab[] = [
-  { href: '/now', label: 'Now', icon: <IconNow /> },
-  { href: '/history', label: 'History', icon: <IconHistory /> },
-  { href: '/targets', label: 'Targets', icon: <IconTargets /> },
-  { href: '/analytics', label: 'Analytics', icon: <IconAnalytics /> },
-  { href: '/reminders', label: 'Reminder', icon: <IconReminder /> },
+  { href: '/now', paths: ['/now'], label: 'Now', icon: <IconNow /> },
+  { href: '/history', paths: ['/history', '/analytics'], label: 'Review', icon: <IconReview /> },
+  { href: '/targets', paths: ['/targets', '/reminders'], label: 'Plan', icon: <IconPlan /> },
 ];
 
 export default function BottomNav() {
@@ -24,7 +24,7 @@ export default function BottomNav() {
         // Mobile: the bar sits at the end of the column, NOT `fixed`. `fixed`
         // sticks to the layout viewport bottom - on iOS Safari that is under
         // the toolbar when the page scrolls, so Analytics (a long page) sank
-        // while the 3 short tabs did not. As a flex column child all 4 tabs match.
+        // while the 3 short tabs did not. As a flex column child all tabs match.
         // Opaque background, no blur: blur makes iOS scrolling stutter.
         'z-40 flex shrink-0 border-t border-line bg-surface-0',
         // Room for the iPhone home indicator.
@@ -34,7 +34,7 @@ export default function BottomNav() {
       ].join(' ')}
     >
       {TABS.map((tab) => {
-        const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+        const active = tab.paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
         return (
           <Link
             key={tab.href}
@@ -85,7 +85,7 @@ function IconNow() {
   );
 }
 
-function IconHistory() {
+function IconReview() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
       <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
@@ -93,28 +93,11 @@ function IconHistory() {
   );
 }
 
-function IconTargets() {
+function IconPlan() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
       <circle cx="12" cy="12" r="8" />
       <circle cx="12" cy="12" r="3.5" />
-    </svg>
-  );
-}
-
-function IconReminder() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
-      <path d="M6 16.5h12L16.5 14V10a4.5 4.5 0 0 0-9 0v4z" strokeLinejoin="round" />
-      <path d="M10 19.5h4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconAnalytics() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
-      <path d="M6 19V10M12 19V5M18 19v-6" strokeLinecap="round" />
     </svg>
   );
 }
