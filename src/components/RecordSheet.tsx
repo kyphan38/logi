@@ -337,7 +337,7 @@ export default function RecordSheet({
                 type="button"
                 disabled={busy}
                 onClick={() => setEndStr(running ? toLocalInput(now) : '')}
-                className="text-sm font-medium text-zinc-500 underline underline-offset-2 disabled:opacity-50 dark:text-zinc-400"
+                className="text-sm font-medium text-zinc-500 hover:text-ink active:text-ink disabled:opacity-50 dark:text-zinc-400"
               >
                 {running ? 'End now' : 'Still running'}
               </button>

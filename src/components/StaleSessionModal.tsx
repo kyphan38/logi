@@ -162,7 +162,7 @@ export default function StaleSessionModal({
           type="button"
           disabled={busy}
           onClick={() => void discard()}
-          className="mt-4 min-h-11 w-full rounded-md text-sm text-zinc-500 underline-offset-2 hover:underline disabled:opacity-50 dark:text-zinc-400"
+          className="mt-4 min-h-11 w-full rounded-md text-sm text-zinc-500 hover:text-ink active:text-ink disabled:opacity-50 dark:text-zinc-400"
         >
           Discard this session
         </button>

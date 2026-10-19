@@ -149,7 +149,7 @@ export default function SettingsPage() {
         <p className="text-[13px] text-ink-muted">
           Export is on Analytics. Pick “All time” for a full backup.
         </p>
-        <Link href="/settings/restore" className="text-[13px] text-ink-soft underline">
+        <Link href="/settings/restore" className="text-[13px] text-ink-soft hover:text-ink active:text-ink after:ml-1 after:content-['›']">
           Restore from a backup file
         </Link>
       </section>

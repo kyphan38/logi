@@ -94,7 +94,7 @@ export default function EventSheet({
             <button
               type="button"
               onClick={() => setTime('')}
-              className="text-[13px] text-zinc-500 underline"
+              className="text-[13px] text-zinc-500 hover:text-ink active:text-ink"
             >
               All day
             </button>

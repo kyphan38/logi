@@ -218,7 +218,7 @@ function ObservationRow({ o, digest }: { o: Observation; digest: Digest | null }
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="self-start text-[11px] text-ink-muted underline decoration-dotted underline-offset-4"
+          className="self-start text-[11px] text-ink-muted hover:text-ink active:text-ink"
         >
           {open ? `${hit.path} = ${format(hit.value)}` : o.metric}
         </button>

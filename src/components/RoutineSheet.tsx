@@ -187,7 +187,7 @@ export function ItemSheet({
           <button
             type="button"
             onClick={() => setDays(days.length === 7 ? [] : [...GRID_DOWS])}
-            className="text-xs text-ink-soft underline-offset-2 hover:underline"
+            className="text-xs text-ink-soft hover:text-ink active:text-ink"
           >
             {days.length === 7 ? 'Clear' : 'Every day'}
           </button>

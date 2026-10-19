@@ -96,7 +96,7 @@ export default function RestorePage() {
         <p className="text-[13px] text-ink-muted">
           Adds missing records only. Never overwrites.
         </p>
-        <Link href="/settings" className="text-[13px] text-ink-soft underline">
+        <Link href="/settings" className="text-[13px] text-ink-soft hover:text-ink active:text-ink after:ml-1 after:content-['›']">
           Back to Settings
         </Link>
       </header>
@@ -129,7 +129,7 @@ export default function RestorePage() {
             Added {done.added} {done.added === 1 ? 'record' : 'records'}. Skipped{' '}
             {done.skipped} already there.
           </p>
-          <Link href="/history" className="text-[13px] text-ink-soft underline">
+          <Link href="/history" className="text-[13px] text-ink-soft hover:text-ink active:text-ink after:ml-1 after:content-['›']">
             Open History
           </Link>
         </div>

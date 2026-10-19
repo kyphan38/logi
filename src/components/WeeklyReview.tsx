@@ -139,7 +139,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
                   <button
                     type="button"
                     onClick={() => insight.run(true)}
-                    className="self-start text-[13px] text-ink-muted underline decoration-dotted underline-offset-4"
+                    className="self-start text-[13px] text-ink-muted hover:text-ink active:text-ink"
                   >
                     Could not analyse. Retry
                   </button>
