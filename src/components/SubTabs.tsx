@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import SettingsLink from '@/components/SettingsLink';
 import { useIndicator } from '@/hooks/useIndicator';
 
 export type SubTab = { href: string; label: string };
@@ -20,35 +21,39 @@ export default function SubTabs({ tabs, label }: { tabs: SubTab[]; label: string
   );
 
   return (
-    <nav
-      ref={container}
-      aria-label={label}
-      className="relative mb-4 flex shrink-0 rounded-md bg-surface-1 p-1"
-    >
-      {/* The open side's fill, sliding between the two. */}
-      <span
-        ref={indicator}
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-surface-2 shadow-sm"
-      />
-      {tabs.map((tab) => {
-        const active = isActive(tab.href);
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            replace
-            aria-current={active ? 'page' : undefined}
-            data-active={active}
-            className={[
-              'relative flex min-h-9 flex-1 items-center justify-center rounded-sm text-[13px] font-medium transition',
-              active ? 'text-ink' : 'text-ink-muted hover:text-ink',
-            ].join(' ')}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    // Settings shares this row, so the page gets no extra line for it.
+    <div className="mb-4 flex shrink-0 items-center gap-4">
+      <nav
+        ref={container}
+        aria-label={label}
+        className="relative flex flex-1 rounded-md bg-surface-1 p-1"
+      >
+        {/* The open side's fill, sliding between the two. */}
+        <span
+          ref={indicator}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-surface-2 shadow-sm"
+        />
+        {tabs.map((tab) => {
+          const active = isActive(tab.href);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              replace
+              aria-current={active ? 'page' : undefined}
+              data-active={active}
+              className={[
+                'relative flex min-h-9 flex-1 items-center justify-center rounded-sm text-[13px] font-medium transition',
+                active ? 'text-ink' : 'text-ink-muted hover:text-ink',
+              ].join(' ')}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
+      <SettingsLink />
+    </div>
   );
 }

@@ -21,6 +21,7 @@ import Toasts from '@/components/Toasts';
 import VoiceSheet from '@/components/VoiceSheet';
 import WeeklyReview from '@/components/WeeklyReview';
 import MoonIcon from '@/components/MoonIcon';
+import SettingsLink from '@/components/SettingsLink';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   capWait,
@@ -389,6 +390,7 @@ export default function NowPage() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400">{prettyLogicalDate(today)}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-0.5">
+          <SettingsLink />
           <p className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
             {formatDuration(trackedMs)} tracked
           </p>
