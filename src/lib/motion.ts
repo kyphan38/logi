@@ -20,3 +20,11 @@ export function sheetShouldClose(dy: number, height: number, velocityPxPerMs: nu
 export function dragOffset(dy: number): number {
   return dy >= 0 ? dy : dy * 0.2;
 }
+
+/** Indexes of characters that differ, for two strings of the same shape. */
+export function changedDigits(prev: string, next: string): number[] {
+  if (prev.length !== next.length) return [...next].map((_, i) => i);
+  const out: number[] = [];
+  for (let i = 0; i < next.length; i++) if (prev[i] !== next[i]) out.push(i);
+  return out;
+}

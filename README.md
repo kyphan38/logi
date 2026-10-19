@@ -311,3 +311,12 @@ turns every animation and transition off under `prefers-reduced-motion`.
   (handle on top); controls in it never start a drag. A sheet without
   `onClose` must be answered: no swipe, no backdrop close (the "Less than a
   minute" box). `StaleSessionModal` only fades in and pops.
+- Now: a session card `rise`s in when it starts while the page is open and
+  slides out (`row-out`) when it stops; the stream drops a stopped session at
+  once, so the page keeps it 180ms (`StoppedCards`, ordered with CSS `order`).
+  The grid and routine below move with `useFlip`. First-load data just appears.
+- Timers use `RollingDigits`: hour and minute digits roll, seconds never do.
+- Category tiles sink to `scale(0.96)` over the 500ms long-press
+  (`data-pressing`, unlayered CSS so it beats `active:scale-*`), then vibrate.
+  The progress strip is `scaleX` and grows over 600ms; it grows from 0 once
+  per app open.

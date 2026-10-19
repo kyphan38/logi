@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dragOffset, leavingItems, reducedMotion, sheetShouldClose } from '@/lib/motion';
+import {
+  changedDigits,
+  dragOffset,
+  leavingItems,
+  reducedMotion,
+  sheetShouldClose,
+} from '@/lib/motion';
 
 const a = { id: 'a' };
 const b = { id: 'b' };
@@ -45,4 +51,16 @@ test('dragOffset: dragging up is damped', () => {
 
 test('dragOffset: dragging down follows the finger', () => {
   assert.equal(dragOffset(30), 30);
+});
+
+test('changedDigits: an hour rollover changes every digit', () => {
+  assert.deepEqual(changedDigits('1:59:59', '2:00:00'), [0, 2, 3, 5, 6]);
+});
+
+test('changedDigits: one second changes one digit', () => {
+  assert.deepEqual(changedDigits('0:24:10', '0:24:11'), [6]);
+});
+
+test('changedDigits: a different length rolls every position', () => {
+  assert.deepEqual(changedDigits('9:59:59', '10:00:00'), [0, 1, 2, 3, 4, 5, 6, 7]);
 });

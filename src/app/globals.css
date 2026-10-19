@@ -336,6 +336,13 @@ body {
   transition: none;
 }
 
+/* A held category tile sinks over the long-press time. Unlayered, so it
+   beats Tailwind's `active:scale-*` while the finger is down. */
+[data-pressing='true'] {
+  scale: 0.96;
+  transition: scale 500ms linear;
+}
+
 /* Keep last: the system "reduce motion" setting turns all of it off. */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -5,6 +5,8 @@ import { useTap } from '@/hooks/useTap';
 import { clockTime } from '@/lib/datetime';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 
+import RollingDigits from './RollingDigits';
+
 /** 2:41:07 - always derived from seconds, never accumulated. */
 function hms(totalSec: number): string {
   const h = Math.floor(totalSec / 3600);
@@ -58,7 +60,9 @@ export default function ActiveSessionCard({
           <span className="shrink-0 text-xs font-semibold uppercase tracking-wide">
             {CATEGORY_LABEL[activity.category]}
           </span>
-          <span className="shrink-0 text-sm font-semibold tabular-nums">{hms(elapsed)}</span>
+          <span className="shrink-0 text-sm font-semibold tabular-nums">
+            <RollingDigits text={hms(elapsed)} />
+          </span>
           <span className="truncate text-xs text-zinc-400 dark:text-zinc-500">
             since {clockTime(activity.startAt)}
           </span>
@@ -119,7 +123,9 @@ export default function ActiveSessionCard({
           Started {clockTime(activity.startAt)}
         </p>
 
-        <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">{hms(elapsed)}</p>
+        <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">
+          <RollingDigits text={hms(elapsed)} />
+        </p>
       </div>
 
       <button

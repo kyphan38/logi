@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import ActiveSessionCard from '@/components/ActiveSessionCard';
 import BalanceBanner from '@/components/BalanceBanner';
@@ -34,6 +34,7 @@ import {
 import { bedtimeDate, logBedtime, useRecentBedtime } from '@/hooks/useBedtime';
 import { useReminders } from '@/hooks/useReminders';
 import { useReviewDue } from '@/hooks/useReview';
+import { useFlip } from '@/hooks/useFlip';
 import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
 import { useRoutineChecks, useRoutines } from '@/hooks/useRoutine';
 import { useVoice } from '@/hooks/useVoice';
@@ -42,6 +43,7 @@ import { actualHours, findStale, logicalDate, logicalWeekday, overlapHours } fro
 import { pickBalance } from '@/lib/banner';
 import { clearBedtime } from '@/lib/bedtime-store';
 import { formatBedtime } from '@/lib/bedtime';
+import { leavingItems, reducedMotion } from '@/lib/motion';
 import { clockTime, formatDuration, roundDown } from '@/lib/datetime';
 import { nowTiles } from '@/lib/day-progress';
 import { routineForDay } from '@/lib/routine';
@@ -49,6 +51,11 @@ import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/type
 
 /** From 3 parallel sessions up, cards collapse so Now still fits one screen. */
 const COMPACT_FROM = 3;
+
+/** Matches `.row-out` in globals.css. */
+const CARD_EXIT_MS = 180;
+
+const ignore = () => {};
 
 /** "2026-08-26" → "Wednesday, Aug 26". Parsed by hand to avoid timezone shifts. */
 function prettyLogicalDate(d: string): string {
@@ -121,6 +128,40 @@ export default function NowPage() {
   );
 
   const running = useMemo(() => new Set(active.map((a) => a.category)), [active]);
+
+  // Cards rise in when a session starts while the page is open, and slide out
+  // when it stops. The stream drops a stopped session at once, so it is kept
+  // here for the exit animation. Data from the first load just appears.
+  const [ready, setReady] = useState(false);
+  const [prevActive, setPrevActive] = useState(active);
+  const [leaving, setLeaving] = useState<Activity[]>([]);
+  const [risen, setRisen] = useState<Set<string>>(() => new Set());
+  if (active !== prevActive) {
+    if (ready && !reducedMotion()) {
+      const stopped = leavingItems(prevActive, active);
+      const before = new Set(prevActive.map((a) => a.id));
+      const added = active.filter((a) => !before.has(a.id)).map((a) => a.id);
+      if (stopped.length > 0) setLeaving((l) => [...l, ...stopped]);
+      if (added.length > 0) setRisen((r) => new Set([...r, ...added]));
+    }
+    setPrevActive(active);
+  }
+  if (!ready && !activeLoading) setReady(true);
+
+  useEffect(() => {
+    if (leaving.length === 0) return;
+    const ids = new Set(leaving.map((a) => a.id));
+    const t = setTimeout(() => setLeaving((l) => l.filter((a) => !ids.has(a.id))), CARD_EXIT_MS);
+    return () => clearTimeout(t);
+  }, [leaving]);
+
+  const gone = leaving.filter((a) => !active.some((x) => x.id === a.id));
+  // Both lists render in one flex column; `order` keeps them by start time.
+  const cards = [...active, ...gone].sort((a, b) => a.startAt - b.startAt);
+  const slot = new Map(cards.map((a, i) => [a.id, i]));
+  const compact = active.length >= COMPACT_FROM;
+  // Everything below the cards slides to its new place instead of jumping.
+  const flip = useFlip([...cards.map((a) => a.id), active.length > 1 ? 'parallel' : '', String(compact)]);
 
   // The progress strip sits inside the category button (AMENDMENT-remove-sleep
   // 6b): each button shows today's progress against today's own target.
@@ -421,44 +462,58 @@ export default function NowPage() {
         />
       ) : null}
 
-      {active.length > 0 ? (
+      {cards.length > 0 ? (
         <section className="flex flex-col gap-2" aria-label="Running sessions">
           {active.map((a) => (
-            <ActiveSessionCard
+            <div
               key={a.id}
-              activity={a}
-              busy={busy}
-              pending={pendingIds.has(a.id)}
-              compact={active.length >= COMPACT_FROM}
-              onStop={() => handleStop(a.id)}
-              onEdit={() => setSheet({ mode: 'edit', activity: a })}
-            />
+              ref={flip(a.id)}
+              className={risen.has(a.id) ? 'rise' : undefined}
+              style={{ order: slot.get(a.id) }}
+            >
+              <ActiveSessionCard
+                activity={a}
+                busy={busy}
+                pending={pendingIds.has(a.id)}
+                compact={compact}
+                onStop={() => handleStop(a.id)}
+                onEdit={() => setSheet({ mode: 'edit', activity: a })}
+              />
+            </div>
           ))}
+          <StoppedCards items={gone} slot={slot} compact={compact} flip={flip} />
           {active.length > 1 ? (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p
+              ref={flip('parallel')}
+              className="text-xs text-zinc-500 dark:text-zinc-400"
+              style={{ order: cards.length }}
+            >
               {active.length} running in parallel · {overlap.toFixed(1)}h overlap
             </p>
           ) : null}
         </section>
       ) : null}
 
-      <CategoryGrid
-        tiles={tiles}
-        running={running}
-        busy={busy}
-        now={nowMinute}
-        onStart={handleStart}
-        onFocusRunning={focusRunning}
-        onEditRunning={editRunning}
-      />
+      {/* One box for both, so an empty routine adds no extra gap. */}
+      <div ref={flip('below')} className="flex flex-col gap-6">
+        <CategoryGrid
+          tiles={tiles}
+          running={running}
+          busy={busy}
+          now={nowMinute}
+          onStart={handleStart}
+          onFocusRunning={focusRunning}
+          onEditRunning={editRunning}
+        />
 
-      <RoutineChecklist
-        groups={routineToday}
-        isChecked={routine.isChecked}
-        onToggle={(id) =>
-          void routine.toggle(id).catch((e) => push(`Could not save. ${(e as Error).message}`))
-        }
-      />
+        <RoutineChecklist
+          groups={routineToday}
+          isChecked={routine.isChecked}
+          onToggle={(id) =>
+            void routine.toggle(id).catch((e) => push(`Could not save. ${(e as Error).message}`))
+          }
+        />
+      </div>
 
       {todayActivities.length === 0 &&
       !activeLoading &&
@@ -580,4 +635,29 @@ export default function NowPage() {
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
+}
+
+/** Stopped sessions, shown only while they slide out. Nothing to tap. */
+function StoppedCards({
+  items,
+  slot,
+  compact,
+  flip,
+}: {
+  items: Activity[];
+  slot: Map<string, number>;
+  compact: boolean;
+  flip: (id: string) => (el: HTMLElement | null) => void;
+}) {
+  return items.map((a) => (
+    <div
+      key={a.id}
+      ref={flip(a.id)}
+      className="row-out"
+      style={{ order: slot.get(a.id) }}
+      aria-hidden="true"
+    >
+      <ActiveSessionCard activity={a} busy compact={compact} onStop={ignore} />
+    </div>
+  ));
 }

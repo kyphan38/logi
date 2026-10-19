@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { catInk, catTint } from '@/lib/category-style';
+import { reducedMotion } from '@/lib/motion';
 import type { NowTile } from '@/lib/day-progress';
 import { MOVE_LIMIT_PX, isRealTap, type Press } from '@/lib/tap-guard';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Category } from '@/types/logi';
@@ -22,6 +23,9 @@ import StartWhenSheet, { type StartWhen } from './StartWhenSheet';
 
 /** Held longer than `isRealTap`'s threshold → open the time sheet, not Start. */
 const LONG_PRESS_MS = 500;
+
+/** The strips grow from 0 on the first open of the app, not on every visit. */
+let stripsGrown = false;
 
 /** The strong ink segment at the right edge when over target (gray only, DESIGN.md). */
 const OVER_PCT = 14;
@@ -55,12 +59,28 @@ export default function CategoryGrid({
   const longFired = useRef(false);
   const down = useRef<{ x: number; y: number; at: number } | null>(null);
   const lastScrollAt = useRef<number | null>(null);
+  // The tile being held, so the sink effect can be undone from any path.
+  const held = useRef<HTMLElement | null>(null);
+  const [grown, setGrown] = useState(stripsGrown);
+
+  useEffect(() => {
+    if (stripsGrown) return;
+    // One frame at 0 first, so the transition has a start. The flag is set in
+    // the frame, so a cancelled effect (Strict Mode) can still run again.
+    const raf = requestAnimationFrame(() => {
+      stripsGrown = true;
+      setGrown(true);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   const clear = useCallback(() => {
     if (timer.current) {
       clearTimeout(timer.current);
       timer.current = null;
     }
+    held.current?.removeAttribute('data-pressing');
+    held.current = null;
   }, []);
 
   useEffect(() => clear, [clear]);
@@ -84,7 +104,16 @@ export default function CategoryGrid({
     longFired.current = false;
     down.current = { x: e.clientX, y: e.clientY, at: e.timeStamp };
     clear();
+    // The tile sinks over the hold time, so the long-press can be felt coming.
+    if (!reducedMotion()) {
+      held.current = e.currentTarget as HTMLElement;
+      held.current.setAttribute('data-pressing', 'true');
+    }
     timer.current = setTimeout(() => {
+      timer.current = null;
+      held.current?.removeAttribute('data-pressing');
+      held.current = null;
+      navigator.vibrate?.(10);
       longFired.current = true;
       if (running.has(c)) onEditRunning(c);
       else setSheetFor(c);
@@ -192,9 +221,10 @@ export default function CategoryGrid({
                   className="absolute inset-x-0 bottom-0 h-[3px] bg-surface-2"
                 >
                   <span
-                    className="absolute inset-y-0 left-0"
+                    className="absolute inset-0 origin-left"
                     style={{
-                      width: `${t.fill * 100}%`,
+                      transform: `scaleX(${grown ? t.fill : 0})`,
+                      transition: 'transform 600ms var(--ease-soft)',
                       backgroundColor: CATEGORY_COLOR[c],
                     }}
                   />
