@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { sanitizeParse } from '@/lib/parse-sanitize';
-import { at, H } from './_helpers.ts';
+import { at, H } from './helpers.ts';
 
 const NOW = at('2026-08-26', '12:00');
 const IDS = new Set(['a1']);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { pickReminder, type Reminder } from '@/lib/reminders';
 import { PRESETS, type Activity } from '@/types/logi';
-import { act, at, H } from './_helpers.ts';
+import { act, at, H } from './helpers.ts';
 
 const WEEKLY = PRESETS.normal.weekly;
 const NONE = () => false;

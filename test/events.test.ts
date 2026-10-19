@@ -13,7 +13,7 @@ import {
   whenLabel,
 } from '@/lib/events';
 import { MILESTONES, type EventItem } from '@/types/logi';
-import { at } from './_helpers.ts';
+import { at } from './helpers.ts';
 
 function ev(o: Partial<EventItem> & { date: string }): EventItem {
   return {

@@ -14,7 +14,7 @@ import {
 import type { LogQuality } from '@/lib/log-quality';
 import type { RangeDeviation } from '@/lib/range-target';
 import type { Category, PresetId } from '@/types/logi';
-import { act, at } from './_helpers.ts';
+import { act, at } from './helpers.ts';
 
 const W35 = '2026-W35'; // Mon 2026-08-24 → Sun 2026-08-30
 const W36 = '2026-W36';

@@ -6,7 +6,7 @@ import type { ParsedCommand } from '@/lib/parse-sanitize';
 import { applyVoice, type VoiceRepo } from '@/lib/voice-command';
 import { planVoice } from '@/lib/voice-plan';
 import type { Activity } from '@/types/logi';
-import { act, at, H } from './_helpers.ts';
+import { act, at, H } from './helpers.ts';
 
 const NOW = at('2026-08-26', '20:00');
 const UID = 'u1';

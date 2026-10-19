@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveClockTime, resolveClockOnDate, toClockInput, relativeLabel } from '@/lib/clock';
 import { logicalDate } from '@/lib/balance';
-import { at, MIN, H } from './_helpers.ts';
+import { at, MIN, H } from './helpers.ts';
 
 // 2026-09-05 is a Friday, 2026-09-06 a Saturday.
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dayWindow, addDays, layoutDay, dayGaps, toPx, HOUR_PX } from '@/lib/timeline';
-import { act, at, H } from './_helpers.ts';
+import { act, at, H } from './helpers.ts';
 
 test('dayWindow runs from 04:00 to 04:00 next day', () => {
   const w = dayWindow('2026-08-26');

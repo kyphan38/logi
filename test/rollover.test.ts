@@ -32,7 +32,7 @@ import {
   type PresetId,
   type WeekTarget,
 } from '@/types/logi';
-import { at } from './_helpers.ts';
+import { at } from './helpers.ts';
 
 const total = (w: Weekly) => CATEGORIES.reduce((a, c) => a + w[c], 0);
 

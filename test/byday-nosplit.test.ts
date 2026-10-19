@@ -7,7 +7,7 @@ import { actualForRange } from '@/lib/range-target';
 import type { Range } from '@/lib/range';
 import { CATEGORIES, type Category } from '@/types/logi';
 
-import { act, at } from './_helpers.ts';
+import { act, at } from './helpers.ts';
 
 // 2026-08-26 is a Wednesday, 2026-08-27 a Thursday.
 const WED = '2026-08-26';

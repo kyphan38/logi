@@ -6,7 +6,7 @@ import { buildRange, type Range } from '@/lib/range';
 import { fullPeriod, isOpenPeriod, rangeTable } from '@/lib/range-table';
 import { BASELINE_WEEKLY, type Category } from '@/types/logi';
 
-import { act, at } from './_helpers.ts';
+import { act, at } from './helpers.ts';
 
 // 2026-08-26 is a Wednesday. The logical week runs Mon 2026-08-24 → Sun 2026-08-30.
 const NOW = at('2026-08-26', '20:00');

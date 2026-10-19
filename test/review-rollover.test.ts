@@ -16,7 +16,7 @@ import {
   type WeekTargetSeed,
 } from '@/lib/rollover';
 import type { WeekTarget } from '@/types/logi';
-import { at } from './_helpers.ts';
+import { at } from './helpers.ts';
 
 const W35 = '2026-W35';
 const W36 = '2026-W36';

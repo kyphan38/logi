@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import { bucketMode, bucketsOf, MAX_DAY_COLUMNS } from '@/lib/bucket';
 import { buildRange, type Range } from '@/lib/range';
-import { at } from './_helpers.ts';
+import { at } from './helpers.ts';
 
 const NOW = at('2026-09-20', '12:00'); // well past every range below
 

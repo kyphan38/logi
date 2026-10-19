@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import type { Range } from '@/lib/range';
 import { overlapForRange } from '@/lib/range-target';
-import { act, at } from './_helpers.ts';
+import { act, at } from './helpers.ts';
 
 // logi - Hour overlap
 //

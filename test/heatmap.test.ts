@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import { heatmapFits, heatmapOf, MAX_HEATMAP_DAYS } from '@/lib/heatmap';
 import type { Range } from '@/lib/range';
-import { act, at } from './_helpers.ts';
+import { act, at } from './helpers.ts';
 
 const D = '2026-08-25';
 const NOW = at('2026-08-30', '12:00');

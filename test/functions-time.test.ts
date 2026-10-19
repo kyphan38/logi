@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import { logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
 import * as fn from '../functions/src/time.ts';
-import { at } from './_helpers.ts';
+import { at } from './helpers.ts';
 
 // ---------------------------------------------------------------------------
 // The Cloud Function runs apart from the app, so it copies the logical-day

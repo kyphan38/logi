@@ -9,7 +9,7 @@ import {
   SCHEDULED_MAX_AGE_MS,
   ActivityError,
 } from '@/lib/activities';
-import { act, at, H } from './_helpers.ts';
+import { act, at, H } from './helpers.ts';
 
 function codeOf(fn: () => void): string {
   try {

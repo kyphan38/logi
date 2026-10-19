@@ -5,7 +5,7 @@ import { PRESETS } from '@/lib/balance';
 import { buildRange, customRange, weekOf, type Range } from '@/lib/range';
 import { expectedForRange } from '@/lib/range-target';
 import type { Category } from '@/types/logi';
-import { at } from './_helpers.ts';
+import { at } from './helpers.ts';
 
 // 2026-08-24 is a Monday, 2026-08-28 is a Friday.
 const MON = '2026-08-24';
