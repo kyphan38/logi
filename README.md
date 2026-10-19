@@ -320,3 +320,12 @@ turns every animation and transition off under `prefers-reduced-motion`.
   (`data-pressing`, unlayered CSS so it beats `active:scale-*`), then vibrate.
   The progress strip is `scaleX` and grows over 600ms; it grows from 0 once
   per app open.
+- Routine: ticking draws a `.strike` line across the text and `pop`s the
+  mark; a group's `n/n` pops once when complete. Only items ticked while the
+  page is open animate (`touched`), so a loaded list shows its marks still.
+- Tab markers slide (`useIndicator`): the bottom bar line (phone only), the
+  `Tabs` pill and the `SubTabs` pill. Active items carry `data-active`; first
+  placement and resizes jump, only a new active item slides.
+- History: after picking another day in `DateStrip`, timeline rows `rise`
+  20ms apart (capped at the 8th) for a 600ms window. Realtime updates later
+  in the day do not replay it. There is still no swipe between days.

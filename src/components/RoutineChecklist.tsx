@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { RoutineDayGroup } from '@/lib/routine';
 import { MOVE_LIMIT_PX, isRealTap, type Press } from '@/lib/tap-guard';
@@ -27,6 +27,16 @@ export default function RoutineChecklist({
 }) {
   const down = useRef<{ x: number; y: number; at: number; id: string } | null>(null);
   const lastScrollAt = useRef<number | null>(null);
+  // Items ticked while the page is open. Only these animate; a list that
+  // loads already ticked just shows its marks.
+  const [touched, setTouched] = useState<Set<string>>(() => new Set());
+  const toggle = useCallback(
+    (id: string) => {
+      setTouched((t) => (t.has(id) ? t : new Set(t).add(id)));
+      onToggle(id);
+    },
+    [onToggle],
+  );
 
   useEffect(() => {
     const onScroll = (e: Event) => {
@@ -61,88 +71,106 @@ export default function RoutineChecklist({
         upAt: e.timeStamp,
         lastScrollAt: lastScrollAt.current,
       };
-      if (isRealTap(p)) onToggle(id);
+      if (isRealTap(p)) toggle(id);
     },
-    [onToggle]
+    [toggle]
   );
 
   if (groups.length === 0) return null;
 
   return (
     <section aria-label="Today's routine" className="flex flex-col gap-4">
-      {groups.map(({ group, items, done }) => (
-        <div key={group.id} className="flex flex-col gap-1.5">
-          <div className="flex items-baseline justify-between gap-3 px-1">
-            <h2 className="truncate text-xs font-semibold uppercase tracking-wide text-ink-soft">
-              {group.title}
-            </h2>
-            <span
-              className={[
-                'shrink-0 text-xs tabular-nums',
-                done === items.length ? 'font-medium text-ink' : 'text-ink-muted',
-              ].join(' ')}
-            >
-              {done}/{items.length}
-            </span>
-          </div>
+      {groups.map(({ group, items, done }) => {
+        const complete = done === items.length;
+        const acted = items.some((it) => touched.has(it.id));
+        return (
+          <div key={group.id} className="flex flex-col gap-1.5">
+            <div className="flex items-baseline justify-between gap-3 px-1">
+              <h2 className="truncate text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                {group.title}
+              </h2>
+              <span
+                // A new key replays `pop` once when the group becomes complete.
+                key={complete ? 'complete' : 'open'}
+                className={[
+                  'inline-block shrink-0 text-xs tabular-nums',
+                  complete ? 'font-medium text-ink' : 'text-ink-muted',
+                  complete && acted ? 'pop' : '',
+                ].join(' ')}
+              >
+                {done}/{items.length}
+              </span>
+            </div>
 
-          <ul className="flex flex-col border-y border-line">
-            {items.map((item, i) => {
-              const on = isChecked(item.id);
-              return (
-                <li key={item.id} className={i > 0 ? 'border-t border-line' : undefined}>
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={on}
-                    onPointerDown={(e) => pressStart(item.id, e)}
-                    onPointerMove={pressMove}
-                    onPointerUp={(e) => press(item.id, e)}
-                    onPointerCancel={() => (down.current = null)}
-                    onKeyDown={(e) => {
-                      // The keyboard does not go through pointer events.
-                      if (e.key === ' ' || e.key === 'Enter') {
-                        e.preventDefault();
-                        onToggle(item.id);
-                      }
-                    }}
-                    onContextMenu={(e) => e.preventDefault()}
-                    className="flex min-h-11 w-full select-none items-center gap-3 px-1 text-left touch-manipulation transition active:bg-surface-2"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={[
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border',
-                        on ? 'border-ink bg-ink text-[var(--surface-0)]' : 'border-line-strong',
-                      ].join(' ')}
+            <ul className="flex flex-col border-y border-line">
+              {items.map((item, i) => {
+                const on = isChecked(item.id);
+                const moved = touched.has(item.id);
+                return (
+                  <li key={item.id} className={i > 0 ? 'border-t border-line' : undefined}>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={on}
+                      onPointerDown={(e) => pressStart(item.id, e)}
+                      onPointerMove={pressMove}
+                      onPointerUp={(e) => press(item.id, e)}
+                      onPointerCancel={() => (down.current = null)}
+                      onKeyDown={(e) => {
+                        // The keyboard does not go through pointer events.
+                        if (e.key === ' ' || e.key === 'Enter') {
+                          e.preventDefault();
+                          toggle(item.id);
+                        }
+                      }}
+                      onContextMenu={(e) => e.preventDefault()}
+                      className="flex min-h-11 w-full select-none items-center gap-3 px-1 text-left touch-manipulation transition active:bg-surface-2"
                     >
-                      {on ? (
-                        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
-                          <path
-                            d="M3.5 8.5l3 3 6-7"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                      <span
+                        aria-hidden="true"
+                        className={[
+                          'flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border',
+                          on ? 'border-ink bg-ink text-[var(--surface-0)]' : 'border-line-strong',
+                        ].join(' ')}
+                      >
+                        {on ? (
+                          <svg
+                            viewBox="0 0 16 16"
+                            className={`h-3.5 w-3.5 ${moved ? 'pop' : ''}`}
+                            fill="none"
+                          >
+                            <path
+                              d="M3.5 8.5l3 3 6-7"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        ) : null}
+                      </span>
+                      <span
+                        className={['min-w-0 flex-1 text-sm', on ? 'text-ink-muted' : 'text-ink'].join(' ')}
+                      >
+                        {/* The strike grows across the text itself, not the whole row. */}
+                        <span className="relative">
+                          {item.text}
+                          <span
+                            aria-hidden="true"
+                            className="strike"
+                            data-on={on}
+                            data-instant={moved ? undefined : 'true'}
                           />
-                        </svg>
-                      ) : null}
-                    </span>
-                    <span
-                      className={[
-                        'min-w-0 flex-1 text-sm',
-                        on ? 'text-ink-muted line-through' : 'text-ink',
-                      ].join(' ')}
-                    >
-                      {item.text}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
     </section>
   );
 }

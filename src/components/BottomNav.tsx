@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
+import { useIndicator } from '@/hooks/useIndicator';
+
 /** `paths`: every page that lights up this tab. `href` is the first one. */
 type Tab = { href: string; paths: string[]; label: string; icon: ReactNode };
 
@@ -16,9 +18,14 @@ const TABS: Tab[] = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const current = TABS.find((t) =>
+    t.paths.some((p) => pathname === p || pathname.startsWith(`${p}/`)),
+  );
+  const { container, indicator } = useIndicator<HTMLElement, HTMLSpanElement>(current?.href ?? '');
 
   return (
     <nav
+      ref={container}
       aria-label="Main"
       className={[
         // Mobile: the bar sits at the end of the column, NOT `fixed`. `fixed`
@@ -26,25 +33,32 @@ export default function BottomNav() {
         // the toolbar when the page scrolls, so Analytics (a long page) sank
         // while the 3 short tabs did not. As a flex column child all tabs match.
         // Opaque background, no blur: blur makes iOS scrolling stutter.
-        'z-40 flex shrink-0 border-t border-line bg-surface-0',
+        // `relative`: the sliding line below anchors to the bar.
+        'relative z-40 flex shrink-0 border-t border-line bg-surface-0',
         // Room for the iPhone home indicator.
         'pb-[env(safe-area-inset-bottom)]',
         // Desktop: becomes a left sidebar.
         'md:fixed md:inset-y-0 md:left-0 md:w-[180px] md:flex-col md:gap-1 md:border-r md:border-t-0 md:p-3 md:pb-3',
       ].join(' ')}
     >
+      {/* One bold line under the open tab, sliding between tabs. Phone only. */}
+      <span
+        ref={indicator}
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-[env(safe-area-inset-bottom)] left-0 flex justify-center md:hidden"
+      >
+        <span className="h-0.5 w-10 rounded-full bg-ink" />
+      </span>
       {TABS.map((tab) => {
-        const active = tab.paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+        const active = tab === current;
         return (
           <Link
             key={tab.href}
             href={tab.href}
             aria-current={active ? 'page' : undefined}
+            data-active={active}
             className={[
-              // `relative`: the active underline anchors to THIS tab. Without it
-              // the line anchors to <nav> (the only positioned ancestor), so
-              // each tab gets a different height.
-              'relative flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition',
+              'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition',
               'md:h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:rounded-lg md:px-3 md:text-sm',
               active
                 ? 'text-ink md:font-semibold'
@@ -61,14 +75,6 @@ export default function BottomNav() {
               {tab.icon}
             </span>
             <span>{tab.label}</span>
-            {/* A bold line under the open tab - visible at a glance. */}
-            <span
-              aria-hidden="true"
-              className={[
-                'absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full md:hidden',
-                active ? 'bg-ink' : 'bg-transparent',
-              ].join(' ')}
-            />
           </Link>
         );
       })}

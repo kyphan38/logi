@@ -35,6 +35,9 @@ function prettyDate(date: string): string {
   });
 }
 
+/** Long enough for 8 staggered rows (8 x 20ms + 240ms) to finish. */
+const RISE_WINDOW_MS = 600;
+
 /**
  * Default time for a manually added record: today → the last hour (rounded to
  * 15 minutes); a past day → 12:00–13:00 of the day being viewed.
@@ -197,6 +200,19 @@ export default function HistoryPage() {
     }
   }
 
+  // Picking another day lets its rows rise in once. Realtime updates later in
+  // the same day do not replay it.
+  const [riseDay, setRiseDay] = useState<string | null>(null);
+  function pickDay(d: string) {
+    setSelected(d);
+    setRiseDay(d);
+  }
+  useEffect(() => {
+    if (!riseDay || loading) return;
+    const t = setTimeout(() => setRiseDay(null), RISE_WINDOW_MS);
+    return () => clearTimeout(t);
+  }, [riseDay, loading]);
+
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -251,7 +267,7 @@ export default function HistoryPage() {
         </div>
 
         <div className="mt-3">
-          <DateStrip today={today} selected={selected} bars={dayBars} onSelect={setSelected} />
+          <DateStrip today={today} selected={selected} bars={dayBars} onSelect={pickDay} />
         </div>
 
         <SummaryGauge
@@ -269,6 +285,8 @@ export default function HistoryPage() {
           <p className="pb-3 text-sm text-zinc-400">Loading…</p>
         ) : (
           <Timeline
+            key={selected}
+            rise={riseDay === selected && !loading}
             segments={segments}
             gaps={gaps}
             win={win}

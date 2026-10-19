@@ -28,6 +28,10 @@ const LABEL_W = 'w-[42px]';
 /** Under a minute counts as a mistap - shown faint, not bold. */
 const ZERO_MS = 60_000;
 
+/** 20ms more per row, capped at the 8th, so a long day still settles fast. */
+const riseDelay = (rise: boolean, i: number) =>
+  rise ? { animationDelay: `${Math.min(i, 7) * 20}ms` } : undefined;
+
 const hhmm = (ts: number) =>
   new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -38,6 +42,7 @@ export default function Timeline({
   now,
   onSelect,
   onAdd,
+  rise = false,
 }: {
   segments: Segment[];
   gaps: Gap[];
@@ -45,13 +50,17 @@ export default function Timeline({
   now: number;
   onSelect: (a: Activity) => void;
   onAdd: () => void;
+  /** Rows rise in one after another, right after the user picks another day. */
+  rise?: boolean;
 }) {
   const rows = useMemo(() => elasticRows(segments, gaps), [segments, gaps]);
 
   if (segments.length === 0) {
     return (
       <div className="w-full space-y-2">
-        <div className="rounded-md border border-dashed border-line-strong px-4 py-10 text-center">
+        <div
+          className={`${rise ? 'rise ' : ''}rounded-md border border-dashed border-line-strong px-4 py-10 text-center`}
+        >
           <p className="text-sm text-ink-muted">Nothing tracked on this day.</p>
           <button
             type="button"
@@ -67,16 +76,24 @@ export default function Timeline({
 
   return (
     <div className="w-full space-y-2 overflow-x-hidden">
-      {rows.map((row) =>
+      {rows.map((row, i) =>
         row.kind === 'gap' ? (
-          <div key={row.key} className="flex items-stretch" style={{ height: GAP_ROW_PX }}>
+          <div
+            key={row.key}
+            className={rise ? 'rise flex items-stretch' : 'flex items-stretch'}
+            style={{ height: GAP_ROW_PX, ...riseDelay(rise, i) }}
+          >
             <div className={`${LABEL_W} shrink-0`} />
             <div className="flex min-w-0 flex-1 items-center justify-center rounded-md border border-dashed border-line-strong text-[11px] text-ink-muted">
               {formatGap(row.end - row.start)} untracked
             </div>
           </div>
         ) : (
-          <div key={row.key} className="flex items-stretch" style={{ height: row.height }}>
+          <div
+            key={row.key}
+            className={rise ? 'rise flex items-stretch' : 'flex items-stretch'}
+            style={{ height: row.height, ...riseDelay(rise, i) }}
+          >
             <div
               className={`${LABEL_W} shrink-0 pr-2 pt-0.5 text-right text-[11px] tabular-nums text-ink-muted`}
             >

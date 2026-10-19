@@ -11,6 +11,8 @@
 // are on. State lives in `useState`, not the URL: the mobile Back button is for
 // LEAVING Analytics, not for stepping back through tabs.
 // ---------------------------------------------------------------------------
+import { useIndicator } from '@/hooks/useIndicator';
+
 export interface TabItem<T extends string> {
   value: T;
   label: string;
@@ -48,13 +50,22 @@ export default function Tabs<T extends string>({
     document.getElementById(`${base}-tab-${items[next].value}`)?.focus();
   }
 
+  const { container, indicator } = useIndicator<HTMLDivElement, HTMLSpanElement>(value);
+
   return (
     <div
       role="tablist"
       aria-label={label}
+      ref={container}
       onKeyDown={onKeyDown}
-      className="flex gap-1 rounded-md border border-line-strong bg-surface-1 p-1"
+      className="relative flex gap-1 rounded-md border border-line-strong bg-surface-1 p-1"
     >
+      {/* The selected tab's fill, sliding between tabs. */}
+      <span
+        ref={indicator}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-surface-2"
+      />
       {items.map((t) => {
         const on = t.value === value;
         return (
@@ -66,9 +77,10 @@ export default function Tabs<T extends string>({
             aria-selected={on}
             aria-controls={`${base}-panel-${t.value}`}
             tabIndex={on ? 0 : -1}
+            data-active={on}
             onClick={() => onChange(t.value)}
-            className={`min-h-9 flex-1 rounded-sm text-[13px] transition active:scale-[0.98] ${
-              on ? 'bg-surface-2 font-medium text-ink' : 'text-ink-soft'
+            className={`relative min-h-9 flex-1 rounded-sm text-[13px] transition active:scale-[0.98] ${
+              on ? 'font-medium text-ink' : 'text-ink-soft'
             }`}
           >
             {t.label}
