@@ -96,7 +96,7 @@ export default function RestorePage() {
         <p className="text-[13px] text-ink-muted">
           Adds missing records only. Never overwrites.
         </p>
-        <Link href="/settings" className="text-[13px] text-ink-soft hover:text-ink active:text-ink after:ml-1 after:content-['›']">
+        <Link href="/settings" className="text-[13px] text-ink-soft hover:text-ink active:text-ink">
           Back to Settings
         </Link>
       </header>
