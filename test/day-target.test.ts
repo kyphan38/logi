@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { dailyTargetFor, daySummary, LOW_RATIO } from '@/lib/day-target';
 import { expectedHours, logicalWeekday } from '@/lib/balance';
 import { BASELINE_WEEKLY, CATEGORIES, PRESETS, type Category } from '@/types/logi';
-import { at } from './helpers.ts';
+import { at } from './_helpers.ts';
 
 // 0 = CN … 6 = T7
 const SUN = 0;

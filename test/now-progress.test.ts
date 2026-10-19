@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { nowTiles } from '@/lib/day-progress';
 import { logicalWeekday } from '@/lib/balance';
 import { BASELINE_WEEKLY, type Category } from '@/types/logi';
-import { act, at } from './helpers.ts';
+import { act, at } from './_helpers.ts';
 
 // 2026-08-25 is a Tuesday, 2026-08-30 is a Sunday.
 const TUE = '2026-08-25';

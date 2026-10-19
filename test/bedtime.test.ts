@@ -10,7 +10,7 @@ import { describe, it } from 'node:test';
 
 import { bedtimeScale, bedtimeStats, formatBedtime, formatScale, median } from '@/lib/bedtime';
 
-import { at } from './helpers.ts';
+import { at } from './_helpers.ts';
 
 describe('bedtimeScale', () => {
   it('the evening before keeps its clock time', () => {

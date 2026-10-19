@@ -10,7 +10,7 @@ import {
   type Signals,
 } from '@/lib/signals';
 import { PRESETS, type Activity, type Category } from '@/types/logi';
-import { act, at } from './helpers.ts';
+import { act, at } from './_helpers.ts';
 
 // Week 2026-W35: Monday 24/08 → Sunday 30/08. Scored on 31/08 so
 // no day is unfinished - expected numbers can be worked out by hand.

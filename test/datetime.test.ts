@@ -8,7 +8,7 @@ import {
   shortDate,
   countdown,
 } from '@/lib/datetime';
-import { at } from './helpers.ts';
+import { at } from './_helpers.ts';
 
 test('toLocalInput gives the datetime-local input format', () => {
   assert.equal(toLocalInput(at('2026-08-26', '22:05')), '2026-08-26T22:05');

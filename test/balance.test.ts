@@ -13,7 +13,7 @@ import {
   applyDebt,
 } from '@/lib/balance';
 import { BASELINE_WEEKLY, TOTAL_BUDGET, CATEGORIES } from '@/types/logi';
-import { act, at, H } from './helpers.ts';
+import { act, at, H } from './_helpers.ts';
 
 // --- The 04:00 day cut (items 9, 10 in the manual checklist) --------------
 

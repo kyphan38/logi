@@ -19,7 +19,7 @@ import {
   TOTAL_BUDGET,
   type WeekTarget,
 } from '@/types/logi';
-import { at } from './helpers.ts';
+import { at } from './_helpers.ts';
 
 const total = (w: Weekly) => CATEGORIES.reduce((a, c) => a + w[c], 0);
 

@@ -7,7 +7,7 @@ import {
   logQuality,
   logQualityLine,
 } from '@/lib/log-quality';
-import { act, at } from './helpers.ts';
+import { act, at } from './_helpers.ts';
 
 const DAY = '2026-08-25'; // a Tuesday
 const LATER = at('2026-08-27', '12:00'); // "now" is outside the measured day

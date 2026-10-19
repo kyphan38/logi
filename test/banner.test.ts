@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { deviations, expectedHours, logicalWeekday } from '@/lib/balance';
 import { loggedRatio, MIN_LOGGED_RATIO, pickBalance } from '@/lib/banner';
 import { CATEGORIES, PRESETS, type Activity } from '@/types/logi';
-import { act, at, H } from './helpers.ts';
+import { act, at, H } from './_helpers.ts';
 
 const WEEKLY = PRESETS.normal.weekly;
 

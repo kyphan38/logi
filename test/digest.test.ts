@@ -16,7 +16,7 @@ import type { Range } from '@/lib/range';
 import { hasBannedWord } from '@/lib/insight-sanitize';
 import { computeSignals } from '@/lib/signals';
 import { PRESETS, type Activity, type Category } from '@/types/logi';
-import { act, at } from './helpers.ts';
+import { act, at } from './_helpers.ts';
 
 const NOW = at('2026-08-31', '12:00');
 const WEEK: Range = { from: '2026-08-24', to: '2026-08-30', kind: 'custom', isPartial: false };

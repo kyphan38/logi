@@ -20,7 +20,7 @@ import {
 } from '@/lib/routine';
 import type { RoutineGroup, RoutineItem } from '@/types/logi';
 
-import { at } from './helpers.ts';
+import { at } from './_helpers.ts';
 
 const item = (id: string, days: number[]): RoutineItem => ({ id, text: id, days });
 

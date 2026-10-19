@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { planVoice } from '@/lib/voice-plan';
 import { sanitizeParse, type ParsedCommand } from '@/lib/parse-sanitize';
 import { applyVoice, type VoiceRepo } from '@/lib/voice-command';
-import { act, at } from './helpers.ts';
+import { act, at } from './_helpers.ts';
 
 const NOW = at('2026-08-26', '20:00');
 

@@ -12,7 +12,7 @@ import {
   type BlockRow,
   type Row,
 } from '@/lib/timeline';
-import { act, at } from './helpers.ts';
+import { act, at } from './_helpers.ts';
 
 const DATE = '2026-08-27'; // Thursday
 const win = dayWindow(DATE);

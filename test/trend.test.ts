@@ -13,7 +13,7 @@ import {
   type TrendPoint,
 } from '@/lib/trend';
 import { weekDiff } from '@/lib/week';
-import { at } from './helpers.ts';
+import { at } from './_helpers.ts';
 
 // Monday 2026-08-31, 12:00. Logical week: 2026-W36.
 const NOW = at('2026-08-31', '12:00');

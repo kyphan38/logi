@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { logicalDate } from '@/lib/balance';
 import * as app from '@/lib/events';
 import * as fn from '../functions/src/events.ts';
-import { at } from './helpers.ts';
+import { at } from './_helpers.ts';
 
 // ---------------------------------------------------------------------------
 // The Cloud Function cannot import app code, so `functions/src/events.ts` is a
