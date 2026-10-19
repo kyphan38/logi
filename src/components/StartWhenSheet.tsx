@@ -6,6 +6,8 @@ import { resolveClockTime, relativeLabel, toClockInput, type ClockDir } from '@/
 import { clockTime } from '@/lib/datetime';
 import { CATEGORY_LABEL, type Category } from '@/types/logi';
 
+import SheetShell from './SheetShell';
+
 // -----------------------------------------------------------------------------
 // logi - "When did it start" (long-press a category button)
 //
@@ -56,108 +58,99 @@ export default function StartWhenSheet({
   const commit = (startAt: number) => onPick({ startAt, scheduled: !past });
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Start ${CATEGORY_LABEL[category]} at a different time`}
-      onClick={onClose}
+    <SheetShell
+      onClose={onClose}
+      label={`Start ${CATEGORY_LABEL[category]} at a different time`}
+      className="w-full max-w-md rounded-t-lg bg-surface-2 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+      header={<h2 className="text-base font-semibold">Start {CATEGORY_LABEL[category]}</h2>}
     >
-      <div
-        className="w-full max-w-md rounded-t-lg bg-surface-2 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
-        style={{ overscrollBehavior: 'contain' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-base font-semibold">Start {CATEGORY_LABEL[category]}</h2>
+      {/* Before / After. Before is the default since "forgot to tap" beats "planned ahead". */}
+      <div className="mt-3 grid grid-cols-2 gap-1 rounded-sm bg-surface-1 p-1">
+        {(['past', 'future'] as const).map((d) => (
+          <button
+            key={d}
+            type="button"
+            aria-pressed={dir === d}
+            onClick={() => setDir(d)}
+            className={[
+              'min-h-10 rounded-sm text-sm transition',
+              dir === d
+                ? 'border border-line-strong bg-surface-2 font-medium text-ink'
+                : 'text-ink-soft',
+            ].join(' ')}
+          >
+            {d === 'past' ? 'Before' : 'After'}
+          </button>
+        ))}
+      </div>
 
-        {/* Before / After. Before is the default since "forgot to tap" beats "planned ahead". */}
-        <div className="mt-3 grid grid-cols-2 gap-1 rounded-sm bg-surface-1 p-1">
-          {(['past', 'future'] as const).map((d) => (
+      {/* Line 2 of each chip is the real time, so no mental subtraction. */}
+      <div className="mt-3 grid grid-cols-4 gap-2">
+        {OFFSETS.map((m) => {
+          const ts = now + sign * m * 60_000;
+          return (
             <button
-              key={d}
+              key={m}
               type="button"
-              aria-pressed={dir === d}
-              onClick={() => setDir(d)}
-              className={[
-                'min-h-10 rounded-sm text-sm transition',
-                dir === d
-                  ? 'border border-line-strong bg-surface-2 font-medium text-ink'
-                  : 'text-ink-soft',
-              ].join(' ')}
+              onClick={() => commit(ts)}
+              aria-label={`${offsetLabel(m)} ${past ? 'ago' : 'from now'}, ${clockTime(ts)}`}
+              className="flex min-h-14 flex-col items-center justify-center rounded-sm border border-line active:scale-[0.99]"
             >
-              {d === 'past' ? 'Before' : 'After'}
+              <span className="text-sm font-medium">{offsetLabel(m)}</span>
+              <span className="text-xs tabular-nums text-ink-muted">{clockTime(ts)}</span>
             </button>
-          ))}
-        </div>
+          );
+        })}
+      </div>
 
-        {/* Line 2 of each chip is the real time, so no mental subtraction. */}
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {OFFSETS.map((m) => {
-            const ts = now + sign * m * 60_000;
-            return (
-              <button
-                key={m}
-                type="button"
-                onClick={() => commit(ts)}
-                aria-label={`${offsetLabel(m)} ${past ? 'ago' : 'from now'}, ${clockTime(ts)}`}
-                className="flex min-h-14 flex-col items-center justify-center rounded-sm border border-line active:scale-[0.99]"
-              >
-                <span className="text-sm font-medium">{offsetLabel(m)}</span>
-                <span className="text-xs tabular-nums text-ink-muted">{clockTime(ts)}</span>
-              </button>
-            );
-          })}
-        </div>
+      {open ? (
+        <div className="mt-3 rounded-sm border border-line p-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-ink-soft">
+              {past ? 'Started at' : 'Starting at'}
+            </span>
+            <input
+              type="time"
+              value={text}
+              autoFocus
+              onChange={(e) => setText(e.target.value)}
+              aria-invalid={typed === null}
+              className="min-h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-base"
+            />
+          </label>
 
-        {open ? (
-          <div className="mt-3 rounded-sm border border-line p-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-ink-soft">
-                {past ? 'Started at' : 'Starting at'}
-              </span>
-              <input
-                type="time"
-                value={text}
-                autoFocus
-                onChange={(e) => setText(e.target.value)}
-                aria-invalid={typed === null}
-                className="min-h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-base"
-              />
-            </label>
+          {/* Live confirmation: which day, how long from now. This is where users
+              catch that they just typed into the night before. */}
+          <p className="mt-2 min-h-5 text-xs tabular-nums text-ink-muted">
+            {typed === null ? '·' : `${clockTime(typed)} · ${relativeLabel(typed, now)}`}
+          </p>
 
-            {/* Live confirmation: which day, how long from now. This is where users
-                catch that they just typed into the night before. */}
-            <p className="mt-2 min-h-5 text-xs tabular-nums text-ink-muted">
-              {typed === null ? '·' : `${clockTime(typed)} · ${relativeLabel(typed, now)}`}
-            </p>
-
-            <button
-              type="button"
-              disabled={typed === null}
-              onClick={() => typed !== null && commit(typed)}
-              className="mt-2 min-h-11 w-full rounded-sm bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 active:scale-[0.99] disabled:opacity-40"
-            >
-              {past ? 'Start' : 'Schedule'}
-            </button>
-          </div>
-        ) : (
           <button
             type="button"
-            onClick={() => setOpen(true)}
-            className="mt-2 min-h-11 w-full rounded-sm text-sm text-ink-soft"
+            disabled={typed === null}
+            onClick={() => typed !== null && commit(typed)}
+            className="mt-2 min-h-11 w-full rounded-sm bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 active:scale-[0.99] disabled:opacity-40"
           >
-            Specific time…
+            {past ? 'Start' : 'Schedule'}
           </button>
-        )}
-
+        </div>
+      ) : (
         <button
           type="button"
-          onClick={onClose}
-          className="mt-1 min-h-11 w-full rounded-sm text-sm text-ink-soft"
+          onClick={() => setOpen(true)}
+          className="mt-2 min-h-11 w-full rounded-sm text-sm text-ink-soft"
         >
-          Cancel
+          Specific time…
         </button>
-      </div>
-    </div>
+      )}
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-1 min-h-11 w-full rounded-sm text-sm text-ink-soft"
+      >
+        Cancel
+      </button>
+    </SheetShell>
   );
 }

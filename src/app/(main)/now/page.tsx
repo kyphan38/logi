@@ -14,6 +14,7 @@ import ParseConfirmCard from '@/components/ParseConfirmCard';
 import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
+import SheetShell from '@/components/SheetShell';
 import { type StartWhen } from '@/components/StartWhenSheet';
 import RoutineChecklist from '@/components/RoutineChecklist';
 import Toasts from '@/components/Toasts';
@@ -468,31 +469,32 @@ export default function NowPage() {
       ) : null}
 
       {zeroStop ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center">
-          <div className="w-full max-w-lg rounded-t-lg bg-surface-2 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:rounded-lg md:pb-5">
-            <h3 className="mb-4 text-base font-semibold text-ink">
-              Less than a minute. Save anyway?
-            </h3>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => void discardStop(zeroStop.id)}
-                disabled={busy}
-                className="flex-1 rounded-sm border border-line py-2.5 text-sm font-medium text-ink-soft disabled:opacity-40"
-              >
-                Discard
-              </button>
-              <button
-                type="button"
-                onClick={() => void commitStop(zeroStop.id, zeroStop.at)}
-                disabled={busy}
-                className="flex-1 rounded-sm bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
-              >
-                Save
-              </button>
-            </div>
+        // No onClose: the record must be saved or discarded.
+        <SheetShell
+          label="Less than a minute. Save anyway?"
+          center
+          className="w-full max-w-lg rounded-t-lg bg-surface-2 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:rounded-lg md:pb-5"
+        >
+          <h3 className="mb-4 text-base font-semibold text-ink">Less than a minute. Save anyway?</h3>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void discardStop(zeroStop.id)}
+              disabled={busy}
+              className="flex-1 rounded-sm border border-line py-2.5 text-sm font-medium text-ink-soft disabled:opacity-40"
+            >
+              Discard
+            </button>
+            <button
+              type="button"
+              onClick={() => void commitStop(zeroStop.id, zeroStop.at)}
+              disabled={busy}
+              className="flex-1 rounded-sm bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
+            >
+              Save
+            </button>
           </div>
-        </div>
+        </SheetShell>
       ) : null}
 
       {stale.length > 0 ? (

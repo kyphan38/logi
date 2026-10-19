@@ -81,12 +81,12 @@ export default function StaleSessionModal({
   return (
     // Cannot close by tapping outside - it must be handled.
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+      className="fade-in fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="stale-title"
     >
-      <div className="w-full max-w-sm rounded-lg bg-white p-5 dark:bg-zinc-900">
+      <div className="pop w-full max-w-sm rounded-lg bg-white p-5 dark:bg-zinc-900">
         <h2 id="stale-title" className="text-lg font-semibold tracking-tight">
           Unfinished session
         </h2>

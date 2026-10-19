@@ -10,3 +10,13 @@ export function leavingItems<T extends { id: string | number }>(prev: T[], next:
   const kept = new Set(next.map((x) => x.id));
   return prev.filter((x) => !kept.has(x.id));
 }
+
+/** Close when dragged past a quarter of the sheet, or flicked fast. */
+export function sheetShouldClose(dy: number, height: number, velocityPxPerMs: number): boolean {
+  return dy > height * 0.25 || velocityPxPerMs > 0.5;
+}
+
+/** Dragging up past the top only moves a little. */
+export function dragOffset(dy: number): number {
+  return dy >= 0 ? dy : dy * 0.2;
+}

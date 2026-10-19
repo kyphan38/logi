@@ -6,6 +6,8 @@ import { resolveClockOnDate, toClockInput } from '@/lib/clock';
 import { formatBedtime } from '@/lib/bedtime';
 import type { DayLog } from '@/types/logi';
 
+import SheetShell from './SheetShell';
+
 // ---------------------------------------------------------------------------
 // logi - "What time did I go to bed that night" (History)
 //
@@ -66,96 +68,91 @@ export default function DayBedtimeSheet({
   const typed = resolveClockOnDate(text, date);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Bedtime"
-      onClick={onClose}
+    <SheetShell
+      onClose={onClose}
+      label="Bedtime"
+      className="w-full max-w-md rounded-t-lg bg-surface-2 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+      header={
+        <>
+          <h2 className="text-base font-semibold">Bedtime</h2>
+          {/* Say plainly which night is being edited. The sheet opens from the
+              header, which scrolls away - without this line it is easy to save
+              onto the wrong day. */}
+          <p className="mt-0.5 text-xs text-ink-muted">Night of {nightLabel(date)}</p>
+        </>
+      }
     >
-      <div
-        className="w-full max-w-md rounded-t-lg bg-surface-2 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
-        style={{ overscrollBehavior: 'contain' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-base font-semibold">Bedtime</h2>
-        {/* Say plainly which night is being edited. The sheet opens from the
-            header, which scrolls away - without this line it is easy to save
-            onto the wrong day. */}
-        <p className="mt-0.5 text-xs text-ink-muted">Night of {nightLabel(date)}</p>
-
-        <div className="mt-3 flex min-h-11 items-center gap-3 rounded-sm border border-line bg-surface-1 px-3 py-2 text-sm">
-          <span className="min-w-0 flex-1 truncate font-medium">Logged</span>
-          <span className="shrink-0 tabular-nums">
-            {current === null ? '-' : formatBedtime(current)}
-          </span>
-          {current === null ? null : (
-            <button
-              type="button"
-              onClick={() => onClear(date)}
-              disabled={busy}
-              aria-label="Clear bedtime"
-              className="min-h-11 shrink-0 px-1 text-ink-soft transition active:scale-95 disabled:opacity-40"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        {/* Line 2 of each cell is the mark's CALENDAR day. 00:00 and 01:00 fall on
-            the next day but still belong to this night - written out, no trust needed. */}
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {CHIPS.map((hhmm) => {
-            const ts = resolveClockOnDate(hhmm, date);
-            if (ts === null) return null;
-            return (
-              <button
-                key={hhmm}
-                type="button"
-                onClick={() => onPick(ts)}
-                disabled={busy}
-                aria-label={`${hhmm} on ${stampLabel(ts)}`}
-                className="flex min-h-14 flex-col items-center justify-center rounded-sm border border-line transition active:scale-[0.99] disabled:opacity-40"
-              >
-                <span className="text-sm font-medium tabular-nums">{hhmm}</span>
-                <span className="text-xs text-ink-muted">{stampLabel(ts).split(',')[0]}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-3 rounded-sm border border-line p-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-ink-soft">Went to bed at</span>
-            <input
-              type="time"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              aria-invalid={typed === null}
-              className="min-h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-base"
-            />
-          </label>
-          <p className="mt-2 min-h-5 text-xs tabular-nums text-ink-muted">
-            {typed === null ? '-' : stampLabel(typed)}
-          </p>
+      <div className="mt-3 flex min-h-11 items-center gap-3 rounded-sm border border-line bg-surface-1 px-3 py-2 text-sm">
+        <span className="min-w-0 flex-1 truncate font-medium">Logged</span>
+        <span className="shrink-0 tabular-nums">
+          {current === null ? '-' : formatBedtime(current)}
+        </span>
+        {current === null ? null : (
           <button
             type="button"
-            disabled={busy || typed === null}
-            onClick={() => typed !== null && onPick(typed)}
-            className="mt-2 min-h-11 w-full rounded-sm bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 transition active:scale-[0.99] disabled:opacity-40"
+            onClick={() => onClear(date)}
+            disabled={busy}
+            aria-label="Clear bedtime"
+            className="min-h-11 shrink-0 px-1 text-ink-soft transition active:scale-95 disabled:opacity-40"
           >
-            Save
+            ×
           </button>
-        </div>
+        )}
+      </div>
 
+      {/* Line 2 of each cell is the mark's CALENDAR day. 00:00 and 01:00 fall on
+          the next day but still belong to this night - written out, no trust needed. */}
+      <div className="mt-3 grid grid-cols-4 gap-2">
+        {CHIPS.map((hhmm) => {
+          const ts = resolveClockOnDate(hhmm, date);
+          if (ts === null) return null;
+          return (
+            <button
+              key={hhmm}
+              type="button"
+              onClick={() => onPick(ts)}
+              disabled={busy}
+              aria-label={`${hhmm} on ${stampLabel(ts)}`}
+              className="flex min-h-14 flex-col items-center justify-center rounded-sm border border-line transition active:scale-[0.99] disabled:opacity-40"
+            >
+              <span className="text-sm font-medium tabular-nums">{hhmm}</span>
+              <span className="text-xs text-ink-muted">{stampLabel(ts).split(',')[0]}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 rounded-sm border border-line p-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-ink-soft">Went to bed at</span>
+          <input
+            type="time"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            aria-invalid={typed === null}
+            className="min-h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-base"
+          />
+        </label>
+        <p className="mt-2 min-h-5 text-xs tabular-nums text-ink-muted">
+          {typed === null ? '-' : stampLabel(typed)}
+        </p>
         <button
           type="button"
-          onClick={onClose}
-          className="mt-1 min-h-11 w-full rounded-sm text-sm text-ink-soft"
+          disabled={busy || typed === null}
+          onClick={() => typed !== null && onPick(typed)}
+          className="mt-2 min-h-11 w-full rounded-sm bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 transition active:scale-[0.99] disabled:opacity-40"
         >
-          Cancel
+          Save
         </button>
       </div>
-    </div>
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-1 min-h-11 w-full rounded-sm text-sm text-ink-soft"
+      >
+        Cancel
+      </button>
+    </SheetShell>
   );
 }

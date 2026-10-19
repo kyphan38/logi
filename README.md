@@ -305,3 +305,9 @@ turns every animation and transition off under `prefers-reduced-motion`.
   `animate-pulse`. The mic button still pulses.
 - Toasts `rise` in and fade out over 200ms; a fading toast takes no taps.
   A toast closed by its action button goes at once.
+- Every bottom sheet uses `SheetShell` (`src/components/SheetShell.tsx`):
+  slides in, slides out when closed by the backdrop, a swipe down or Esc.
+  Buttons inside close at once. On a phone the header is the drag zone
+  (handle on top); controls in it never start a drag. A sheet without
+  `onClose` must be answered: no swipe, no backdrop close (the "Less than a
+  minute" box). `StaleSessionModal` only fades in and pops.

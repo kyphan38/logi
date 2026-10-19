@@ -21,6 +21,8 @@ import { markReviewed, setupNextWeek } from '@/lib/targets';
 import { addWeeks } from '@/lib/week';
 import { PRESETS, type PresetId } from '@/types/logi';
 
+import SheetShell from './SheetShell';
+
 const PANELS = ['Last week', 'Worth noting', 'Next week'];
 const ORDER: PresetId[] = ['normal', 'crunch', 'deep_learn', 'recovery'];
 
@@ -83,13 +85,13 @@ export default function WeeklyReview({ week, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Weekly review"
-        className="relative flex w-full max-w-[var(--content-max)] flex-col gap-3 rounded-t-lg border-t border-line bg-surface-2 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:rounded-lg sm:pb-4"
-      >
+    <SheetShell
+      onClose={onClose}
+      label="Weekly review"
+      center
+      dim={30}
+      className="relative flex w-full max-w-[var(--content-max)] flex-col gap-3 rounded-t-lg border-t border-line bg-surface-2 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:rounded-lg md:pb-4"
+      header={
         <header className="flex items-baseline justify-between gap-2 px-4">
           <h2 className="text-base font-semibold">{summary?.title ?? 'Weekly review'}</h2>
           <button
@@ -100,153 +102,153 @@ export default function WeeklyReview({ week, onClose }: Props) {
             Close
           </button>
         </header>
-
-        <div
-          ref={scroller}
-          onScroll={onScroll}
-          className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {/* --- Screen 1: the past week --- */}
-          <Panel label={PANELS[0]}>
-            {loading || !summary ? (
-              <p className="text-[13px] text-ink-muted">Loading…</p>
-            ) : (
-              <>
-                <BalanceBars rows={summary.rows} showDeviation />
-                <p className="text-[13px] tabular-nums text-ink-muted">
-                  {logQualityLine(summary.quality)}
-                </p>
-              </>
-            )}
-          </Panel>
-
-          {/* --- Screen 2: worth noticing ---
-              The AI picks three things; on failure or missing data it falls back
-              to Stage 6's fixed notes. This screen is never empty. */}
-          <Panel label={PANELS[1]}>
-            {insight.state === 'loading' ? (
-              <p className="text-[13px] text-ink-muted">Reading your week…</p>
-            ) : insight.state === 'ready' && insight.result ? (
-              <InsightNotes result={insight.result} digest={insight.digest} />
-            ) : (
-              <>
-                {summary?.notes.map((n) => (
-                  <p key={n} className="text-sm text-ink">
-                    {n}
-                  </p>
-                ))}
-                {insight.state === 'error' && (
-                  <button
-                    type="button"
-                    onClick={() => insight.run(true)}
-                    className="self-start text-[13px] text-ink-muted hover:text-ink active:text-ink"
-                  >
-                    Could not analyse. Retry
-                  </button>
-                )}
-              </>
-            )}
-          </Panel>
-
-          {/* --- Screen 3: next week --- */}
-          <Panel label={`Set up week ${Number(nextWeek.slice(-2))}`}>
-            {canSetNext ? (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  {ORDER.map((id) => {
-                    const locked = id === 'crunch' && debt.crunchLocked;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        disabled={locked}
-                        onClick={() => setPreset(id)}
-                        aria-pressed={preset === id}
-                        className={[
-                          'rounded-full border px-3 py-1.5 text-[13px] font-medium transition active:scale-[0.98]',
-                          preset === id
-                            ? 'border-transparent bg-ink text-[var(--surface-0)]'
-                            : 'border-line bg-surface-1 text-ink-soft',
-                          locked ? 'opacity-40' : '',
-                        ].join(' ')}
-                      >
-                        {PRESETS[id].label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {hinted && (
-                  <p className="text-[13px] text-ink-muted">
-                    Suggested: {PRESETS[hinted].label}. Change it if you disagree.
-                  </p>
-                )}
-
-                <p className="text-[13px] text-ink-muted">
-                  {plan.debtNote || 'No debt carried over.'}
-                </p>
-                {debt.crunchLocked && (
-                  <p className="text-[13px] text-ink-muted">
-                    Crunch is locked - debt is over the limit.
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="text-[13px] text-ink-muted">
-                This week is already over. Viewing only.
+      }
+    >
+      <div
+        ref={scroller}
+        onScroll={onScroll}
+        className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {/* --- Screen 1: the past week --- */}
+        <Panel label={PANELS[0]}>
+          {loading || !summary ? (
+            <p className="text-[13px] text-ink-muted">Loading…</p>
+          ) : (
+            <>
+              <BalanceBars rows={summary.rows} showDeviation />
+              <p className="text-[13px] tabular-nums text-ink-muted">
+                {logQualityLine(summary.quality)}
               </p>
-            )}
-          </Panel>
+            </>
+          )}
+        </Panel>
+
+        {/* --- Screen 2: worth noticing ---
+            The AI picks three things; on failure or missing data it falls back
+            to Stage 6's fixed notes. This screen is never empty. */}
+        <Panel label={PANELS[1]}>
+          {insight.state === 'loading' ? (
+            <p className="text-[13px] text-ink-muted">Reading your week…</p>
+          ) : insight.state === 'ready' && insight.result ? (
+            <InsightNotes result={insight.result} digest={insight.digest} />
+          ) : (
+            <>
+              {summary?.notes.map((n) => (
+                <p key={n} className="text-sm text-ink">
+                  {n}
+                </p>
+              ))}
+              {insight.state === 'error' && (
+                <button
+                  type="button"
+                  onClick={() => insight.run(true)}
+                  className="self-start text-[13px] text-ink-muted hover:text-ink active:text-ink"
+                >
+                  Could not analyse. Retry
+                </button>
+              )}
+            </>
+          )}
+        </Panel>
+
+        {/* --- Screen 3: next week --- */}
+        <Panel label={`Set up week ${Number(nextWeek.slice(-2))}`}>
+          {canSetNext ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {ORDER.map((id) => {
+                  const locked = id === 'crunch' && debt.crunchLocked;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      disabled={locked}
+                      onClick={() => setPreset(id)}
+                      aria-pressed={preset === id}
+                      className={[
+                        'rounded-full border px-3 py-1.5 text-[13px] font-medium transition active:scale-[0.98]',
+                        preset === id
+                          ? 'border-transparent bg-ink text-[var(--surface-0)]'
+                          : 'border-line bg-surface-1 text-ink-soft',
+                        locked ? 'opacity-40' : '',
+                      ].join(' ')}
+                    >
+                      {PRESETS[id].label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {hinted && (
+                <p className="text-[13px] text-ink-muted">
+                  Suggested: {PRESETS[hinted].label}. Change it if you disagree.
+                </p>
+              )}
+
+              <p className="text-[13px] text-ink-muted">
+                {plan.debtNote || 'No debt carried over.'}
+              </p>
+              {debt.crunchLocked && (
+                <p className="text-[13px] text-ink-muted">
+                  Crunch is locked - debt is over the limit.
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-[13px] text-ink-muted">
+              This week is already over. Viewing only.
+            </p>
+          )}
+        </Panel>
+      </div>
+
+      {error && <p className="px-4 text-[13px] text-ink-soft">{error}</p>}
+
+      <div className="flex items-center justify-between gap-3 px-4">
+        <div className="flex gap-1.5" aria-hidden="true">
+          {PANELS.map((p, i) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => goTo(i)}
+              className={[
+                'h-1.5 w-1.5 rounded-full transition',
+                i === panel ? 'bg-ink' : 'bg-line-strong',
+              ].join(' ')}
+            />
+          ))}
         </div>
 
-        {error && <p className="px-4 text-[13px] text-ink-soft">{error}</p>}
-
-        <div className="flex items-center justify-between gap-3 px-4">
-          <div className="flex gap-1.5" aria-hidden="true">
-            {PANELS.map((p, i) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => goTo(i)}
-                className={[
-                  'h-1.5 w-1.5 rounded-full transition',
-                  i === panel ? 'bg-ink' : 'bg-line-strong',
-                ].join(' ')}
-              />
-            ))}
-          </div>
-
-          {panel < 2 ? (
+        {panel < 2 ? (
+          <button
+            type="button"
+            onClick={() => goTo(panel + 1)}
+            className="rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99]"
+          >
+            Next
+          </button>
+        ) : (
+          <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => goTo(panel + 1)}
-              className="rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99]"
+              disabled={saving}
+              onClick={() => void finish(false)}
+              className="rounded-sm border border-line px-4 py-2.5 text-sm text-ink-soft transition active:scale-[0.99] disabled:opacity-40"
             >
-              Next
+              Skip
             </button>
-          ) : (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => void finish(false)}
-                className="rounded-sm border border-line px-4 py-2.5 text-sm text-ink-soft transition active:scale-[0.99] disabled:opacity-40"
-              >
-                Skip
-              </button>
-              <button
-                type="button"
-                disabled={saving || !canSetNext}
-                onClick={() => void finish(true)}
-                className="rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99] disabled:opacity-40"
-              >
-                Confirm
-              </button>
-            </div>
-          )}
-        </div>
+            <button
+              type="button"
+              disabled={saving || !canSetNext}
+              onClick={() => void finish(true)}
+              className="rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99] disabled:opacity-40"
+            >
+              Confirm
+            </button>
+          </div>
+        )}
       </div>
-    </div>
+    </SheetShell>
   );
 }
 

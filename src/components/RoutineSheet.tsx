@@ -10,6 +10,8 @@ import {
   type RoutineItem,
 } from '@/types/logi';
 
+import SheetShell from './SheetShell';
+
 // ---------------------------------------------------------------------------
 // logi - Sheet for adding / editing Routine groups and items (Stage 10)
 // ---------------------------------------------------------------------------
@@ -20,14 +22,25 @@ const LABEL = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-ink
 const BTN = 'min-h-11 flex-1 rounded-lg border border-line-strong text-sm font-medium text-ink-soft';
 const BTN_MAIN = 'min-h-11 flex-1 rounded-lg bg-ink text-sm font-medium text-[var(--surface-0)] disabled:opacity-40';
 
-function Shell({ title, children }: { title: string; children: React.ReactNode }) {
+function Shell({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center">
-      <div className="w-full max-w-lg rounded-t-lg bg-surface-2 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:rounded-lg md:pb-5">
-        <h3 className="mb-4 text-base font-semibold text-ink">{title}</h3>
-        {children}
-      </div>
-    </div>
+    <SheetShell
+      onClose={onClose}
+      label={title}
+      center
+      className="w-full max-w-lg rounded-t-lg bg-surface-2 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:rounded-lg md:pb-5"
+      header={<h3 className="mb-4 text-base font-semibold text-ink">{title}</h3>}
+    >
+      {children}
+    </SheetShell>
   );
 }
 
@@ -93,7 +106,7 @@ export function GroupSheet({
   const clean = title.trim();
 
   return (
-    <Shell title={group ? 'Edit group' : 'New group'}>
+    <Shell title={group ? 'Edit group' : 'New group'} onClose={onCancel}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -163,7 +176,10 @@ export function ItemSheet({
   }
 
   return (
-    <Shell title={item ? `Edit item · ${groupTitle}` : `New item · ${groupTitle}`}>
+    <Shell
+      title={item ? `Edit item · ${groupTitle}` : `New item · ${groupTitle}`}
+      onClose={onCancel}
+    >
       <form
         onSubmit={(e) => {
           e.preventDefault();

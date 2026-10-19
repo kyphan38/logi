@@ -568,3 +568,4 @@ nền trượt; bấm ngày khác ở History thấy các khối hiện dần tr
 (AI làm ghi một dòng mỗi phase: ngày, commit, ghi chú.)
 
 - P1 (2026-10-19): motion CSS block + `--ease-soft`, `src/lib/motion.ts`, `usePresence`, `useFlip`, `breathe` for running dots and skeletons, toast rise/fade-out. Test `motion`. `usePresence` sets state during render (React 19 lint forbids setState in effects). Not tried in the app yet (needs Google sign-in).
+- P2 (2026-10-19): `SheetShell` for 9 sheets + the zero-stop box, `sheetShouldClose`/`dragOffset` + tests, StaleSessionModal fade/pop. Added props beyond the plan: `header` (drag zone), `dim`, `locked`. EventSheet, RoutineSheet, WeeklyReview and the targets modal can now close by backdrop/swipe/Esc. Tested in a temporary local page (slow drag springs back, long drag slides out, backdrop and Esc animate out, no swipe on desktop); real sheets not tried (needs Google sign-in).

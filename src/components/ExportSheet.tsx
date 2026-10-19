@@ -14,6 +14,8 @@ import { exportFilename, toCsv, toJson } from '@/lib/export';
 import type { Range } from '@/lib/range';
 import type { Activity, Category } from '@/types/logi';
 
+import SheetShell from './SheetShell';
+
 type Format = 'csv' | 'json';
 type Scope = 'range' | 'all';
 
@@ -81,99 +83,91 @@ export default function ExportSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center">
-      <button
-        type="button"
-        aria-label="Close"
-        className="absolute inset-0 cursor-default"
-        onClick={onClose}
-      />
+    <SheetShell
+      onClose={onClose}
+      label="Export"
+      center
+      dim={30}
+      className="relative flex w-full max-w-[var(--content-max)] flex-col gap-4 rounded-t-lg border-t border-line bg-surface-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:rounded-lg md:pb-4"
+      header={<h2 className="text-base font-semibold">Export</h2>}
+    >
 
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Export"
-        className="relative flex w-full max-w-[var(--content-max)] flex-col gap-4 rounded-t-lg border-t border-line bg-surface-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:rounded-lg sm:pb-4"
-      >
-        <h2 className="text-base font-semibold">Export</h2>
-
-        {loadAllTime && (
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-[11px] uppercase tracking-wide text-ink-muted">
-              Data
-            </legend>
-            <div className="flex gap-2">
-              <FormatButton
-                label="This range"
-                hint={rangeText(range)}
-                active={scope === 'range'}
-                onClick={() => setScope('range')}
-              />
-              <FormatButton
-                label="All time"
-                hint="full backup"
-                active={scope === 'all'}
-                onClick={() => void pickAll()}
-              />
-            </div>
-          </fieldset>
-        )}
-
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-ink-muted">Range</span>
-          <p className="text-sm tabular-nums text-ink">
-            {loading ? 'Loading…' : rangeText(data.range)}
-          </p>
-          <p className="text-[13px] text-ink-muted">
-            {data.activities.length} {data.activities.length === 1 ? 'record' : 'records'}
-            {scope === 'all' && all ? ` · ${all.weekTargets.size} weeks planned` : ''}
-          </p>
-          {error && (
-            <p role="alert" className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
-              {error}
-            </p>
-          )}
-        </div>
-
+      {loadAllTime && (
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-[11px] uppercase tracking-wide text-ink-muted">
-            Format
+            Data
           </legend>
           <div className="flex gap-2">
             <FormatButton
-              label="CSV"
-              hint="Excel, Sheets"
-              active={format === 'csv'}
-              onClick={() => setFormat('csv')}
+              label="This range"
+              hint={rangeText(range)}
+              active={scope === 'range'}
+              onClick={() => setScope('range')}
             />
             <FormatButton
-              label="JSON"
-              hint={scope === 'all' ? 'targets + debt' : 'with targets'}
-              active={format === 'json'}
-              onClick={() => setFormat('json')}
+              label="All time"
+              hint="full backup"
+              active={scope === 'all'}
+              onClick={() => void pickAll()}
             />
           </div>
         </fieldset>
+      )}
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-sm border border-line px-4 py-2.5 text-sm text-ink-soft transition active:scale-[0.99]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={download}
-            disabled={loading || data.activities.length === 0}
-            className="flex-1 rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99] disabled:opacity-40"
-          >
-            Download
-          </button>
-        </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-[11px] uppercase tracking-wide text-ink-muted">Range</span>
+        <p className="text-sm tabular-nums text-ink">
+          {loading ? 'Loading…' : rangeText(data.range)}
+        </p>
+        <p className="text-[13px] text-ink-muted">
+          {data.activities.length} {data.activities.length === 1 ? 'record' : 'records'}
+          {scope === 'all' && all ? ` · ${all.weekTargets.size} weeks planned` : ''}
+        </p>
+        {error && (
+          <p role="alert" className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+            {error}
+          </p>
+        )}
       </div>
-    </div>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-[11px] uppercase tracking-wide text-ink-muted">
+          Format
+        </legend>
+        <div className="flex gap-2">
+          <FormatButton
+            label="CSV"
+            hint="Excel, Sheets"
+            active={format === 'csv'}
+            onClick={() => setFormat('csv')}
+          />
+          <FormatButton
+            label="JSON"
+            hint={scope === 'all' ? 'targets + debt' : 'with targets'}
+            active={format === 'json'}
+            onClick={() => setFormat('json')}
+          />
+        </div>
+      </fieldset>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 rounded-sm border border-line px-4 py-2.5 text-sm text-ink-soft transition active:scale-[0.99]"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={download}
+          disabled={loading || data.activities.length === 0}
+          className="flex-1 rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99] disabled:opacity-40"
+        >
+          Download
+        </button>
+      </div>
+    </SheetShell>
   );
 }
 

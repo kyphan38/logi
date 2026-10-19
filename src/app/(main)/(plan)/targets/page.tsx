@@ -13,6 +13,7 @@ import Link from 'next/link';
 
 import Toasts from '@/components/Toasts';
 import RoutineSection from '@/components/RoutineSection';
+import SheetShell from '@/components/SheetShell';
 import WeeklyReview from '@/components/WeeklyReview';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTick, useToasts } from '@/hooks/useActivities';
@@ -747,52 +748,57 @@ function ConfirmSheet({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center">
-      <div className="w-full max-w-lg rounded-t-lg bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:bg-zinc-950 md:rounded-lg md:pb-5">
+    <SheetShell
+      onClose={onCancel}
+      label={`Switch to ${PRESETS[to].label}`}
+      center
+      className="w-full max-w-lg rounded-t-lg bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:bg-zinc-950 md:rounded-lg md:pb-5"
+      header={
         <h3 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
           Switch to {PRESETS[to].label}
         </h3>
+      }
+    >
 
-        <div className="mb-4">
-          {rows.map((r) => (
-            <div key={r.category} className="flex items-baseline justify-between py-1 text-sm">
-              <span className="text-zinc-700 dark:text-zinc-300">
-                {CATEGORY_LABEL[r.category]}
-              </span>
-              <span className="font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
-                {h(r.from)} → {h(r.to)}
-                {/* Changing preset without seeing the cost makes this mechanism pointless. */}
-                {r.debt > 0 && (
-                  <span className="ml-2 font-medium text-zinc-900 dark:text-zinc-100">
-                    +{h(r.debt)} debt
-                  </span>
-                )}
-              </span>
-            </div>
-          ))}
-          {rows.length === 0 && (
-            <p className="text-sm text-zinc-500">No change to your targets.</p>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 rounded-lg border border-zinc-300 py-2.5 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={busy}
-            className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
-          >
-            Switch
-          </button>
-        </div>
+      <div className="mb-4">
+        {rows.map((r) => (
+          <div key={r.category} className="flex items-baseline justify-between py-1 text-sm">
+            <span className="text-zinc-700 dark:text-zinc-300">
+              {CATEGORY_LABEL[r.category]}
+            </span>
+            <span className="font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
+              {h(r.from)} → {h(r.to)}
+              {/* Changing preset without seeing the cost makes this mechanism pointless. */}
+              {r.debt > 0 && (
+                <span className="ml-2 font-medium text-zinc-900 dark:text-zinc-100">
+                  +{h(r.debt)} debt
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+        {rows.length === 0 && (
+          <p className="text-sm text-zinc-500">No change to your targets.</p>
+        )}
       </div>
-    </div>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 rounded-lg border border-zinc-300 py-2.5 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={busy}
+          className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
+        >
+          Switch
+        </button>
+      </div>
+    </SheetShell>
   );
 }
