@@ -275,8 +275,6 @@ export default function HistoryPage() {
           trackedH={trackedH}
           gapH={gapH}
           overlap={overlap}
-          today={selected === today}
-          planned={doneBefore !== null}
         />
       </header>
 
@@ -345,17 +343,11 @@ function SummaryGauge({
   trackedH,
   gapH,
   overlap,
-  today,
-  planned,
 }: {
   lines: DayLine[];
   trackedH: number;
   gapH: number;
   overlap: number;
-  /** Only when the viewed day is today is there a "how much is left". */
-  today: boolean;
-  /** The denominator is the catch-up suggestion, not a baseline split. */
-  planned: boolean;
 }) {
   const h = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
 
@@ -373,6 +365,9 @@ function SummaryGauge({
   }
 
   const by = new Map(lines.map((l) => [l.category, l]));
+  // The note row shows only when some cell has a note, so a normal day is
+  // just label, bar and number.
+  const anyNote = lines.some((l) => gaugeNote(l) !== '');
 
   return (
     <div className="mt-3">
@@ -380,7 +375,7 @@ function SummaryGauge({
         {CATEGORIES.map((c) => (
           <Gauge
             key={c}
-            today={today}
+            showNote={anyNote}
             line={
               by.get(c) ?? {
                 category: c,
@@ -395,13 +390,6 @@ function SummaryGauge({
           />
         ))}
       </div>
-      {/* Say once what the denominator is. Without this line the number changes
-          daily and nobody knows why - it looks like a bug. */}
-      {planned ? (
-        <p className="mt-1.5 text-[11px] leading-snug text-ink-muted">
-          Daily target = hours left ÷ days left.
-        </p>
-      ) : null}
       {overlap > 0 ? (
         <p className="mt-1.5 text-[11px] tabular-nums text-ink-muted">{h(overlap)}h overlap</p>
       ) : null}
@@ -409,23 +397,26 @@ function SummaryGauge({
   );
 }
 
-/** One gauge cell: label / bar / number / note. The bar is 6px tall, no border. */
-function Gauge({ line, today }: { line: DayLine; today: boolean }) {
-  const { category: c, actual, target, met, capped } = line;
-  const h = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
+/** "week done" beats "at cap". No "Xh left": the number already says it. */
+function gaugeNote({ met, capped }: DayLine): string {
+  return met ? 'week done' : capped ? 'at cap' : '';
+}
+
+/** 3.9 -> "3.9", 1.0 -> "1", 0 -> "0". A trailing ".0" is noise. */
+function hours(n: number): string {
+  return String(Math.round(n * 10) / 10);
+}
+
+/**
+ * One gauge cell: label / bar / number (/ note). The bar is 6px tall, no border.
+ * On a planned week the target is hours left / days left, so it moves daily.
+ */
+function Gauge({ line, showNote }: { line: DayLine; showNote: boolean }) {
+  const { category: c, actual, target } = line;
+  const h = hours;
 
   const { fill, over, noTarget, dim } = gaugeShape(actual, target);
-
-  // The bottom line. Priority: week done → still short today → capped.
-  // It always reserves its height, or the 4 columns would not line up.
-  const left = target - actual;
-  const note = met
-    ? 'week done'
-    : today && !noTarget && left > 0.05
-      ? `${h(left)}h left`
-      : capped
-        ? 'at cap'
-        : '';
+  const note = gaugeNote(line);
 
   return (
     <div className={`min-w-0 ${dim ? 'opacity-40' : ''}`}>
@@ -468,8 +459,10 @@ function Gauge({ line, today }: { line: DayLine; today: boolean }) {
         <span className="text-ink-muted">/{noTarget ? '-' : h(target)}</span>
       </p>
 
-      {/* Always takes space, even empty - the 4 columns must line up at the bottom. */}
-      <p className="mt-0.5 h-3.5 truncate text-[10px] tabular-nums text-ink-muted">{note}</p>
+      {/* Empty cells still take the space when shown, so the 4 columns line up. */}
+      {showNote ? (
+        <p className="mt-0.5 h-3.5 truncate text-[10px] tabular-nums text-ink-muted">{note}</p>
+      ) : null}
     </div>
   );
 }
