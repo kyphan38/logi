@@ -9,7 +9,6 @@
 
 import { Suspense, useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 
 import Toasts from '@/components/Toasts';
 import RoutineSection from '@/components/RoutineSection';
@@ -421,11 +420,6 @@ function TargetsView() {
           onConfirm={() => applyPreset(confirm)}
         />
       )}
-
-      {/* Settings is not in the nav: visited about once a week. */}
-      <Link href="/settings" className="mt-2 self-start text-[13px] text-ink-muted hover:text-ink active:text-ink after:ml-1 after:content-['›']">
-        Settings
-      </Link>
 
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>

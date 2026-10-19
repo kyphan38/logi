@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import BottomNav from '@/components/BottomNav';
+import SettingsCorner from '@/components/SettingsCorner';
 import { useOnline } from '@/hooks/useActivities';
 
 /** A thin banner on top. Blocks nothing - Firestore still writes to the cache. */
@@ -26,12 +27,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
     // does not collapse/expand -> the tab bar stays put. Everything scrolls in <main>.
     <div className="flex h-dvh min-h-0 flex-col md:pl-[180px]">
       <OfflineBanner />
+      <SettingsCorner />
       {/* The ONLY scrollable place. The nav is a sibling below, no longer
           `fixed`, so it stays in one place whether the page is long or short.
           content-width: every screen is capped at 720px and centered. */}
       <main
         id="app-scroll"
-        className="content-width flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain px-5 pb-6 pt-6"
+        className="content-width flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain px-5 pb-6 pt-3"
       >
         {children}
       </main>
