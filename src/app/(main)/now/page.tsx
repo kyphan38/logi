@@ -414,7 +414,7 @@ export default function NowPage() {
           CategoryGrid does not jump down when data arrives. */}
       {activeLoading && active.length === 0 ? (
         <div
-          className="h-[76px] animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-900"
+          className="h-[76px] breathe rounded-md bg-zinc-100 dark:bg-zinc-900"
           aria-busy="true"
           aria-label="Loading sessions"
         />

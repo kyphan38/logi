@@ -117,8 +117,8 @@ export default function RemindersPage() {
 
       {loading ? (
         <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading">
-          <div className="h-16 animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-800" />
-          <div className="h-16 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-900" />
+          <div className="h-16 breathe rounded-md bg-zinc-200 dark:bg-zinc-800" />
+          <div className="h-16 breathe rounded-md bg-zinc-100 dark:bg-zinc-900" />
         </div>
       ) : upcoming.length === 0 ? (
         <Empty />

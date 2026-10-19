@@ -228,7 +228,7 @@ export default function AnalyticsPage() {
 
 function Skeleton() {
   return (
-    <div className="flex animate-pulse flex-col gap-3" aria-busy="true" aria-label="Loading">
+    <div className="flex breathe flex-col gap-3" aria-busy="true" aria-label="Loading">
       {[0, 1, 2, 3, 4].map((i) => (
         <div key={i} className="flex flex-col gap-1">
           <div className="h-3 w-20 rounded-sm bg-surface-1" />

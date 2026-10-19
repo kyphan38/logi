@@ -75,6 +75,9 @@
 
   /* --- Max content width on desktop --- */
   --content-max: 720px;
+
+  /* --- Motion --- */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
   color-scheme: light;
 }
 
@@ -207,40 +210,140 @@ body {
   }
 }
 
-/* ===== Sheet sliding up from the bottom (voice confirm / clarify) ===== */
+/* ---- Motion: short, opacity/transform only (DESIGN.md "Motion") ---- */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.fade-in,
+.dim-in {
+  animation: fade-in 180ms ease-out both;
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+.fade-out {
+  animation: fade-out 200ms ease-in both;
+}
+
 @keyframes sheet-up {
   from {
-    transform: translateY(1.25rem);
+    transform: translateY(16px);
     opacity: 0;
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+}
+.sheet-up {
+  animation: sheet-up 220ms var(--ease-soft) both;
 }
 
-@keyframes dim-in {
+@keyframes sheet-down {
+  to {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+.sheet-down {
+  animation: sheet-down 200ms ease-in both;
+}
+
+@keyframes rise {
   from {
     opacity: 0;
+    transform: translateY(6px);
   }
+}
+.rise {
+  animation: rise 240ms var(--ease-soft) both;
+}
+
+@keyframes row-out {
   to {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+.row-out {
+  animation: row-out 180ms ease-in both;
+  pointer-events: none;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+.pop {
+  animation: pop 180ms var(--ease-soft) both;
+}
+
+/* A slow fade in and out for "running"; never blinks. */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
     opacity: 1;
   }
 }
-
-.sheet-up {
-  animation: sheet-up 180ms ease-out;
+.breathe {
+  animation: breathe 3.2s ease-in-out infinite;
 }
 
-.dim-in {
-  animation: dim-in 150ms ease-out;
+/* One digit rolls up when it changes. */
+@keyframes digit-out {
+  to {
+    transform: translateY(-40%);
+    opacity: 0;
+  }
+}
+@keyframes digit-in {
+  from {
+    transform: translateY(40%);
+    opacity: 0;
+  }
+}
+.digit-out {
+  animation: digit-out 280ms var(--ease-soft) both;
+}
+.digit-in {
+  animation: digit-in 280ms var(--ease-soft) both;
 }
 
-/* Respect the user's choice when motion is turned off in system settings. */
+/* A line drawn across a done routine item. */
+.strike {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 180ms ease-in;
+}
+.strike[data-on='true'] {
+  transform: scaleX(1);
+  transform-origin: left;
+  transition: transform 260ms var(--ease-soft);
+}
+.strike[data-instant='true'] {
+  transition: none;
+}
+
+/* Keep last: the system "reduce motion" setting turns all of it off. */
 @media (prefers-reduced-motion: reduce) {
-  .sheet-up,
-  .dim-in {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }
 

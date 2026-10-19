@@ -60,7 +60,7 @@ export default function WeekSleepCard({ range }: { range: Range }) {
   if (loading) {
     return (
       <Card title="Sleep">
-        <div className="h-48 w-full animate-pulse rounded-md bg-surface-1" aria-busy="true" />
+        <div className="h-48 w-full breathe rounded-md bg-surface-1" aria-busy="true" />
       </Card>
     );
   }

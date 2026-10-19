@@ -166,7 +166,7 @@ export default function CategoryGrid({
               <span className="flex items-center gap-2">
                 <span
                   aria-hidden="true"
-                  className={`h-[7px] w-[7px] shrink-0 rounded-full ${isRunning ? 'animate-pulse' : ''}`}
+                  className={`h-[7px] w-[7px] shrink-0 rounded-full ${isRunning ? 'breathe' : ''}`}
                   style={{ backgroundColor: CATEGORY_COLOR[c] }}
                 />
                 <span className="text-sm font-medium md:text-base">{CATEGORY_LABEL[c]}</span>

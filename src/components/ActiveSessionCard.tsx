@@ -51,7 +51,7 @@ export default function ActiveSessionCard({
       >
         <div className="flex min-w-0 flex-1 items-center gap-2" aria-label={hint} {...tap}>
           <span
-            className="h-2 w-2 shrink-0 animate-pulse rounded-full"
+            className="h-2 w-2 shrink-0 breathe rounded-full"
             style={{ backgroundColor: color }}
             aria-hidden="true"
           />
@@ -92,7 +92,7 @@ export default function ActiveSessionCard({
       <div className="min-w-0 flex-1" aria-label={hint} {...tap}>
         <div className="flex items-center gap-2">
           <span
-            className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full"
+            className="h-2.5 w-2.5 shrink-0 breathe rounded-full"
             style={{ backgroundColor: color }}
             aria-hidden="true"
           />

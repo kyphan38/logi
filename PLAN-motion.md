@@ -566,3 +566,5 @@ nền trượt; bấm ngày khác ở History thấy các khối hiện dần tr
 ## Tiến độ
 
 (AI làm ghi một dòng mỗi phase: ngày, commit, ghi chú.)
+
+- P1 (2026-10-19): motion CSS block + `--ease-soft`, `src/lib/motion.ts`, `usePresence`, `useFlip`, `breathe` for running dots and skeletons, toast rise/fade-out. Test `motion`. `usePresence` sets state during render (React 19 lint forbids setState in effects). Not tried in the app yet (needs Google sign-in).

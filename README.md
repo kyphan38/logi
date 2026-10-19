@@ -290,3 +290,18 @@ is real. Only the 20 newest insights are kept per user.
 `firestore.rules` gained an `insights/{insightId}` match. Firestore does not
 cascade a parent `match`, so without `firebase deploy --only firestore:rules`
 saving an insight fails and every run hits the API.
+
+## Motion
+
+Short, opacity/transform only, following `ws/app/DESIGN.md` "Motion". Plan:
+`PLAN-motion.md`. Classes live in the Motion block of `src/app/globals.css`
+(`fade-in`, `fade-out`, `sheet-up`, `sheet-down`, `rise`, `row-out`, `pop`,
+`breathe`, `digit-*`, `.strike`), with `--ease-soft`. The last block there
+turns every animation and transition off under `prefers-reduced-motion`.
+
+- Logic sits in `src/lib/motion.ts` (`reducedMotion`, `leavingItems`) so
+  `node --test` covers it; `usePresence` and `useFlip` are copied from mora.
+- Running dots and loading skeletons use `breathe` (slow fade), not
+  `animate-pulse`. The mic button still pulses.
+- Toasts `rise` in and fade out over 200ms; a fading toast takes no taps.
+  A toast closed by its action button goes at once.

@@ -135,7 +135,7 @@ function Loading() {
   return (
     <div className="flex flex-col gap-3 rounded-md border border-line bg-surface-1 p-4" aria-busy="true">
       <p className="text-[13px] text-ink-muted">Reading your week…</p>
-      <div className="flex animate-pulse flex-col gap-2">
+      <div className="flex breathe flex-col gap-2">
         <div className="h-3 w-2/5 rounded-sm bg-surface-2" />
         <div className="h-3 w-full rounded-sm bg-surface-2" />
         <div className="h-3 w-4/5 rounded-sm bg-surface-2" />
