@@ -223,15 +223,11 @@ export default function HistoryPage() {
     <div className="flex flex-1 flex-col">
       <header
         ref={headerRef}
-        className="sticky top-0 z-30 -mx-5 border-b border-zinc-100 bg-white px-5 pb-3 pt-4 dark:border-zinc-800 dark:bg-zinc-950"
+        className="sticky top-0 z-30 -mx-5 border-b border-zinc-100 bg-white px-5 pb-3 pt-2.5 dark:border-zinc-800 dark:bg-zinc-950"
       >
+        {/* No title: the Days switch in the top bar already names the page. */}
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight">History</h1>
-            <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
-              {prettyDate(selected)}
-            </p>
-          </div>
+          <p className="min-w-0 flex-1 truncate text-sm text-ink-muted">{prettyDate(selected)}</p>
           {/* Bedtime sits on the same row as the + button, NOT appended to the
               date line: that line has `truncate`, so a long "Wednesday, Sep 24"
               would cut off the time. Same text size and color token as the moon

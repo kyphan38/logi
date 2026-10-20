@@ -231,18 +231,16 @@ function TargetsView() {
 
   return (
     <div className="pb-8">
-      <header className="mb-4 flex items-baseline justify-between">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Targets</h1>
-        <div className="flex items-baseline gap-3">
-          <button
-            type="button"
-            onClick={() => setReviewOpen(week)}
-            className="shrink-0 rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink-soft transition active:scale-[0.98]"
-          >
-            Review
-          </button>
-          <span className="text-sm text-zinc-500 dark:text-zinc-400">{weekLabel(week)}</span>
-        </div>
+      {/* No title: the Week switch in the top bar already names the page. */}
+      <header className="mb-4 flex items-center justify-between gap-3 pt-2.5">
+        <p className="min-w-0 text-sm text-ink-muted">{weekLabel(week)}</p>
+        <button
+          type="button"
+          onClick={() => setReviewOpen(week)}
+          className="shrink-0 rounded-sm border border-line px-3 py-1.5 text-[13px] text-ink-soft transition active:scale-[0.98]"
+        >
+          Review
+        </button>
       </header>
 
       {reviewOpen && <WeeklyReview week={reviewOpen} onClose={() => setReviewOpen(null)} />}

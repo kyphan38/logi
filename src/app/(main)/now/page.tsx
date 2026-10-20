@@ -388,7 +388,7 @@ export default function NowPage() {
         <TopBar>
           <h1 className="text-2xl font-semibold tracking-tight">Now</h1>
         </TopBar>
-        <p className="flex flex-wrap items-baseline gap-x-2 text-sm tabular-nums text-ink-muted">
+        <p className="flex flex-wrap items-baseline gap-2 pt-2.5 text-sm tabular-nums text-ink-muted">
           <span>{prettyLogicalDate(today)}</span>
           <span aria-hidden="true">·</span>
           <span>{formatDuration(trackedMs)} tracked</span>

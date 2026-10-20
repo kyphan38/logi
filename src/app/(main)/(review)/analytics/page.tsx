@@ -70,11 +70,9 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-          <p className="text-[13px] text-ink-muted">{rangeLabel(range)}</p>
-        </div>
+      {/* No title: the Stats switch in the top bar already names the page. */}
+      <header className="flex items-center justify-between gap-3 pt-2.5">
+        <p className="min-w-0 text-sm text-ink-muted">{rangeLabel(range)}</p>
         <button
           type="button"
           onClick={() => setExporting(true)}

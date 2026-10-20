@@ -93,12 +93,8 @@ export default function RemindersPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <h1 className="text-xl font-semibold text-ink">Reminder</h1>
-        <span className="text-[13px] tabular-nums text-ink-muted">
-          {upcoming.length} upcoming
-        </span>
-      </div>
+      {/* No title: the Dates switch in the top bar already names the page. */}
+      <p className="pt-2.5 text-sm tabular-nums text-ink-muted">{upcoming.length} upcoming</p>
 
       <button
         type="button"

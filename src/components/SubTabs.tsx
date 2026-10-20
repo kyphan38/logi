@@ -22,7 +22,7 @@ export default function SubTabs({ tabs, label }: { tabs: SubTab[]; label: string
 
   return (
     // The switch takes the title's place in the top row, next to the gear.
-    <div className="mb-4">
+    // No margin: each page's own meta row starts right under the line, as on Now.
     <TopBar>
       <nav
         ref={container}
@@ -55,6 +55,5 @@ export default function SubTabs({ tabs, label }: { tabs: SubTab[]; label: string
         })}
       </nav>
     </TopBar>
-    </div>
   );
 }
