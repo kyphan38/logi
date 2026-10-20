@@ -21,7 +21,7 @@ import Toasts from '@/components/Toasts';
 import VoiceSheet from '@/components/VoiceSheet';
 import WeeklyReview from '@/components/WeeklyReview';
 import MoonIcon from '@/components/MoonIcon';
-import SettingsLink from '@/components/SettingsLink';
+import TopBar from '@/components/TopBar';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   capWait,
@@ -382,20 +382,17 @@ export default function NowPage() {
   return (
     // pb-20: room for the mic FAB, so it does not cover the last card's Stop button.
     <div className="flex flex-1 flex-col gap-6 pb-20">
-      {/* One-line header: logical date on the left, logged hours on the right.
-           Sign out moved to Settings so Now fits one screen. */}
-      <header className="flex items-baseline justify-between gap-3">
-        <div>
+      {/* Title and gear on top. Date, hours and bedtime share one quiet line
+           below, so the gear never has to share its corner. */}
+      <div className="flex flex-col">
+        <TopBar>
           <h1 className="text-2xl font-semibold tracking-tight">Now</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">{prettyLogicalDate(today)}</p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-0.5">
-          <SettingsLink />
-          <p className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
-            {formatDuration(trackedMs)} tracked
-          </p>
-          {/* Bedtime: a small text button on the same info row as tracked, so it
-              adds no height. */}
+        </TopBar>
+        <p className="flex flex-wrap items-baseline gap-x-2 text-sm tabular-nums text-ink-muted">
+          <span>{prettyLogicalDate(today)}</span>
+          <span aria-hidden="true">·</span>
+          <span>{formatDuration(trackedMs)} tracked</span>
+          <span aria-hidden="true">·</span>
           <button
             type="button"
             onClick={() => setBedtimeOpen(true)}
@@ -405,12 +402,12 @@ export default function NowPage() {
                 ? `Bedtime ${formatBedtime(bedtimeLog.bedtimeAt)}, tap to edit`
                 : 'Log bedtime'
             }
-            className="text-xs tabular-nums text-zinc-400 transition active:scale-95 disabled:opacity-50 dark:text-zinc-500"
+            className="transition hover:text-ink active:scale-95 active:text-ink disabled:opacity-50"
           >
             <MoonIcon /> {bedtimeLog.bedtimeAt ? formatBedtime(bedtimeLog.bedtimeAt) : 'bedtime'}
           </button>
-        </div>
-      </header>
+        </p>
+      </div>
 
       {reviewWeek && (
         <div className="flex items-center justify-between gap-3 border-l-2 border-line-strong py-1 pl-3">

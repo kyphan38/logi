@@ -10,6 +10,8 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 
+import TopBar from '@/components/TopBar';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { deleteAllInsights, listInsights } from '@/lib/insights';
 import {
@@ -69,9 +71,9 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
+      <TopBar settings>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-      </header>
+      </TopBar>
 
       <section className="flex flex-col gap-3 rounded-md border border-line-strong bg-surface-1 p-4">
         <div className="flex flex-col gap-1">
@@ -154,8 +156,6 @@ export default function SettingsPage() {
         </Link>
       </section>
 
-      {/* Sign out moved here from Now (AMENDMENT-remove-sleep 6b): the Now
-          header only keeps the date and logged hours. */}
       <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
         <h2 className="text-sm font-medium text-ink">Account</h2>
         <p className="text-[13px] text-ink-muted">{user?.email ?? 'Signed in'}</p>

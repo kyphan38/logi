@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import SettingsLink from '@/components/SettingsLink';
+import TopBar from '@/components/TopBar';
 import { useIndicator } from '@/hooks/useIndicator';
 
 export type SubTab = { href: string; label: string };
@@ -21,8 +21,9 @@ export default function SubTabs({ tabs, label }: { tabs: SubTab[]; label: string
   );
 
   return (
-    // Settings shares this row, so the page gets no extra line for it.
-    <div className="mb-4 flex shrink-0 items-center gap-4">
+    // The switch takes the title's place in the top row, next to the gear.
+    <div className="mb-4">
+    <TopBar>
       <nav
         ref={container}
         aria-label={label}
@@ -53,7 +54,7 @@ export default function SubTabs({ tabs, label }: { tabs: SubTab[]; label: string
           );
         })}
       </nav>
-      <SettingsLink />
+    </TopBar>
     </div>
   );
 }
