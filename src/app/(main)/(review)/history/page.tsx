@@ -223,10 +223,10 @@ export default function HistoryPage() {
     <div className="flex flex-1 flex-col">
       <header
         ref={headerRef}
-        className="sticky top-0 z-30 -mx-5 border-b border-zinc-100 bg-white px-5 pb-3 pt-2.5 dark:border-zinc-800 dark:bg-zinc-950"
+        className="sticky top-0 z-30 -mx-5 border-b border-zinc-100 bg-white px-5 pb-3 dark:border-zinc-800 dark:bg-zinc-950"
       >
         {/* No title: the Days switch in the top bar already names the page. */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex min-h-11 items-center justify-between gap-3">
           <p className="min-w-0 flex-1 truncate text-sm text-ink-muted">{prettyDate(selected)}</p>
           {/* Bedtime sits on the same row as the + button, NOT appended to the
               date line: that line has `truncate`, so a long "Wednesday, Sep 24"

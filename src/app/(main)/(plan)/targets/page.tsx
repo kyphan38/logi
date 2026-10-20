@@ -232,7 +232,7 @@ function TargetsView() {
   return (
     <div className="pb-8">
       {/* No title: the Week switch in the top bar already names the page. */}
-      <header className="mb-4 flex items-center justify-between gap-3 pt-2.5">
+      <header className="mb-4 flex min-h-11 items-center justify-between gap-3">
         <p className="min-w-0 text-sm text-ink-muted">{weekLabel(week)}</p>
         <button
           type="button"

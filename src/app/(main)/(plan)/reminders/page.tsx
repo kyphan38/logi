@@ -94,7 +94,7 @@ export default function RemindersPage() {
   return (
     <div className="flex flex-1 flex-col gap-4">
       {/* No title: the Dates switch in the top bar already names the page. */}
-      <p className="pt-2.5 text-sm tabular-nums text-ink-muted">{upcoming.length} upcoming</p>
+      <p className="flex min-h-11 items-center text-sm tabular-nums text-ink-muted">{upcoming.length} upcoming</p>
 
       <button
         type="button"
