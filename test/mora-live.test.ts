@@ -17,7 +17,7 @@ test('start: a running mora record with a stable id', () => {
 
 test('bad requests are refused', () => {
   assert.throws(() => readLiveRequest({ action: 'start', runId: 'has space', startAt: NOW }, NOW));
-  assert.throws(() => readLiveRequest({ action: 'start', runId: 'x', kind: 'leisure', startAt: NOW }, NOW));
+  assert.throws(() => readLiveRequest({ action: 'start', runId: 'x', kind: 'sleep', startAt: NOW }, NOW));
   assert.throws(() => readLiveRequest({ action: 'start', runId: 'x', startAt: NOW + 3_600_000 }, NOW));
   assert.throws(() => readLiveRequest({ action: 'pause', runId: 'x' }, NOW));
   assert.throws(() => readLiveRequest({ action: 'stop', runId: 'x' }, NOW));
@@ -37,4 +37,9 @@ test('a run under a minute is removed; repeats and finished records are ignored'
   assert.equal(planStop({ status: 'active', startAt: NOW - MIN_RUN_MS + 1 }, NOW, NOW).kind, 'delete');
   assert.equal(planStop(undefined, NOW, NOW).kind, 'ignore');
   assert.equal(planStop({ status: 'done', startAt: NOW - 3_600_000 }, NOW, NOW).kind, 'ignore');
+});
+
+test('a routine item started in mora keeps its category', () => {
+  const r = readLiveRequest({ action: 'start', runId: 'run-2', kind: 'fitness', startAt: NOW - 5_000 }, NOW);
+  assert.equal(r.action === 'start' && r.kind, 'fitness');
 });

@@ -8,28 +8,12 @@ import 'server-only';
 // Same token as /api/ingest/mora. Server to server, so no CORS.
 // ============================================================
 
-import { timingSafeEqual } from 'node:crypto';
-
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
+import { ownerUid, tokenOk } from '@/lib/mora-auth';
 import { docId, planStop, readLiveRequest, startDoc } from '@/lib/mora-live';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-function tokenOk(header: string | null, expected: string): boolean {
-  const got = Buffer.from((header ?? '').replace(/^Bearer\s+/i, ''));
-  const want = Buffer.from(expected);
-  return got.length === want.length && timingSafeEqual(got, want);
-}
-
-let cachedUid: string | null = null;
-async function ownerUid(): Promise<string> {
-  if (cachedUid) return cachedUid;
-  const email = process.env.ALLOWED_USER_EMAIL;
-  if (!email) throw new Error('ALLOWED_USER_EMAIL is not set');
-  cachedUid = (await adminAuth.getUserByEmail(email)).uid;
-  return cachedUid;
-}
 
 export async function POST(req: Request) {
   const expected = process.env.MORA_INGEST_TOKEN;

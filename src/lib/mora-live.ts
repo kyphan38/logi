@@ -8,7 +8,7 @@
 // ============================================================
 
 import { ActivityError, deriveInZone, validateTimes } from '@/lib/activity-rules';
-import { TIMEZONE, type Category } from '@/types/logi';
+import { CATEGORIES, TIMEZONE, type Category } from '@/types/logi';
 
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 /** Runs shorter than this are removed instead of kept: a quick pause is not worth a record. */
@@ -28,7 +28,8 @@ export function readLiveRequest(body: unknown, now: number = Date.now()): LiveRe
   const runId = typeof b.runId === 'string' ? b.runId : '';
   if (!ID_RE.test(runId)) throw new Error('bad-id');
   if (b.action === 'start') {
-    const kind = b.kind === 'work' ? 'work' : b.kind === 'learn' || b.kind === undefined ? 'learn' : null;
+    // mora's own tasks are learn or work; routine items started in mora keep their category.
+    const kind = b.kind === undefined ? 'learn' : (CATEGORIES as readonly unknown[]).includes(b.kind) ? (b.kind as Category) : null;
     if (!kind) throw new Error('bad-category');
     if (typeof b.startAt !== 'number') throw new Error('bad-times');
     validateTimes(b.startAt, null, 'active', now);
