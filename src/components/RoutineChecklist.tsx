@@ -91,6 +91,11 @@ export default function RoutineChecklist({
 
   const total = groups.reduce((n, g) => n + g.items.length, 0);
   const doneAll = groups.reduce((n, g) => n + g.done, 0);
+  // Planned time of today's items. Items with no length add nothing.
+  const totalMin = groups.reduce(
+    (n, g) => n + g.items.reduce((m, it) => m + (it.minutes ?? 0), 0),
+    0
+  );
 
   return (
     <section aria-label="Today's routine" className="flex flex-col gap-4">
@@ -100,7 +105,12 @@ export default function RoutineChecklist({
         onClick={() => setOpen((o) => !o)}
         className="-my-2 flex min-h-11 items-center justify-between gap-3 px-1 text-left"
       >
-        <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Routine</span>
+        <span className="text-xs text-ink-soft">
+          <span className="font-semibold uppercase tracking-wide">Routine</span>
+          {totalMin > 0 ? (
+            <span className="tabular-nums text-ink-muted"> · {minutesLabel(totalMin)}</span>
+          ) : null}
+        </span>
         <span className="flex items-center gap-1.5 text-xs tabular-nums text-ink-muted">
           {doneAll}/{total}
           <svg
