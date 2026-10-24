@@ -17,6 +17,7 @@ import ScheduledCard from '@/components/ScheduledCard';
 import SheetShell from '@/components/SheetShell';
 import { type StartWhen } from '@/components/StartWhenSheet';
 import RoutineChecklist from '@/components/RoutineChecklist';
+import RoutineDueSheet from '@/components/RoutineDueSheet';
 import Toasts from '@/components/Toasts';
 import VoiceSheet from '@/components/VoiceSheet';
 import WeeklyReview from '@/components/WeeklyReview';
@@ -39,7 +40,13 @@ import { useFlip } from '@/hooks/useFlip';
 import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
 import { useRoutineChecks, useRoutines } from '@/hooks/useRoutine';
 import { useVoice } from '@/hooks/useVoice';
-import { ActivityError, deleteActivity, startActivity, stopActivity } from '@/lib/activities';
+import {
+  ActivityError,
+  deleteActivity,
+  startActivity,
+  stopActivity,
+  updateActivity,
+} from '@/lib/activities';
 import { actualHours, findStale, logicalDate, logicalWeekday, overlapHours } from '@/lib/balance';
 import { pickBalance } from '@/lib/banner';
 import { clearBedtime } from '@/lib/bedtime-store';
@@ -48,7 +55,13 @@ import { leavingItems, reducedMotion } from '@/lib/motion';
 import { clockTime, formatDuration, roundDown } from '@/lib/datetime';
 import { nowTiles } from '@/lib/day-progress';
 import { routineForDay } from '@/lib/routine';
-import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
+import {
+  CATEGORIES,
+  CATEGORY_LABEL,
+  type Activity,
+  type Category,
+  type RoutineItem,
+} from '@/types/logi';
 
 /** From 3 parallel sessions up, cards collapse so Now still fits one screen. */
 const COMPACT_FROM = 3;
@@ -188,6 +201,25 @@ export default function NowPage() {
     () => routineForDay(routineGroups, logicalWeekday(nowMinute), routine.isChecked),
     [routineGroups, nowMinute, routine.isChecked]
   );
+  const routineRunning = useMemo(
+    () => new Set(active.flatMap((a) => (a.routineItemId ? [a.routineItemId] : []))),
+    [active]
+  );
+
+  // A routine session past its planned length asks "Done?". The 60s tick
+  // would ask up to a minute late, so one timer fires at the next due time.
+  const nextDue = useMemo(() => {
+    const due = active.flatMap((a) => (a.dueAt != null ? [a.dueAt] : []));
+    return due.length > 0 ? Math.min(...due) : null;
+  }, [active]);
+  const [dueClock, setDueClock] = useState(0);
+  useEffect(() => {
+    if (nextDue === null) return;
+    const t = setTimeout(() => setDueClock(Date.now()), Math.max(0, nextDue - Date.now()) + 50);
+    return () => clearTimeout(t);
+  }, [nextDue]);
+  const clock = Math.max(nowMinute, dueClock);
+  const dueSession = active.find((a) => a.dueAt != null && a.dueAt <= clock) ?? null;
 
   // Bedtime is a mark in dayLogs, not an activity. The small header button only
   // shows tonight; the sheet is where last night can be seen and edited.
@@ -203,7 +235,7 @@ export default function NowPage() {
    * `when.startAt === null` is the everyday path: one tap, start now.
    * `scheduled` means the record waits until its time; `promoteScheduled()` starts it.
    */
-  async function handleStart(category: Category, when: StartWhen) {
+  async function handleStart(category: Category, when: StartWhen, item?: RoutineItem) {
     if (!uid || busy) return;
     setBusy(true);
     try {
@@ -212,6 +244,13 @@ export default function NowPage() {
         category,
         startAt: when.startAt ?? undefined,
         status: when.scheduled ? 'scheduled' : 'active',
+        ...(item
+          ? {
+              label: item.text,
+              routineItemId: item.id,
+              dueAt: item.minutes ? Date.now() + item.minutes * 60_000 : undefined,
+            }
+          : {}),
       });
       await capWait(started, (e) => push(`Sync failed. ${(e as Error).message}`));
       // Layer 3 of 6c: Start is one tap, so there must always be a 5-second way back.
@@ -219,7 +258,7 @@ export default function NowPage() {
       const done =
         when.scheduled && when.startAt !== null
           ? `${CATEGORY_LABEL[category]} scheduled for ${clockTime(when.startAt)}`
-          : `Started ${CATEGORY_LABEL[category]}`;
+          : `Started ${item ? item.text : CATEGORY_LABEL[category]}`;
       push(done, {
         label: 'Undo',
         run: () => {
@@ -234,6 +273,45 @@ export default function NowPage() {
           ? `${CATEGORY_LABEL[category]} is already running.`
           : `Could not start. ${(e as Error).message}`
       );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleStartRoutine(item: RoutineItem) {
+    if (item.category) void handleStart(item.category, { startAt: null, scheduled: false }, item);
+  }
+
+  /** "Done?" → yes: stop the session and tick its item. */
+  async function handleRoutineDone(a: Activity) {
+    if (!uid || busy) return;
+    setBusy(true);
+    try {
+      await capWait(stopActivity(uid, a.id, Date.now()), (e) =>
+        push(`Sync failed. ${(e as Error).message}`),
+      );
+      const itemId = a.routineItemId;
+      if (itemId && !routine.isChecked(itemId)) {
+        void routine.toggle(itemId).catch((e) => push(`Could not tick. ${(e as Error).message}`));
+      }
+      push(`${a.label ?? CATEGORY_LABEL[a.category]} done.`);
+    } catch (e) {
+      push(`Could not stop. ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** "Done?" → not yet: keep the same session running, ask again later. */
+  async function handleRoutineMore(a: Activity, minutes: number) {
+    if (!uid || busy) return;
+    setBusy(true);
+    try {
+      await capWait(updateActivity(uid, a.id, { dueAt: Date.now() + minutes * 60_000 }), (e) =>
+        push(`Sync failed. ${(e as Error).message}`),
+      );
+    } catch (e) {
+      push(`Could not save. ${(e as Error).message}`);
     } finally {
       setBusy(false);
     }
@@ -511,6 +589,9 @@ export default function NowPage() {
           onToggle={(id) =>
             void routine.toggle(id).catch((e) => push(`Could not save. ${(e as Error).message}`))
           }
+          runningIds={routineRunning}
+          busy={busy}
+          onStart={handleStartRoutine}
         />
       </div>
 
@@ -549,6 +630,16 @@ export default function NowPage() {
             </button>
           </div>
         </SheetShell>
+      ) : null}
+
+      {dueSession && !zeroStop && stale.length === 0 ? (
+        <RoutineDueSheet
+          key={`${dueSession.id}-${dueSession.dueAt}`}
+          activity={dueSession}
+          busy={busy}
+          onDone={() => void handleRoutineDone(dueSession)}
+          onMore={(m) => void handleRoutineMore(dueSession, m)}
+        />
       ) : null}
 
       {stale.length > 0 ? (

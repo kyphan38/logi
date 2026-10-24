@@ -48,6 +48,11 @@ export interface Activity {
 
   createdAt: number;
   updatedAt: number;
+
+  /** Set when started from a routine item on Now. */
+  routineItemId?: string | null;
+  /** When to ask "Done?". Pushed later on "Not yet". */
+  dueAt?: number | null;
 }
 
 // ------------------------------------------------------------
@@ -251,6 +256,10 @@ export interface RoutineItem {
   id: string;
   text: string;
   days: number[];
+  /** Planned length. Null = no timer. */
+  minutes?: number | null;
+  /** Needed to Start a session from Now. Null = tick only. */
+  category?: Category | null;
 }
 
 /**

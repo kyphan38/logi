@@ -76,6 +76,8 @@ function toActivity(id: string, d: DocumentData): Activity {
     rawText: d.rawText ?? null,
     createdAt: d.createdAt ?? d.startAt,
     updatedAt: d.updatedAt ?? d.startAt,
+    routineItemId: typeof d.routineItemId === 'string' ? d.routineItemId : null,
+    dueAt: typeof d.dueAt === 'number' ? d.dueAt : null,
   };
 }
 
@@ -139,6 +141,9 @@ export interface StartInput extends Provenance {
   startAt?: number;
   /** 'scheduled' = booked ahead (delayed start). Default is 'active'. */
   status?: Extract<ActivityStatus, 'active' | 'scheduled'>;
+  /** Started from a routine item: which one, and when to ask "Done?". */
+  routineItemId?: string;
+  dueAt?: number;
 }
 
 /**
@@ -171,6 +176,9 @@ export async function startActivity(uid: string, input: StartInput): Promise<str
     source: input.source ?? 'manual',
     confidence: input.confidence ?? null,
     rawText: input.rawText ?? null,
+    ...(input.routineItemId
+      ? { routineItemId: input.routineItemId, dueAt: input.dueAt ?? null }
+      : {}),
     createdAt: now,
     updatedAt: now,
   });
@@ -213,6 +221,7 @@ export async function updateActivity(
   if (patch.source !== undefined) next.source = patch.source;
   if (patch.confidence !== undefined) next.confidence = patch.confidence ?? null;
   if (patch.rawText !== undefined) next.rawText = patch.rawText ?? null;
+  if (patch.dueAt !== undefined) next.dueAt = patch.dueAt ?? null;
 
   const touchesTime = patch.startAt !== undefined || patch.endAt !== undefined;
   if (touchesTime) {

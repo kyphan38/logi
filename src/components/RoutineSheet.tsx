@@ -2,10 +2,21 @@
 
 import { useState } from 'react';
 
-import { DOW_LETTER, DOW_SHORT, GRID_DOWS } from '@/lib/routine';
 import {
+  DOW_LETTER,
+  DOW_SHORT,
+  GRID_DOWS,
+  MINUTE_PRESETS,
+  ROUTINE_MINUTES_MAX,
+  cleanMinutes,
+  minutesLabel,
+} from '@/lib/routine';
+import {
+  CATEGORIES,
+  CATEGORY_LABEL,
   ROUTINE_ITEM_MAX,
   ROUTINE_TITLE_MAX,
+  type Category,
   type RoutineGroup,
   type RoutineItem,
 } from '@/types/logi';
@@ -21,6 +32,20 @@ const INPUT =
 const LABEL = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-muted';
 const BTN = 'min-h-11 flex-1 rounded-lg border border-line-strong text-sm font-medium text-ink-soft';
 const BTN_MAIN = 'min-h-11 flex-1 rounded-lg bg-ink text-sm font-medium text-[var(--surface-0)] disabled:opacity-40';
+
+function chip(on: boolean): string {
+  return [
+    'min-h-11 rounded-md border px-1 text-sm font-medium transition',
+    on ? 'border-ink bg-ink text-[var(--surface-0)]' : 'border-line-strong text-ink-soft',
+  ].join(' ');
+}
+
+export interface ItemDraft {
+  text: string;
+  days: number[];
+  minutes: number | null;
+  category: Category | null;
+}
 
 function Shell({
   title,
@@ -163,13 +188,21 @@ export function ItemSheet({
   defaultDays: number[];
   busy: boolean;
   onCancel: () => void;
-  onSave: (text: string, days: number[]) => void;
+  onSave: (draft: ItemDraft) => void;
   onRemove: () => void;
 }) {
   const [text, setText] = useState(item?.text ?? '');
   const [days, setDays] = useState<number[]>(item?.days ?? defaultDays);
+  const [category, setCategory] = useState<Category | null>(item?.category ?? null);
+  const startMinutes = item?.minutes ?? null;
+  const [minutes, setMinutes] = useState<number | null>(startMinutes);
+  // A saved length that is not a preset opens in Custom.
+  const [custom, setCustom] = useState(
+    startMinutes !== null && !MINUTE_PRESETS.includes(startMinutes)
+  );
+  const [customText, setCustomText] = useState(custom ? String(startMinutes) : '');
   const clean = text.trim();
-  const ok = clean.length > 0 && days.length > 0;
+  const ok = clean.length > 0 && days.length > 0 && (!custom || minutes !== null);
 
   function flip(d: number) {
     setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
@@ -183,7 +216,7 @@ export function ItemSheet({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (ok && !busy) onSave(clean, days);
+          if (ok && !busy) onSave({ text: clean, days, minutes, category });
         }}
       >
         <label className={LABEL} htmlFor="routine-item-text">
@@ -226,6 +259,88 @@ export function ItemSheet({
                 ].join(' ')}
               >
                 {DOW_LETTER[d]}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className={LABEL}>Time</p>
+        <div className="mb-2 grid grid-cols-6 gap-1.5">
+          <button
+            type="button"
+            aria-pressed={minutes === null && !custom}
+            onClick={() => {
+              setCustom(false);
+              setMinutes(null);
+            }}
+            className={chip(minutes === null && !custom)}
+          >
+            None
+          </button>
+          {MINUTE_PRESETS.map((m) => {
+            const on = !custom && minutes === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  setCustom(false);
+                  setMinutes(m);
+                }}
+                className={chip(on)}
+              >
+                {minutesLabel(m)}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            aria-pressed={custom}
+            onClick={() => {
+              setCustom(true);
+              setMinutes(cleanMinutes(Number(customText)));
+            }}
+            className={chip(custom)}
+          >
+            Custom
+          </button>
+        </div>
+        {custom ? (
+          <div className="mb-2 flex items-center gap-2">
+            <input
+              aria-label="Minutes"
+              inputMode="numeric"
+              value={customText}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, '').slice(0, 3);
+                setCustomText(v);
+                setMinutes(cleanMinutes(Number(v)));
+              }}
+              placeholder="40"
+              autoFocus
+              className="w-24 rounded-md border border-line-strong bg-transparent px-3 py-2.5 text-base text-ink outline-none focus:border-ink"
+            />
+            <span className="text-sm text-ink-muted">
+              min{minutes !== null && minutes >= 60 ? ` · ${minutesLabel(minutes)}` : ''}
+              {customText && minutes === null ? ` · 1 to ${ROUTINE_MINUTES_MAX}` : ''}
+            </span>
+          </div>
+        ) : null}
+
+        <p className={`${LABEL} mt-4`}>Start as</p>
+        <div className="mb-5 grid grid-cols-5 gap-1.5">
+          {[null, ...CATEGORIES].map((c) => {
+            const on = category === c;
+            return (
+              <button
+                key={c ?? 'none'}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setCategory(c)}
+                className={chip(on)}
+              >
+                {c === null ? 'None' : CATEGORY_LABEL[c]}
               </button>
             );
           })}

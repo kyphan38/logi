@@ -10,9 +10,12 @@ import { describe, it } from 'node:test';
 import { logicalDate, logicalWeekday } from '@/lib/balance';
 import {
   cleanDays,
+  cleanItem,
+  cleanMinutes,
   cleanText,
   daysLabel,
   itemsForDay,
+  minutesLabel,
   moveItem,
   removeItem,
   routineForDay,
@@ -117,5 +120,36 @@ describe('labels', () => {
   it('cleanText trims and caps length', () => {
     assert.equal(cleanText('  a   b  '), 'a b');
     assert.equal(cleanText('x'.repeat(200)).length, 80);
+  });
+});
+
+describe('item length and category', () => {
+  it('labels the length chips', () => {
+    assert.deepEqual([25, 50, 90, 120, 70, 150].map(minutesLabel), ['25m', '50m', '1.5h', '2h', '1h 10m', '2.5h']);
+  });
+
+  it('keeps whole minutes in range, else no timer', () => {
+    assert.equal(cleanMinutes(40.4), 40);
+    assert.equal(cleanMinutes(0), null);
+    assert.equal(cleanMinutes(601), null);
+    assert.equal(cleanMinutes('25'), null);
+    assert.equal(cleanMinutes(undefined), null);
+  });
+
+  it('leaves out empty optional fields so old items stay the same', () => {
+    assert.deepEqual(cleanItem({ id: 'a', text: 'a', days: [1], minutes: null, category: null }), {
+      id: 'a',
+      text: 'a',
+      days: [1],
+    });
+    assert.deepEqual(
+      cleanItem({ id: 'a', text: 'a', days: [1], minutes: 50, category: 'learn' }),
+      { id: 'a', text: 'a', days: [1], minutes: 50, category: 'learn' }
+    );
+  });
+
+  it('drops an unknown category', () => {
+    const bad = { id: 'a', text: 'a', days: [1], category: 'sleep' } as unknown as RoutineItem;
+    assert.equal(cleanItem(bad).category, undefined);
   });
 });

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { GroupSheet, ItemSheet } from '@/components/RoutineSheet';
+import { GroupSheet, ItemSheet, type ItemDraft } from '@/components/RoutineSheet';
 import Toasts from '@/components/Toasts';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToasts } from '@/hooks/useActivities';
@@ -14,6 +14,7 @@ import {
   GRID_DOWS,
   daysLabel,
   itemsForDay,
+  minutesLabel,
   moveItem,
   removeItem,
   upsertItem,
@@ -26,7 +27,7 @@ import {
   saveItems,
   swapGroups,
 } from '@/lib/routine-store';
-import type { RoutineGroup, RoutineItem } from '@/types/logi';
+import { CATEGORY_LABEL, type RoutineGroup, type RoutineItem } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
 // logi - Editing the Routine in the Targets tab (Stage 10)
@@ -110,10 +111,10 @@ export default function RoutineSection() {
     });
   }
 
-  async function onSaveItem(text: string, days: number[]) {
+  async function onSaveItem(draft: ItemDraft) {
     if (!uid || !itemSheet) return;
     const { group, item } = itemSheet;
-    const next = upsertItem(group.items, { id: item?.id ?? newId(), text, days });
+    const next = upsertItem(group.items, { id: item?.id ?? newId(), ...draft });
     const ok = await run(() => saveItems(uid, group.id, next), 'Could not save item.');
     if (ok) setItemSheet(null);
   }
@@ -242,8 +243,16 @@ export default function RoutineSection() {
                         className="flex min-h-11 min-w-0 flex-1 flex-col justify-center px-3 text-left"
                       >
                         <span className="truncate text-sm text-ink">{item.text}</span>
-                        {dow === null ? (
-                          <span className="text-xs text-ink-muted">{daysLabel(item.days)}</span>
+                        {dow === null || item.minutes || item.category ? (
+                          <span className="truncate text-xs text-ink-muted">
+                            {[
+                              dow === null ? daysLabel(item.days) : null,
+                              item.minutes ? minutesLabel(item.minutes) : null,
+                              item.category ? CATEGORY_LABEL[item.category] : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </span>
                         ) : null}
                       </button>
                       <button
@@ -308,7 +317,7 @@ export default function RoutineSection() {
           defaultDays={[dow ?? todayDow]}
           busy={busy}
           onCancel={() => setItemSheet(null)}
-          onSave={(t, d) => void onSaveItem(t, d)}
+          onSave={(d) => void onSaveItem(d)}
           onRemove={() => void onRemoveItem()}
         />
       ) : null}

@@ -2,15 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { RoutineDayGroup } from '@/lib/routine';
+import { minutesLabel, type RoutineDayGroup } from '@/lib/routine';
 import { MOVE_LIMIT_PX, isRealTap, type Press } from '@/lib/tap-guard';
+import type { RoutineItem } from '@/types/logi';
 
 // ---------------------------------------------------------------------------
 // logi - Today's routine on the Now screen (Stage 10)
 //
-// Below the 4-button grid. One block per group: title + a "2/3" count, then
-// one row per item with a checkbox. Tap again to untick. No Undo: a mistap
-// is undone by tapping again.
+// Below the 4-button grid. Collapsed to one "Routine 3/8" row by default so
+// Now stays short; tapping it opens the whole day. One block per group:
+// title + a "2/3" count, then one row per item with a checkbox. Tap again to
+// untick. No Undo: a mistap is undone by tapping again. An item with a
+// category gets a Start button that runs it as a session.
 //
 // Taps share the scroll mistap guard with the button grid - this list is
 // long, so a swipe ending on a row is common.
@@ -20,11 +23,19 @@ export default function RoutineChecklist({
   groups,
   isChecked,
   onToggle,
+  runningIds,
+  busy,
+  onStart,
 }: {
   groups: RoutineDayGroup[];
   isChecked: (itemId: string) => boolean;
   onToggle: (itemId: string) => void;
+  /** Items with a session running now. */
+  runningIds: ReadonlySet<string>;
+  busy: boolean;
+  onStart: (item: RoutineItem) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const down = useRef<{ x: number; y: number; at: number; id: string } | null>(null);
   const lastScrollAt = useRef<number | null>(null);
   // Items ticked while the page is open. Only these animate; a list that
@@ -78,9 +89,38 @@ export default function RoutineChecklist({
 
   if (groups.length === 0) return null;
 
+  const total = groups.reduce((n, g) => n + g.items.length, 0);
+  const doneAll = groups.reduce((n, g) => n + g.done, 0);
+
   return (
     <section aria-label="Today's routine" className="flex flex-col gap-4">
-      {groups.map(({ group, items, done }) => {
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="-my-2 flex min-h-11 items-center justify-between gap-3 px-1 text-left"
+      >
+        <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Routine</span>
+        <span className="flex items-center gap-1.5 text-xs tabular-nums text-ink-muted">
+          {doneAll}/{total}
+          <svg
+            viewBox="0 0 16 16"
+            className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M4 6l4 4 4-4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </button>
+
+      {open && groups.map(({ group, items, done }) => {
         const complete = done === items.length;
         const acted = items.some((it) => touched.has(it.id));
         return (
@@ -107,7 +147,10 @@ export default function RoutineChecklist({
                 const on = isChecked(item.id);
                 const moved = touched.has(item.id);
                 return (
-                  <li key={item.id} className={i > 0 ? 'border-t border-line' : undefined}>
+                  <li
+                    key={item.id}
+                    className={['flex items-center', i > 0 ? 'border-t border-line' : ''].join(' ')}
+                  >
                     <button
                       type="button"
                       role="checkbox"
@@ -124,7 +167,7 @@ export default function RoutineChecklist({
                         }
                       }}
                       onContextMenu={(e) => e.preventDefault()}
-                      className="flex min-h-11 w-full select-none items-center gap-3 px-1 text-left touch-manipulation transition active:bg-surface-2"
+                      className="flex min-h-11 min-w-0 flex-1 select-none items-center gap-3 px-1 text-left touch-manipulation transition active:bg-surface-2"
                     >
                       <span
                         aria-hidden="true"
@@ -163,7 +206,29 @@ export default function RoutineChecklist({
                           />
                         </span>
                       </span>
+                      {item.minutes ? (
+                        <span className="shrink-0 text-xs tabular-nums text-ink-muted">
+                          {minutesLabel(item.minutes)}
+                        </span>
+                      ) : null}
                     </button>
+                    {item.category && !on ? (
+                      runningIds.has(item.id) ? (
+                        <span className="flex min-h-11 shrink-0 items-center px-3 text-xs font-medium text-ink-soft">
+                          Running
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onStart(item)}
+                          disabled={busy}
+                          aria-label={`Start ${item.text}`}
+                          className="ml-1 min-h-9 shrink-0 rounded-md border border-line-strong px-3 text-xs font-medium text-ink-soft transition active:scale-[0.97] disabled:opacity-40"
+                        >
+                          Start
+                        </button>
+                      )
+                    ) : null}
                   </li>
                 );
               })}

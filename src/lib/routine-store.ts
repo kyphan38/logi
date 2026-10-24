@@ -21,7 +21,7 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase-client';
-import { cleanDays, cleanText } from '@/lib/routine';
+import { cleanItem } from '@/lib/routine';
 import {
   ROUTINE_TITLE_MAX,
   type RoutineChecks,
@@ -47,7 +47,13 @@ const checkRef = (uid: string, date: string) => doc(db, 'users', uid, 'routineCh
 /** Broken items (missing fields after a bad write) are dropped without crashing the group. */
 function toItem(d: DocumentData): RoutineItem | null {
   if (typeof d?.id !== 'string' || typeof d?.text !== 'string') return null;
-  return { id: d.id, text: d.text, days: Array.isArray(d.days) ? cleanDays(d.days) : [] };
+  return cleanItem({
+    id: d.id,
+    text: d.text,
+    days: Array.isArray(d.days) ? d.days : [],
+    minutes: d.minutes,
+    category: d.category,
+  });
 }
 
 function toGroup(id: string, d: DocumentData): RoutineGroup {
@@ -128,9 +134,7 @@ export async function renameGroup(uid: string, id: string, title: string): Promi
 
 /** Overwrites the whole item array. One write, no half state. */
 export async function saveItems(uid: string, id: string, items: RoutineItem[]): Promise<void> {
-  const clean = items
-    .map((i) => ({ id: i.id, text: cleanText(i.text), days: cleanDays(i.days) }))
-    .filter((i) => i.text.length > 0);
+  const clean = items.map(cleanItem).filter((i) => i.text.length > 0);
   await updateDoc(groupRef(uid, id), { items: clean, updatedAt: Date.now() });
 }
 

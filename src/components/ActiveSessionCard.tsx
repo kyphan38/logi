@@ -121,6 +121,7 @@ export default function ActiveSessionCard({
 
         <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
           Started {clockTime(activity.startAt)}
+          {activity.dueAt ? ` · until ${clockTime(activity.dueAt)}` : ''}
         </p>
 
         <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">
