@@ -18,8 +18,7 @@ const EMPTY: EventItem[] = [];
  * and a list saying "Tomorrow" when that day has already come is a visible error.
  */
 export function useEvents() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const now = useTick(60_000, true);
 
   const [events, setEvents] = useState<EventItem[]>(EMPTY);

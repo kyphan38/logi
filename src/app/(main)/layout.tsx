@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AppShell from '@/components/AppShell';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, uid, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -15,8 +15,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   // Draw the app shell even before auth finishes. AppShell and BottomNav need no
   // user: BottomNav only reads the pathname, OfflineBanner only navigator.onLine.
-  // The user sees the app open, instead of three gray boxes on a white screen.
-  return <AppShell>{loading || !user ? <Skeleton /> : children}</AppShell>;
+  // With last session's uid the page renders at once from the Firestore cache;
+  // the skeleton only shows on a first sign-in on this device.
+  return <AppShell>{uid ? children : <Skeleton />}</AppShell>;
 }
 
 function Skeleton() {

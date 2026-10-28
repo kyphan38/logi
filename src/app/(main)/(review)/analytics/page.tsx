@@ -50,8 +50,7 @@ export default function AnalyticsPage() {
   const buckets = useMemo(() => trendBuckets(span, now), [span, now]);
   const trend = useTrend(span, now);
 
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const { nudge, markDone } = useExportNudge(now);
 
   const view = useMemo(() => {

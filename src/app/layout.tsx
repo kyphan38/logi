@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import { BG_DARK, BG_LIGHT, THEME_SCRIPT } from "@/lib/theme";
 
 export const metadata: Metadata = {
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           fake hydration mismatch. Only silences this one tag - children are
           still checked as usual. */}
       <body className="flex min-h-dvh flex-col overscroll-none" suppressHydrationWarning>
+        <ServiceWorkerRegistrar />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

@@ -61,8 +61,7 @@ const ICON_BTN =
   'flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-ink-muted transition active:scale-95 disabled:opacity-30';
 
 export default function RoutineSection() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const { groups, loading } = useRoutines();
   const { toasts, push, dismiss } = useToasts();
 

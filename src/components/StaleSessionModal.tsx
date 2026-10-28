@@ -34,8 +34,7 @@ export default function StaleSessionModal({
   remaining: number;
   onResolved: () => void;
 }) {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

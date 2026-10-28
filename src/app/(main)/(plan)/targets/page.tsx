@@ -92,8 +92,7 @@ export default function TargetsPage() {
 }
 
 function TargetsView() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const week = useCurrentWeek();
 
   // Opening this tab first on Monday morning must still roll the week over.

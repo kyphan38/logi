@@ -15,8 +15,7 @@ import type { DayLog } from '@/types/logi';
 // ---------------------------------------------------------------------------
 
 export function useDayLog(date: string | null) {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [log, setLog] = useState<DayLog>(() => EMPTY_LOG(date ?? ''));
   const [loading, setLoading] = useState(true);

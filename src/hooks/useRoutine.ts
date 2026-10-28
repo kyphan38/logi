@@ -10,8 +10,7 @@ const EMPTY_GROUPS: RoutineGroup[] = [];
 
 /** Active routine groups (archived filtered out), in order. */
 export function useRoutines() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [groups, setGroups] = useState<RoutineGroup[]>(EMPTY_GROUPS);
   const [loading, setLoading] = useState(true);
@@ -54,8 +53,7 @@ export function useRoutines() {
  * the snapshot catches up, otherwise the tick would flicker off and on again.
  */
 export function useRoutineChecks(date: string) {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [checks, setChecks] = useState<RoutineChecks>(() => EMPTY_CHECKS(date));
   const [optimistic, setOptimistic] = useState<Record<string, boolean>>({});

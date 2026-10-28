@@ -15,8 +15,7 @@ import type { DayLog } from '@/types/logi';
 const EMPTY: DayLog[] = [];
 
 export function useWeekBedtime(from: string, to: string): { logs: DayLog[]; loading: boolean } {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const [logs, setLogs] = useState<DayLog[]>(EMPTY);
   const [loading, setLoading] = useState(false);
 

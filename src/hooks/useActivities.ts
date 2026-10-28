@@ -52,8 +52,7 @@ export function capWait(
 // ------------------------------------------------------------
 
 export function useActiveActivities() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [activities, setActivities] = useState<Activity[]>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -113,8 +112,7 @@ const PROMOTE_EVERY_MS = 30_000;
  * shows a timer already counting - truly "started at 22:05".
  */
 export function useScheduledActivities() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [activities, setActivities] = useState<Activity[]>(EMPTY);
   const [meta, setMeta] = useState<SnapMeta>(EMPTY_META);
@@ -177,8 +175,7 @@ export function useScheduledActivities() {
 // ------------------------------------------------------------
 
 export function useDayActivities(logicalDate: string | null) {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [activities, setActivities] = useState<Activity[]>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -241,8 +238,7 @@ export function useDayActivities(logicalDate: string | null) {
 const NO_DATES: ReadonlySet<string> = new Set();
 
 export function useRecentDates(sinceDate: string): ReadonlySet<string> {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const [dates, setDates] = useState<ReadonlySet<string>>(NO_DATES);
 
   // User changed → clear during render, do not wait for an effect.
@@ -308,8 +304,7 @@ export function useElapsed(startAt: number): number {
 // ------------------------------------------------------------
 
 export function useWeekActivities(logicalWeek: string | null) {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [activities, setActivities] = useState<Activity[]>(EMPTY);
   const [loading, setLoading] = useState(true);

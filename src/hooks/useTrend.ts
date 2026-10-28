@@ -46,8 +46,7 @@ interface Cached {
 // splitting by `extra` would read activities three times under three cache
 // keys. 26 weeks is still one query on `logicalDate`, not 26 queries.
 export function useTrend(span: TrendSpan, now: number): TrendData {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const buckets = trendBuckets(span, now);
   const win = trendWindow(buckets);

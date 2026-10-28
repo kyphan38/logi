@@ -53,8 +53,7 @@ function newRecordDefaults(selected: string, today: string, now: number): SheetT
 }
 
 export default function HistoryPage() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const nowMinute = useTick(60_000, true);
   const today = logicalDate(nowMinute);
 

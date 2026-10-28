@@ -34,8 +34,7 @@ import { MAX_EVENTS, MILESTONES, type EventItem } from '@/types/logi';
 type Sheet = null | 'new' | EventItem;
 
 export default function RemindersPage() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const { events, upcoming, past, now, loading, error } = useEvents();
   const { toasts, push, dismiss } = useToasts();
 

@@ -48,8 +48,7 @@ export interface InsightInput {
 
 export function useInsight(input: InsightInput): UseInsight {
   const { activities, range, weekTargets, now, auto = false } = input;
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [state, setState] = useState<InsightState>('idle');
   const [result, setResult] = useState<InsightResult | null>(null);

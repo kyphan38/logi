@@ -32,8 +32,7 @@ interface Loaded {
 }
 
 export default function RestorePage() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [word, setWord] = useState('');

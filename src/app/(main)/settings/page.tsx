@@ -28,8 +28,7 @@ import { themeStore, type Theme } from '@/lib/theme';
 const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
 
 export default function SettingsPage() {
-  const { user, signOut } = useAuth();
-  const uid = user?.uid ?? null;
+  const { user, uid, signOut } = useAuth();
 
   const [state, setState] = useState<PushState | null>(null);
   const [enabled, setEnabled] = useState(false);

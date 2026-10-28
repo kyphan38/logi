@@ -82,8 +82,7 @@ function prettyLogicalDate(d: string): string {
 }
 
 export default function NowPage() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   // Weekly Review: banner from 19:00 Sunday, valid until the end of Tuesday.
   const reviewWeek = useReviewDue();

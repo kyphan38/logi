@@ -32,8 +32,7 @@ interface Props {
 }
 
 export default function WeeklyReview({ week, onClose }: Props) {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const { summary, activities, weekTargets, now, debt, canSetNext, loading } = useReviewData(week);
 
   // Screen 2 runs as soon as it opens - the user taps nothing extra.

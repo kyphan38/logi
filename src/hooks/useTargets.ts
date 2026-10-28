@@ -51,8 +51,7 @@ export function useCurrentWeek(): string {
  * the next app open retries.
  */
 export function useRollover(): RolloverResult | null {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
   const week = useCurrentWeek();
 
   const [result, setResult] = useState<RolloverResult | null>(null);
@@ -91,8 +90,7 @@ export function useRollover(): RolloverResult | null {
 // ------------------------------------------------------------
 
 export function useWeekTarget(week: string | null) {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [target, setTarget] = useState<WeekTarget | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,8 +130,7 @@ export function useWeekTarget(week: string | null) {
 // ------------------------------------------------------------
 
 export function useDebt() {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [balance, setBalance] = useState<DebtBalance>(EMPTY_DEBT);
   const [loading, setLoading] = useState(true);
@@ -175,8 +172,7 @@ export function useDebt() {
 
 /** The last 6 weeks, to ask "4/6 weeks of crunch - is this still an exception?" */
 export function useCrunchStreak(deps: unknown = null) {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [history, setHistory] = useState<WeekTarget[]>([]);
 

@@ -18,8 +18,7 @@ import type { Weekly } from '@/lib/rollover';
 import type { Activity } from '@/types/logi';
 
 export function useReviewFlags(): { flags: ReviewFlags; loading: boolean } {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [flags, setFlags] = useState<ReviewFlags>({});
   const [loading, setLoading] = useState(true);

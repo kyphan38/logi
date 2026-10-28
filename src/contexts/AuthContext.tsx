@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,6 +31,11 @@ const GENERIC = 'Sign-in failed. Please try again.';
 
 type AuthState = {
   user: User | null;
+  /**
+   * uid to read data with. While auth is still loading it is last session's
+   * uid, so pages render from the Firestore cache without waiting.
+   */
+  uid: string | null;
   /** true while sign-in state is unknown (first check). */
   loading: boolean;
   /** true right after the user taps sign in. */
@@ -42,6 +48,29 @@ type AuthState = {
 };
 
 const AuthContext = createContext<AuthState | null>(null);
+
+// Last signed-in uid, cleared on sign out. Read once per render: only the
+// first moments before Firebase Auth answers depend on it.
+const UID_HINT_KEY = 'logi.uid';
+
+function readUidHint(): string {
+  try {
+    return localStorage.getItem(UID_HINT_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function writeUidHint(uid: string | null) {
+  try {
+    if (uid) localStorage.setItem(UID_HINT_KEY, uid);
+    else localStorage.removeItem(UID_HINT_KEY);
+  } catch {
+    // Private mode: no hint, pages wait for auth as before.
+  }
+}
+
+const noSubscribe = () => () => {};
 
 function newProvider() {
   const provider = new GoogleAuthProvider();
@@ -59,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionReady, setSessionReady] = useState(false);
   // Avoid calling POST /api/auth/session several times for the same user.
   const syncedUid = useRef<string | null>(null);
+  const uidHint = useSyncExternalStore(noSubscribe, readUidHint, () => '');
 
   /** Exchange an ID token for a session cookie. Returns true if the server accepts. */
   const exchangeToken = useCallback(
@@ -118,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Source of truth for the client-side user.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (next) => {
+      writeUidHint(next?.uid ?? null);
       setUser(next);
       setLoading(false);
 
@@ -211,9 +242,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [router]);
 
+  const uid = user?.uid ?? (loading && uidHint ? uidHint : null);
+
   const value = useMemo<AuthState>(
-    () => ({ user, loading, signingIn, sessionReady, error, signIn, signOut }),
-    [user, loading, signingIn, sessionReady, error, signIn, signOut],
+    () => ({ user, uid, loading, signingIn, sessionReady, error, signIn, signOut }),
+    [user, uid, loading, signingIn, sessionReady, error, signIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

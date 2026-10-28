@@ -63,8 +63,7 @@ const QUIET: ExportNudge = { show: false, text: '', daysAgo: null };
  * and only runs once signed in.
  */
 export function useExportNudge(now: number): { nudge: ExportNudge; markDone: () => void } {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [lastExport, setLastExport] = useState<number | null>(null);
   const [firstRecord, setFirstRecord] = useState<string | null>(null);

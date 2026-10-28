@@ -30,8 +30,7 @@ export interface RangeData {
 }
 
 export function useRangeData(range: Range): RangeData {
-  const { user } = useAuth();
-  const uid = user?.uid ?? null;
+  const { uid } = useAuth();
 
   const [activities, setActivities] = useState<Activity[]>(EMPTY);
   const [weekTargets, setWeekTargets] = useState<Map<string, Record<Category, number>>>(
