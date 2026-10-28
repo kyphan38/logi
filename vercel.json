@@ -3,5 +3,8 @@
     "src/app/api/**/*.ts": {
       "maxDuration": 30
     }
-  }
+  },
+  "regions": [
+    "sin1"
+  ]
 }

@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'next/navigation';
 import {
   GoogleAuthProvider,
+  browserPopupRedirectResolver,
   getRedirectResult,
   onAuthStateChanged,
   signInWithPopup,
@@ -131,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Result of signInWithRedirect (fallback when iOS blocks the popup).
   useEffect(() => {
     let cancelled = false;
-    getRedirectResult(auth)
+    getRedirectResult(auth, browserPopupRedirectResolver)
       .then(async (result) => {
         if (cancelled || !result?.user) return;
         const ok = await exchangeToken(result.user);
@@ -187,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // redirect (works thanks to the same-domain authDomain, see firebase-client.ts).
     if (isStandalone()) {
       try {
-        await signInWithRedirect(auth, newProvider());
+        await signInWithRedirect(auth, newProvider(), browserPopupRedirectResolver);
         return; // the page will navigate away, keep signingIn = true
       } catch {
         setError(GENERIC);
@@ -197,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const result = await signInWithPopup(auth, newProvider());
+      const result = await signInWithPopup(auth, newProvider(), browserPopupRedirectResolver);
       const ok = await exchangeToken(result.user);
       if (ok) router.push('/now');
     } catch (err: unknown) {
@@ -208,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
         // iOS Safari/Edge often block popups → switch to redirect.
         try {
-          await signInWithRedirect(auth, newProvider());
+          await signInWithRedirect(auth, newProvider(), browserPopupRedirectResolver);
           return; // the page will navigate away, keep signingIn = true
         } catch {
           setError(GENERIC);

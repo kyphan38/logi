@@ -4,7 +4,14 @@
 // ============================================================
 
 import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  type Auth,
+} from 'firebase/auth';
 import {
   getFirestore,
   initializeFirestore,
@@ -58,7 +65,25 @@ export const app: FirebaseApp = getApps().length
   ? getApp()
   : initializeApp(firebaseConfig as Required<typeof firebaseConfig>);
 
-export const auth: Auth = getAuth(app);
+/**
+ * Auth without a popup/redirect resolver: with one, Safari and iOS load the
+ * Google sign-in iframe on every open and wait for it before reporting the
+ * signed-in user. Sign-in calls in AuthContext pass the resolver themselves.
+ * Persistence is the same list getAuth uses, so existing sessions stay.
+ */
+function createAuth(): Auth {
+  if (typeof window === 'undefined') return getAuth(app);
+  try {
+    return initializeAuth(app, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+    });
+  } catch {
+    // Hot reload: auth already exists for this app.
+    return getAuth(app);
+  }
+}
+
+export const auth: Auth = createAuth();
 
 // Firestore may only be initialized once per app. Keep it on globalThis so
 // hot reload does not throw "Firestore has already been started".
