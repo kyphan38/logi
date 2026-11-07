@@ -115,8 +115,8 @@ Write in English. Be brief. No preamble, no closing summary.`;
 // 3. Calling the model
 // ------------------------------------------------------------
 
-// Same model as the voice parse path: known to work with the current key.
-const MODEL = 'gemini-4-argon';
+// Same model as the voice parse path.
+const MODEL = 'gemini-3.8-flash';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 /**

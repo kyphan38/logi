@@ -67,7 +67,12 @@ export const PARSE_SCHEMA = {
       description: 'Exactly what the user said, for display and debugging.',
     },
   },
-  required: ['intent', 'confidence', 'transcript'],
+  // Every key required (null allowed): gemini-3.8-flash skips optional keys
+  // and dropped endAt on "gym from 6 to 7:30".
+  required: [
+    'intent', 'category', 'label', 'startAt', 'endAt', 'confidence',
+    'clarifyQuestion', 'clarifyOptions', 'bedtimeAt', 'targetActivityId', 'transcript',
+  ],
 } as const;
 
 export interface ParseResult {
@@ -218,10 +223,9 @@ ${ctx.recentActivities.length
 
 export const AUTO_COMMIT_THRESHOLD = 0.85;
 
-// Google stopped granting gemini-2.5-flash to new keys (the API returns 404).
-// Every app in the workspace shares gemini-4-argon. The ~1.3s/sentence below
-// was measured on the old 3.5 lite.
-const MODEL = 'gemini-4-argon';
+// Flash with low thinking parsed the same as gemini-4-argon on test clips,
+// in about 3-4s instead of 5-50s.
+const MODEL = 'gemini-3.8-flash';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 /**
@@ -252,6 +256,7 @@ export async function parseAudio(
         responseMimeType: 'application/json',
         responseSchema: PARSE_SCHEMA,
         temperature: 0.1,
+        thinkingConfig: { thinkingLevel: 'low' },
       },
     }),
   });
@@ -279,6 +284,7 @@ export async function parseTextCorrection(
         responseMimeType: 'application/json',
         responseSchema: PARSE_SCHEMA,
         temperature: 0.1,
+        thinkingConfig: { thinkingLevel: 'low' },
       },
     }),
   });
