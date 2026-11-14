@@ -29,6 +29,7 @@ import {
   type EventInput,
 } from '@/lib/event-store';
 import { MAX_EVENTS, MILESTONES, type EventItem } from '@/types/logi';
+import { btn } from '@/lib/ui';
 
 /** null = closed, 'new' = adding, EventItem = editing that one. */
 type Sheet = null | 'new' | EventItem;
@@ -99,21 +100,21 @@ export default function RemindersPage() {
         type="button"
         onClick={() => setSheet('new')}
         disabled={full}
-        className="min-h-11 w-full rounded-lg bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 active:scale-[0.99] disabled:opacity-40"
+        className={`${btn('primary')} w-full`}
       >
         {full ? `${MAX_EVENTS} events max` : '+ Add event'}
       </button>
 
       {error && (
-        <p className="rounded-md border border-zinc-300 px-3 py-2 text-[13px] font-medium text-zinc-900 dark:border-zinc-700 dark:text-zinc-100">
+        <p className="rounded-md border border-line-strong px-3 py-2 text-[13px] font-medium text-ink">
           {error}
         </p>
       )}
 
       {loading ? (
         <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading">
-          <div className="h-16 breathe rounded-md bg-zinc-200 dark:bg-zinc-800" />
-          <div className="h-16 breathe rounded-md bg-zinc-100 dark:bg-zinc-900" />
+          <div className="h-16 breathe rounded-md bg-sunk" />
+          <div className="h-16 breathe rounded-md bg-surface-1" />
         </div>
       ) : upcoming.length === 0 ? (
         <Empty />

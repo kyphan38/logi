@@ -83,7 +83,7 @@ export default function MicButton({
       {error ? (
         <p
           role="alert"
-          className="pointer-events-auto max-w-xs rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="pointer-events-auto max-w-xs rounded-md bg-ink px-3 py-2 text-xs font-medium text-surface-0"
         >
           {error}
         </p>
@@ -94,8 +94,8 @@ export default function MicButton({
           className={[
             'rounded-full px-3 py-1 text-xs font-medium tabular-nums',
             armed
-              ? 'bg-white text-zinc-900 ring-1 ring-zinc-900 dark:bg-zinc-900 dark:text-white dark:ring-zinc-100'
-              : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900',
+              ? 'bg-surface-2 text-ink ring-1 ring-ink'
+              : 'bg-ink text-surface-0',
           ].join(' ')}
         >
           {label}
@@ -107,7 +107,7 @@ export default function MicButton({
         {recording ? (
           <span
             aria-hidden="true"
-            className="absolute inset-0 rounded-full bg-zinc-500/25 transition-transform duration-75"
+            className="absolute inset-0 rounded-full bg-ink-muted/25 transition-transform duration-75"
             style={{ transform: `scale(${1 + level * 0.9})` }}
           />
         ) : null}
@@ -131,8 +131,8 @@ export default function MicButton({
             'disabled:opacity-50',
             recording
               // 64 → 76px.
-              ? 'scale-[1.1875] bg-white text-zinc-900 ring-4 ring-zinc-900/40 dark:bg-zinc-900 dark:text-white dark:ring-zinc-100/40'
-              : 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900',
+              ? 'scale-[1.1875] bg-surface-2 text-ink ring-4 ring-ink/40'
+              : 'bg-ink text-surface-0',
             armed ? 'opacity-60' : '',
           ].join(' ')}
         >
@@ -140,14 +140,14 @@ export default function MicButton({
           {recording ? (
             <span
               aria-hidden="true"
-              className="absolute inset-0 animate-pulse rounded-full ring-2 ring-zinc-400"
+              className="absolute inset-0 animate-pulse rounded-full ring-2 ring-ink-muted"
             />
           ) : null}
         </button>
       </div>
 
       {state === 'processing' || thinking ? (
-        <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs text-white dark:bg-zinc-100 dark:text-zinc-900">
+        <span className="rounded-full bg-ink px-3 py-1 text-xs text-surface-0">
           Thinking…
         </span>
       ) : null}

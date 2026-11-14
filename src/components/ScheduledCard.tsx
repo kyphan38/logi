@@ -39,7 +39,7 @@ export default function ScheduledCard({
             style={{ borderColor: color }}
             aria-hidden="true"
           />
-          <span className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <span className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
             {CATEGORY_LABEL[activity.category]}
           </span>
           {pending ? (
@@ -53,12 +53,12 @@ export default function ScheduledCard({
         </div>
 
         {activity.label ? (
-          <p className="mt-0.5 truncate text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-0.5 truncate text-sm text-ink-muted">
             {activity.label}
           </p>
         ) : null}
 
-        <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
+        <p className="mt-0.5 text-xs text-ink-muted">
           Starts at {clockTime(activity.startAt)}
         </p>
 
@@ -71,7 +71,7 @@ export default function ScheduledCard({
         type="button"
         onClick={onCancel}
         disabled={busy}
-        className="min-h-11 min-w-11 shrink-0 rounded-lg border border-zinc-300 px-4 text-sm font-medium transition active:scale-[0.97] disabled:opacity-50 dark:border-zinc-700"
+        className="min-h-11 min-w-11 shrink-0 rounded-lg border border-line-strong px-4 text-sm font-medium transition active:scale-[0.97] disabled:opacity-50"
       >
         Cancel
       </button>

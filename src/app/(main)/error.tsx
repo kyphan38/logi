@@ -11,6 +11,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect } from 'react';
+import { btn } from '@/lib/ui';
 
 export default function MainError({
   error,
@@ -35,7 +36,7 @@ export default function MainError({
         <button
           type="button"
           onClick={() => retry()}
-          className="rounded-sm bg-ink px-4 py-2 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99]"
+          className={btn('primary')}
         >
           Try again
         </button>

@@ -8,6 +8,7 @@
 // ============================================================
 
 import type { Reminder } from '@/lib/reminders';
+import { btn } from '@/lib/ui';
 
 export default function ReminderBanner({
   reminder,
@@ -25,12 +26,12 @@ export default function ReminderBanner({
   return (
     <div className="border-l-2 border-line-strong py-1 pl-3">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm text-zinc-900 dark:text-zinc-100">{reminder.text}</p>
+        <p className="text-sm text-ink">{reminder.text}</p>
         <button
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss reminder"
-          className="-m-1.5 shrink-0 p-1.5 text-zinc-400 active:scale-90"
+          className="-m-1.5 shrink-0 p-1.5 text-ink-muted active:scale-90"
         >
           ✕
         </button>
@@ -41,7 +42,7 @@ export default function ReminderBanner({
           type="button"
           onClick={onStartLearn}
           disabled={busy}
-          className="mt-2 min-h-11 w-full rounded-lg bg-zinc-900 px-3 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 active:scale-[0.99] disabled:opacity-40"
+          className={`${btn('primary')} mt-2 w-full`}
         >
           Start Learn
         </button>

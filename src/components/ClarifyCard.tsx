@@ -7,7 +7,7 @@
 // ============================================================
 
 const BTN =
-  'min-h-11 rounded-md border border-zinc-200 px-4 text-sm font-medium transition active:scale-[0.98] disabled:opacity-50 dark:border-zinc-700';
+  'min-h-11 rounded-md border border-line-strong px-4 text-sm font-medium transition active:scale-[0.98] disabled:opacity-50';
 
 export default function ClarifyCard({
   question,
@@ -29,14 +29,14 @@ export default function ClarifyCard({
 }) {
   return (
     <div
-      className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+      className="rounded-lg border border-line bg-surface-2 p-4"
       role="group"
       aria-label="Clarify voice entry"
     >
       <h2 className="text-base font-semibold tracking-tight">{question}</h2>
 
       {transcript ? (
-        <p className="mt-1 text-sm italic text-zinc-500 dark:text-zinc-400">“{transcript}”</p>
+        <p className="mt-1 text-sm italic text-ink-muted">“{transcript}”</p>
       ) : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -46,7 +46,7 @@ export default function ClarifyCard({
             type="button"
             disabled={busy}
             onClick={() => onPick(o)}
-            className={`${BTN} bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900`}
+            className={`${BTN} bg-ink text-surface-0`}
           >
             {o}
           </button>

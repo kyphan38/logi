@@ -7,6 +7,7 @@ import { clockTime } from '@/lib/datetime';
 import { CATEGORY_LABEL, type Category } from '@/types/logi';
 
 import SheetShell from './SheetShell';
+import { btn } from '@/lib/ui';
 
 // -----------------------------------------------------------------------------
 // logi - "When did it start" (long-press a category button)
@@ -129,7 +130,7 @@ export default function StartWhenSheet({
             type="button"
             disabled={typed === null}
             onClick={() => typed !== null && commit(typed)}
-            className="mt-2 min-h-11 w-full rounded-sm bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 active:scale-[0.99] disabled:opacity-40"
+            className={`${btn('primary')} mt-2 w-full`}
           >
             {past ? 'Start' : 'Schedule'}
           </button>

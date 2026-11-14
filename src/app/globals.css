@@ -12,22 +12,6 @@
   }
 }
 
-/* The app hardcodes zinc-* classes (with dark:). Tailwind's zinc leans slightly
-   blue; switch to DESIGN.md's neutral R=G=B grays without editing each class. */
-@theme {
-  --color-zinc-50: #fafafa;
-  --color-zinc-100: #f4f4f4;
-  --color-zinc-200: #e5e5e5;
-  --color-zinc-300: #d4d4d4;
-  --color-zinc-400: #a3a3a3;
-  --color-zinc-500: #737373;
-  --color-zinc-600: #555555;
-  --color-zinc-700: #3a3a3a;
-  --color-zinc-800: #262626;
-  --color-zinc-900: #171717;
-  --color-zinc-950: #0a0a0a;
-}
-
 /* ===========================================================================
    Design tokens (Stage 4.6)
 
@@ -56,6 +40,7 @@
   --surface-2: #ffffff; /* raised card / sheet */
   --border: #e5e5e5;        /* hairline */
   --border-strong: #d4d4d4; /* dashed border of untracked areas */
+  --sunk: #ececec;          /* wells, tracks, picked day */
 
   /* --- Text --- */
   --text-primary: #171717;
@@ -92,6 +77,7 @@
     --surface-2: #222222;
     --border: #262626;
     --border-strong: #3a3a3a;
+    --sunk: #0a0a0a;
 
     --text-primary: #e8e8e8;
     --text-secondary: #a3a3a3;
@@ -120,6 +106,7 @@
   --surface-2: #222222;
   --border: #262626;
   --border-strong: #3a3a3a;
+  --sunk: #0a0a0a;
 
   --text-primary: #e8e8e8;
   --text-secondary: #a3a3a3;
@@ -148,6 +135,7 @@
   --color-surface-2: var(--surface-2);
   --color-line: var(--border);
   --color-line-strong: var(--border-strong);
+  --color-sunk: var(--sunk);
   --color-ink: var(--text-primary);
   --color-ink-soft: var(--text-secondary);
   --color-ink-muted: var(--text-muted);

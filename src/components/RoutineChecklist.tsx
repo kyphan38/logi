@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { minutesLabel, type RoutineDayGroup } from '@/lib/routine';
 import { MOVE_LIMIT_PX, isRealTap, type Press } from '@/lib/tap-guard';
 import type { RoutineItem } from '@/types/logi';
+import { LABEL } from '@/lib/ui';
 
 // ---------------------------------------------------------------------------
 // logi - Today's routine on the Now screen (Stage 10)
@@ -136,7 +137,7 @@ export default function RoutineChecklist({
         return (
           <div key={group.id} className="flex flex-col gap-1.5">
             <div className="flex items-baseline justify-between gap-3 px-1">
-              <h2 className="truncate text-xs font-semibold uppercase tracking-wide text-ink-soft">
+              <h2 className={`${LABEL} truncate`}>
                 {group.title}
               </h2>
               <span
@@ -183,7 +184,7 @@ export default function RoutineChecklist({
                         aria-hidden="true"
                         className={[
                           'flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border',
-                          on ? 'border-ink bg-ink text-[var(--surface-0)]' : 'border-line-strong',
+                          on ? 'border-ink bg-ink text-surface-0' : 'border-line-strong',
                         ].join(' ')}
                       >
                         {on ? (

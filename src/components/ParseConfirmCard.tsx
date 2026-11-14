@@ -11,10 +11,11 @@ import { fromLocalInput, toLocalInput } from '@/lib/datetime';
 import type { ParsedCommand } from '@/lib/parse-sanitize';
 import type { MissingField } from '@/lib/voice-command';
 import { CATEGORIES, CATEGORY_LABEL, type Activity, type Category } from '@/types/logi';
+import { btn } from '@/lib/ui';
 
 const FIELD =
-  'min-h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-base dark:border-zinc-800 dark:bg-zinc-900';
-const MISSING = 'border-zinc-900 dark:border-zinc-100';
+  'min-h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-base';
+const MISSING = 'border-ink';
 
 const INTENT_TITLE: Record<ParsedCommand['intent'], string> = {
   start: 'Start this?',
@@ -102,25 +103,25 @@ export default function ParseConfirmCard({
 
   return (
     <div
-      className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+      className="rounded-lg border border-line bg-surface-2 p-4"
       role="group"
       aria-label="Confirm voice entry"
     >
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-base font-semibold tracking-tight">{INTENT_TITLE[cmd.intent]}</h2>
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+        <span className="text-xs text-ink-muted">
           {Math.round(cmd.confidence * 100)}% sure
         </span>
       </div>
 
       {cmd.transcript ? (
-        <p className="mt-1 text-sm italic text-zinc-500 dark:text-zinc-400">“{cmd.transcript}”</p>
+        <p className="mt-1 text-sm italic text-ink-muted">“{cmd.transcript}”</p>
       ) : null}
 
       <div className="mt-3 flex flex-col gap-3">
         {isBedtime ? (
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <span className="text-xs font-medium text-ink-muted">
               Bedtime <span className="font-normal">(a marker, not a session)</span>
             </span>
             <input
@@ -135,7 +136,7 @@ export default function ParseConfirmCard({
 
         {needsTarget ? (
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Session</span>
+            <span className="text-xs font-medium text-ink-muted">Session</span>
             <select
               value={target}
               disabled={busy}
@@ -155,7 +156,7 @@ export default function ParseConfirmCard({
 
         {needsCategory ? (
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Category</span>
+            <span className="text-xs font-medium text-ink-muted">Category</span>
             <select
               value={category}
               disabled={busy}
@@ -174,7 +175,7 @@ export default function ParseConfirmCard({
 
         {needsCategory ? (
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <span className="text-xs font-medium text-ink-muted">
               Label <span className="font-normal">(optional)</span>
             </span>
             <input
@@ -191,7 +192,7 @@ export default function ParseConfirmCard({
         {needsTime ? (
           <div className="flex gap-2">
             <label className="flex flex-1 flex-col gap-1">
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Start</span>
+              <span className="text-xs font-medium text-ink-muted">Start</span>
               <input
                 type="datetime-local"
                 value={startStr}
@@ -202,7 +203,7 @@ export default function ParseConfirmCard({
             </label>
             {needsEnd ? (
               <label className="flex flex-1 flex-col gap-1">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">End</span>
+                <span className="text-xs font-medium text-ink-muted">End</span>
                 <input
                   type="datetime-local"
                   value={endStr}
@@ -214,8 +215,8 @@ export default function ParseConfirmCard({
             ) : running ? (
               // An empty field here makes people think they must fill it. Say plainly it is running.
               <div className="flex flex-1 flex-col gap-1">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">End</span>
-                <p className={`${FIELD} flex items-center text-zinc-400 dark:text-zinc-500`}>
+                <span className="text-xs font-medium text-ink-muted">End</span>
+                <p className={`${FIELD} flex items-center text-ink-muted`}>
                   running
                 </p>
               </div>
@@ -224,7 +225,7 @@ export default function ParseConfirmCard({
         ) : null}
 
         {problem ? (
-          <p role="alert" className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+          <p role="alert" className="text-xs font-medium text-ink">
             {problem}
           </p>
         ) : null}
@@ -235,7 +236,7 @@ export default function ParseConfirmCard({
           type="button"
           onClick={onCancel}
           disabled={busy}
-          className="min-h-11 flex-1 rounded-md border border-zinc-200 text-sm font-medium disabled:opacity-50 dark:border-zinc-800"
+          className="min-h-11 flex-1 rounded-md border border-line text-sm font-medium disabled:opacity-50"
         >
           Cancel
         </button>
@@ -243,7 +244,7 @@ export default function ParseConfirmCard({
           type="button"
           onClick={confirm}
           disabled={busy || !ready}
-          className="min-h-11 flex-1 rounded-md bg-zinc-900 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className={`${btn('primary')} flex-1`}
         >
           {busy ? 'Saving…' : 'Confirm'}
         </button>

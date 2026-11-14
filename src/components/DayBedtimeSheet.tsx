@@ -7,6 +7,7 @@ import { formatBedtime } from '@/lib/bedtime';
 import type { DayLog } from '@/types/logi';
 
 import SheetShell from './SheetShell';
+import { btn } from '@/lib/ui';
 
 // ---------------------------------------------------------------------------
 // logi - "What time did I go to bed that night" (History)
@@ -140,7 +141,7 @@ export default function DayBedtimeSheet({
           type="button"
           disabled={busy || typed === null}
           onClick={() => typed !== null && onPick(typed)}
-          className="mt-2 min-h-11 w-full rounded-sm bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 transition active:scale-[0.99] disabled:opacity-40"
+          className={`${btn('primary')} mt-2 w-full`}
         >
           Save
         </button>

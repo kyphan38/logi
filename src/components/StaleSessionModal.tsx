@@ -8,6 +8,7 @@ import { stopActivity, updateActivity } from '@/lib/activities';
 import { suggestedEndTimes } from '@/lib/balance';
 import { toLocalInput } from '@/lib/datetime';
 import { CATEGORY_LABEL, MAX_SESSION_MIN, type Activity } from '@/types/logi';
+import { btn } from '@/lib/ui';
 
 const MAX_SESSION_MS = MAX_SESSION_MIN * 60_000;
 
@@ -85,16 +86,16 @@ export default function StaleSessionModal({
       aria-modal="true"
       aria-labelledby="stale-title"
     >
-      <div className="pop w-full max-w-sm rounded-lg bg-white p-5 dark:bg-zinc-900">
+      <div className="pop w-full max-w-sm rounded-lg bg-surface-2 p-5">
         <h2 id="stale-title" className="text-lg font-semibold tracking-tight">
           Unfinished session
         </h2>
 
-        <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
+        <p className="mt-3 text-sm text-ink-soft">
           {startedLine(activity, now)}
         </p>
         {activity.label ? (
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{activity.label}</p>
+          <p className="mt-1 text-sm text-ink-muted">{activity.label}</p>
         ) : null}
         <p className="mt-2 text-sm font-medium">When did you actually stop?</p>
 
@@ -106,7 +107,7 @@ export default function StaleSessionModal({
                 type="button"
                 disabled={busy}
                 onClick={() => void stopAt(s.ts)}
-                className="min-h-11 flex-1 rounded-md border border-zinc-200 px-3 text-sm font-medium active:scale-[0.98] disabled:opacity-50 dark:border-zinc-800"
+                className="min-h-11 flex-1 rounded-md border border-line px-3 text-sm font-medium active:scale-[0.98] disabled:opacity-50"
               >
                 {s.label}
               </button>
@@ -115,7 +116,7 @@ export default function StaleSessionModal({
               type="button"
               disabled={busy}
               onClick={() => setCustom(toLocalInput(maxTs))}
-              className="min-h-11 flex-1 rounded-md border border-zinc-200 px-3 text-sm font-medium active:scale-[0.98] disabled:opacity-50 dark:border-zinc-800"
+              className="min-h-11 flex-1 rounded-md border border-line px-3 text-sm font-medium active:scale-[0.98] disabled:opacity-50"
             >
               Custom…
             </button>
@@ -128,14 +129,14 @@ export default function StaleSessionModal({
               min={toLocalInput(activity.startAt)}
               max={toLocalInput(maxTs)}
               onChange={(e) => setCustom(e.target.value)}
-              className="min-h-11 w-full rounded-md border border-zinc-200 px-3 text-base dark:border-zinc-800 dark:bg-zinc-900"
+              className="min-h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-base"
             />
             <div className="flex gap-2">
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => setCustom(null)}
-                className="min-h-11 flex-1 rounded-md border border-zinc-200 text-sm disabled:opacity-50 dark:border-zinc-800"
+                className="min-h-11 flex-1 rounded-md border border-line text-sm disabled:opacity-50"
               >
                 Back
               </button>
@@ -143,7 +144,7 @@ export default function StaleSessionModal({
                 type="button"
                 disabled={busy}
                 onClick={saveCustom}
-                className="min-h-11 flex-1 rounded-md bg-zinc-900 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+                className={`${btn('primary')} flex-1`}
               >
                 Save
               </button>
@@ -152,7 +153,7 @@ export default function StaleSessionModal({
         )}
 
         {error ? (
-          <p role="alert" className="mt-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+          <p role="alert" className="mt-3 text-sm font-medium text-ink">
             {error}
           </p>
         ) : null}
@@ -161,13 +162,13 @@ export default function StaleSessionModal({
           type="button"
           disabled={busy}
           onClick={() => void discard()}
-          className="mt-4 min-h-11 w-full rounded-md text-sm text-zinc-500 hover:text-ink active:text-ink disabled:opacity-50 dark:text-zinc-400"
+          className="mt-4 min-h-11 w-full rounded-md text-sm text-ink-muted hover:text-ink active:text-ink disabled:opacity-50"
         >
           Discard this session
         </button>
 
         {remaining > 0 ? (
-          <p className="mt-3 text-center text-xs text-zinc-400 dark:text-zinc-500">
+          <p className="mt-3 text-center text-xs text-ink-muted">
             {remaining} more unfinished session{remaining > 1 ? 's' : ''} after this
           </p>
         ) : null}

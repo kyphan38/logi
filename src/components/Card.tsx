@@ -13,6 +13,7 @@
 //   - `footnote`  frame bottom - how to read it, not a color legend
 // ---------------------------------------------------------------------------
 import type { ReactNode } from 'react';
+import { LABEL } from '@/lib/ui';
 
 interface Props {
   title?: string;
@@ -36,7 +37,7 @@ export default function Card({ title, action, footnote, children, label }: Props
       {(title || action) && (
         <div className="flex min-h-7 flex-wrap items-center justify-between gap-x-3 gap-y-2">
           {title ? (
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+            <h2 className={LABEL}>
               {title}
             </h2>
           ) : (

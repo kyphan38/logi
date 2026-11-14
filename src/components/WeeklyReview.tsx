@@ -22,6 +22,7 @@ import { addWeeks } from '@/lib/week';
 import { PRESETS, type PresetId } from '@/types/logi';
 
 import SheetShell from './SheetShell';
+import { btn, LABEL } from '@/lib/ui';
 
 const PANELS = ['Last week', 'Worth noting', 'Next week'];
 const ORDER: PresetId[] = ['normal', 'crunch', 'deep_learn', 'recovery'];
@@ -167,7 +168,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
                       className={[
                         'rounded-full border px-3 py-1.5 text-[13px] font-medium transition active:scale-[0.98]',
                         preset === id
-                          ? 'border-transparent bg-ink text-[var(--surface-0)]'
+                          ? 'border-transparent bg-ink text-surface-0'
                           : 'border-line bg-surface-1 text-ink-soft',
                         locked ? 'opacity-40' : '',
                       ].join(' ')}
@@ -222,7 +223,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
           <button
             type="button"
             onClick={() => goTo(panel + 1)}
-            className="rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99]"
+            className={btn('primary')}
           >
             Next
           </button>
@@ -240,7 +241,7 @@ export default function WeeklyReview({ week, onClose }: Props) {
               type="button"
               disabled={saving || !canSetNext}
               onClick={() => void finish(true)}
-              className="rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99] disabled:opacity-40"
+              className={btn('primary')}
             >
               Confirm
             </button>
@@ -294,7 +295,7 @@ function InsightNotes({
 function Panel({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <section className="w-full shrink-0 snap-center px-4">
-      <h3 className="mb-2 text-[11px] uppercase tracking-wide text-ink-muted">{label}</h3>
+      <h3 className={`${LABEL} mb-2`}>{label}</h3>
       <div className="flex min-h-40 flex-col gap-3">{children}</div>
     </section>
   );

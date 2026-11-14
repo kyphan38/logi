@@ -22,6 +22,7 @@ import {
 } from '@/types/logi';
 
 import SheetShell from './SheetShell';
+import { btn, LABEL as SECTION_LABEL } from '@/lib/ui';
 
 // ---------------------------------------------------------------------------
 // logi - Sheet for adding / editing Routine groups and items (Stage 10)
@@ -29,14 +30,14 @@ import SheetShell from './SheetShell';
 
 const INPUT =
   'mb-4 w-full rounded-md border border-line-strong bg-transparent px-3 py-2.5 text-base text-ink outline-none focus:border-ink';
-const LABEL = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-muted';
-const BTN = 'min-h-11 flex-1 rounded-lg border border-line-strong text-sm font-medium text-ink-soft';
-const BTN_MAIN = 'min-h-11 flex-1 rounded-lg bg-ink text-sm font-medium text-[var(--surface-0)] disabled:opacity-40';
+const LABEL = `${SECTION_LABEL} mb-1 block`;
+const BTN = `${btn('secondary')} flex-1`;
+const BTN_MAIN = `${btn('primary')} flex-1`;
 
 function chip(on: boolean): string {
   return [
     'min-h-11 rounded-md border px-1 text-sm font-medium transition',
-    on ? 'border-ink bg-ink text-[var(--surface-0)]' : 'border-line-strong text-ink-soft',
+    on ? 'border-ink bg-ink text-surface-0' : 'border-line-strong text-ink-soft',
   ].join(' ');
 }
 
@@ -87,14 +88,14 @@ function RemoveRow({
       <button
         type="button"
         onClick={() => setConfirm(true)}
-        className="mb-3 min-h-11 text-sm font-medium text-zinc-900 dark:text-zinc-100"
+        className="mb-3 min-h-11 text-sm font-medium text-ink"
       >
         {label}
       </button>
     );
   }
   return (
-    <div className="mb-3 rounded-md border border-zinc-300 p-3 dark:border-zinc-700">
+    <div className="mb-3 rounded-md border border-line-strong p-3">
       <p className="mb-3 text-[13px] leading-snug text-ink-soft">{question}</p>
       <div className="flex gap-2">
         <button type="button" onClick={() => setConfirm(false)} className={BTN}>
@@ -104,7 +105,7 @@ function RemoveRow({
           type="button"
           onClick={onRemove}
           disabled={busy}
-          className="min-h-11 flex-1 rounded-lg bg-zinc-900 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
+          className={`${btn('primary')} flex-1`}
         >
           Remove
         </button>
@@ -254,7 +255,7 @@ export function ItemSheet({
                 className={[
                   'min-h-11 rounded-md border text-sm font-medium transition',
                   on
-                    ? 'border-ink bg-ink text-[var(--surface-0)]'
+                    ? 'border-ink bg-ink text-surface-0'
                     : 'border-line-strong text-ink-soft',
                 ].join(' ')}
               >

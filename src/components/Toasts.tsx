@@ -57,7 +57,7 @@ export default function Toasts({
             ref={flip(String(t.id))}
             aria-hidden={out || undefined}
             className={[
-              'flex w-full max-w-sm items-center justify-between gap-3 rounded-md bg-zinc-900 px-4 py-3 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900',
+              'flex w-full max-w-sm items-center justify-between gap-3 rounded-md bg-ink px-4 py-3 text-sm text-surface-0',
               // A fading toast must not take a tap meant for its old Undo.
               out ? 'fade-out pointer-events-none' : 'rise pointer-events-auto',
             ].join(' ')}
@@ -72,7 +72,7 @@ export default function Toasts({
                   setActed((s) => new Set(s).add(t.id));
                   onDismiss(t.id);
                 }}
-                className="min-h-11 shrink-0 px-2 font-semibold text-white active:scale-[0.97] dark:text-zinc-900"
+                className="min-h-11 shrink-0 px-2 font-semibold text-surface-0 active:scale-[0.97]"
               >
                 {t.action.label}
               </button>

@@ -28,6 +28,7 @@ import {
   swapGroups,
 } from '@/lib/routine-store';
 import { CATEGORY_LABEL, type RoutineGroup, type RoutineItem } from '@/types/logi';
+import { btn, LABEL } from '@/lib/ui';
 
 // ---------------------------------------------------------------------------
 // logi - Editing the Routine in the Targets tab (Stage 10)
@@ -155,7 +156,7 @@ export default function RoutineSection() {
   return (
     <section aria-label="Routine" className="mb-6">
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Routine</h2>
+        <h2 className={LABEL}>Routine</h2>
         <span className="text-xs text-ink-muted">Repeats every week</span>
       </div>
 
@@ -174,7 +175,7 @@ export default function RoutineSection() {
               className={[
                 'min-h-9 rounded-md border text-xs font-medium transition',
                 on
-                  ? 'border-ink bg-ink text-[var(--surface-0)]'
+                  ? 'border-ink bg-ink text-surface-0'
                   : 'border-line text-ink-soft',
               ].join(' ')}
             >
@@ -185,7 +186,7 @@ export default function RoutineSection() {
       </div>
 
       {loading ? (
-        <p className="py-6 text-center text-sm text-zinc-400">Loading…</p>
+        <p className="py-6 text-center text-sm text-ink-muted">Loading…</p>
       ) : (
         <div className="flex flex-col gap-3">
           {groups.length === 0 ? (
@@ -292,7 +293,7 @@ export default function RoutineSection() {
             type="button"
             disabled={busy}
             onClick={() => setGroupSheet({ group: null })}
-            className="min-h-11 rounded-lg border border-zinc-300 text-sm font-medium text-zinc-700 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300"
+            className={btn('secondary')}
           >
             Add group
           </button>

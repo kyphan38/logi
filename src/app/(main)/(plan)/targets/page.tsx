@@ -45,6 +45,7 @@ import {
   type PresetId,
   type WeekTarget,
 } from '@/types/logi';
+import { btn, LABEL } from '@/lib/ui';
 
 const PRESET_ORDER: PresetId[] = ['normal', 'crunch', 'deep_learn', 'recovery'];
 
@@ -85,7 +86,7 @@ function summary(weekly: Weekly): string {
  */
 export default function TargetsPage() {
   return (
-    <Suspense fallback={<p className="py-10 text-center text-sm text-zinc-400">Loading…</p>}>
+    <Suspense fallback={<p className="py-10 text-center text-sm text-ink-muted">Loading…</p>}>
       <TargetsView />
     </Suspense>
   );
@@ -245,13 +246,13 @@ function TargetsView() {
       {reviewOpen && <WeeklyReview week={reviewOpen} onClose={() => setReviewOpen(null)} />}
 
       {locked && (
-        <p className="mb-4 rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+        <p className="mb-4 rounded-lg bg-surface-1 px-3 py-2 text-sm text-ink-soft">
           This week is closed.
         </p>
       )}
 
       {loading && !target ? (
-        <p className="py-10 text-center text-sm text-zinc-400">Loading…</p>
+        <p className="py-10 text-center text-sm text-ink-muted">Loading…</p>
       ) : (
         <>
           {streak.shouldPrompt && !keepStreak && !locked && (
@@ -273,17 +274,17 @@ function TargetsView() {
               type="button"
               onClick={() => setModeOpen((v) => !v)}
               aria-expanded={modeOpen}
-              className="flex w-full items-center justify-between rounded-md border border-zinc-200 px-4 py-3 text-left transition active:scale-[0.99] dark:border-zinc-800"
+              className="flex w-full items-center justify-between rounded-md border border-line px-4 py-3 text-left transition active:scale-[0.99]"
             >
               <span className="min-w-0">
-                <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <span className={LABEL}>
                   Mode
                 </span>
-                <span className="ml-2 font-medium text-zinc-900 dark:text-zinc-100">
+                <span className="ml-2 font-medium text-ink">
                   {mode === 'custom' ? 'Custom' : PRESETS[mode].label}
                 </span>
                 {suggestPending && (
-                  <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="ml-2 text-xs text-ink-muted">
                     · Suggested: {PRESETS[suggested!].label}
                   </span>
                 )}
@@ -294,7 +295,7 @@ function TargetsView() {
                 stroke="currentColor"
                 strokeWidth="2"
                 aria-hidden="true"
-                className={`h-4 w-4 shrink-0 text-zinc-400 transition ${modeOpen ? 'rotate-180' : ''}`}
+                className={`h-4 w-4 shrink-0 text-ink-muted transition ${modeOpen ? 'rotate-180' : ''}`}
               >
                 <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -343,10 +344,10 @@ function TargetsView() {
           {weekly && mode === 'custom' && (
             <section className="mb-6">
               <div className="mb-2 flex items-baseline justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <h2 className={LABEL}>
                   Your hours
                 </h2>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                <span className="text-xs text-ink-muted">
                   {pinned.size > 0
                     ? `${pinned.size}/${MAX_PINNED} pinned`
                     : 'Pin one to hold it steady'}
@@ -383,7 +384,7 @@ function TargetsView() {
                   <button
                     type="button"
                     onClick={cancelCustom}
-                    className="flex-1 rounded-lg border border-zinc-300 py-2.5 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+                    className={`${btn('secondary')} flex-1`}
                   >
                     Cancel
                   </button>
@@ -391,7 +392,7 @@ function TargetsView() {
                     type="button"
                     onClick={saveCustom}
                     disabled={busy || !check?.ok}
-                    className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
+                    className={`${btn('primary')} flex-1`}
                   >
                     Save
                   </button>
@@ -458,23 +459,23 @@ function ModeCard({
       className={[
         'w-full rounded-md border px-4 py-3 text-left transition',
         selected
-          ? 'border-zinc-900 bg-zinc-100/60 dark:border-zinc-100 dark:bg-zinc-800/40'
-          : 'border-zinc-200 dark:border-zinc-800',
+          ? 'border-ink bg-surface-1'
+          : 'border-line',
         off ? 'cursor-not-allowed opacity-50' : 'active:scale-[0.99]',
       ].join(' ')}
     >
       <div className="flex items-center justify-between">
-        <span className="font-medium text-zinc-900 dark:text-zinc-100">{label}</span>
+        <span className="font-medium text-ink">{label}</span>
         {selected ? (
-          <span className="text-zinc-900 dark:text-zinc-100">✓</span>
+          <span className="text-ink">✓</span>
         ) : suggested ? (
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">Suggested</span>
+          <span className="text-xs text-ink-muted">Suggested</span>
         ) : null}
       </div>
-      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="mt-0.5 text-xs text-ink-muted">
         {lockedReason ?? hint}
       </p>
-      <p className="mt-1 font-mono text-xs text-zinc-400">{line}</p>
+      <p className="mt-1 font-mono text-xs text-ink-muted">{line}</p>
     </button>
   );
 }
@@ -507,7 +508,7 @@ function PinButton({
       aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
       className={[
         'shrink-0 rounded p-1 transition',
-        pinned ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-300 dark:text-zinc-600',
+        pinned ? 'text-ink' : 'text-line-strong',
         off ? 'cursor-not-allowed opacity-40' : 'active:scale-90',
       ].join(' ')}
     >
@@ -558,7 +559,7 @@ function Slider({
   return (
     <div className="mb-3">
       <div className="mb-1 flex items-baseline justify-between text-sm">
-        <span className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
+        <span className="flex items-center gap-1.5 text-ink-soft">
           <span
             aria-hidden="true"
             className="h-2 w-2 rounded-full"
@@ -566,18 +567,18 @@ function Slider({
           />
           {CATEGORY_LABEL[category]}
           {atFloor && (
-            <span className="rounded bg-zinc-900 px-1.5 py-0.5 text-[10px] font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
+            <span className="rounded bg-ink px-1.5 py-0.5 text-[10px] font-medium text-surface-0">
               floor
             </span>
           )}
           {derived && (
-            <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            <span className="rounded bg-surface-1 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
               auto
             </span>
           )}
         </span>
         <span className="flex items-center gap-1">
-          <span className="font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
+          <span className="font-mono tabular-nums text-ink">
             {h(value)}
           </span>
           <PinButton
@@ -600,7 +601,7 @@ function Slider({
         onChange={(e) => onChange(Number(e.target.value))}
         className={[
           'h-1.5 w-full cursor-pointer appearance-none rounded-full disabled:cursor-not-allowed disabled:opacity-50',
-          atFloor ? 'bg-zinc-400 dark:bg-zinc-600' : 'bg-zinc-200 dark:bg-zinc-800',
+          atFloor ? 'bg-ink-muted' : 'bg-sunk',
         ].join(' ')}
       />
     </div>
@@ -612,20 +613,20 @@ function TotalRow({ weekly, errors }: { weekly: Weekly; errors: string[] }) {
   const ok = errors.length === 0;
 
   return (
-    <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+    <div className="mt-4 border-t border-line pt-3">
       <div className="flex items-baseline justify-between text-sm">
-        <span className="text-zinc-500">Total</span>
+        <span className="text-ink-muted">Total</span>
         <span
           className={[
             'font-mono tabular-nums',
-            ok ? 'text-zinc-900 dark:text-zinc-100' : 'font-medium text-zinc-900 dark:text-zinc-100',
+            ok ? 'text-ink' : 'font-medium text-ink',
           ].join(' ')}
         >
           {Math.round(total * 10) / 10} / {TOTAL_BUDGET}h {ok ? '✓' : ''}
         </span>
       </div>
       {errors.map((e) => (
-        <p key={e} className="mt-1 text-xs font-medium text-zinc-900 dark:text-zinc-100">
+        <p key={e} className="mt-1 text-xs font-medium text-ink">
           {e}
         </p>
       ))}
@@ -649,15 +650,15 @@ function DebtSection({
 
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Debt</h2>
-      <div className="rounded-md border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+      <h2 className={`${LABEL} mb-2`}>Debt</h2>
+      <div className="rounded-md border border-line px-4 py-3">
         {rows.map((c) => (
           <div key={c} className="flex items-baseline justify-between py-1 text-sm">
-            <span className="text-zinc-700 dark:text-zinc-300">{CATEGORY_LABEL[c]}</span>
-            <span className="font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
+            <span className="text-ink-soft">{CATEGORY_LABEL[c]}</span>
+            <span className="font-mono tabular-nums text-ink">
               {h(debt[c] ?? 0)}
               {(applied[c] ?? 0) > 0 && (
-                <span className="ml-2 text-xs font-normal text-zinc-500">
+                <span className="ml-2 text-xs font-normal text-ink-muted">
                   ({h(applied[c]!)} applied this week)
                 </span>
               )}
@@ -687,11 +688,11 @@ function StreakPrompt({
   onKeep: () => void;
 }) {
   return (
-    <div className="mb-6 rounded-md border border-zinc-300 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900">
-      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+    <div className="mb-6 rounded-md border border-line-strong bg-surface-1 px-4 py-3">
+      <p className="text-sm font-medium text-ink">
         Crunch: {count} of the last {of} weeks.
       </p>
-      <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">
+      <p className="mt-1 text-sm text-ink-soft">
         Reset your baseline, or is this something to fix?
       </p>
       <div className="mt-3 flex gap-2">
@@ -699,14 +700,14 @@ function StreakPrompt({
           type="button"
           onClick={onReset}
           disabled={busy}
-          className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+          className={`${btn('primary')} flex-1`}
         >
           Reset baseline
         </button>
         <button
           type="button"
           onClick={onKeep}
-          className="flex-1 rounded-lg border border-zinc-400 py-2 text-sm font-medium text-zinc-900 dark:border-zinc-600 dark:text-zinc-100"
+          className={`${btn('secondary')} flex-1`}
         >
           Keep as is
         </button>
@@ -743,9 +744,9 @@ function ConfirmSheet({
       onClose={onCancel}
       label={`Switch to ${PRESETS[to].label}`}
       center
-      className="w-full max-w-lg rounded-t-lg bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:bg-zinc-950 md:rounded-lg md:pb-5"
+      className="w-full max-w-lg rounded-t-lg bg-surface-0 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:rounded-lg md:pb-5"
       header={
-        <h3 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
+        <h3 className="mb-3 text-base font-semibold text-ink">
           Switch to {PRESETS[to].label}
         </h3>
       }
@@ -754,14 +755,14 @@ function ConfirmSheet({
       <div className="mb-4">
         {rows.map((r) => (
           <div key={r.category} className="flex items-baseline justify-between py-1 text-sm">
-            <span className="text-zinc-700 dark:text-zinc-300">
+            <span className="text-ink-soft">
               {CATEGORY_LABEL[r.category]}
             </span>
-            <span className="font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
+            <span className="font-mono tabular-nums text-ink">
               {h(r.from)} → {h(r.to)}
               {/* Changing preset without seeing the cost makes this mechanism pointless. */}
               {r.debt > 0 && (
-                <span className="ml-2 font-medium text-zinc-900 dark:text-zinc-100">
+                <span className="ml-2 font-medium text-ink">
                   +{h(r.debt)} debt
                 </span>
               )}
@@ -769,7 +770,7 @@ function ConfirmSheet({
           </div>
         ))}
         {rows.length === 0 && (
-          <p className="text-sm text-zinc-500">No change to your targets.</p>
+          <p className="text-sm text-ink-muted">No change to your targets.</p>
         )}
       </div>
 
@@ -777,7 +778,7 @@ function ConfirmSheet({
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-lg border border-zinc-300 py-2.5 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+          className={`${btn('secondary')} flex-1`}
         >
           Cancel
         </button>
@@ -785,7 +786,7 @@ function ConfirmSheet({
           type="button"
           onClick={onConfirm}
           disabled={busy}
-          className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
+          className={`${btn('primary')} flex-1`}
         >
           Switch
         </button>

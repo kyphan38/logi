@@ -222,7 +222,7 @@ export default function HistoryPage() {
     <div className="flex flex-1 flex-col">
       <header
         ref={headerRef}
-        className="sticky top-0 z-30 -mx-5 border-b border-zinc-100 bg-white px-5 pb-3 dark:border-zinc-800 dark:bg-zinc-950"
+        className="sticky top-0 z-30 -mx-5 border-b border-line bg-surface-0 px-5 pb-3"
       >
         {/* No title: the Days switch in the top bar already names the page. */}
         <div className="flex min-h-11 items-center justify-between gap-3">
@@ -245,8 +245,8 @@ export default function HistoryPage() {
             }
             className={`min-h-11 shrink-0 px-1 text-xs tabular-nums transition active:scale-95 disabled:opacity-40 ${
               bedtimeLog.bedtimeAt === null
-                ? 'text-zinc-300 dark:text-zinc-600'
-                : 'text-zinc-400 dark:text-zinc-500'
+                ? 'text-line-strong'
+                : 'text-ink-muted'
             }`}
           >
             <MoonIcon /> {bedtimeLog.bedtimeAt === null ? '–' : formatBedtime(bedtimeLog.bedtimeAt)}
@@ -255,7 +255,7 @@ export default function HistoryPage() {
             type="button"
             onClick={() => setSheet(newRecordDefaults(selected, today, nowMinute))}
             aria-label="Add record"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-zinc-200 text-xl transition active:scale-[0.99] dark:border-zinc-700"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line-strong text-xl transition active:scale-[0.99]"
           >
             +
           </button>
@@ -275,7 +275,7 @@ export default function HistoryPage() {
 
       <div ref={bodyRef} className="pt-4">
         {loading && segments.length === 0 ? (
-          <p className="pb-3 text-sm text-zinc-400">Loading…</p>
+          <p className="pb-3 text-sm text-ink-muted">Loading…</p>
         ) : (
           <Timeline
             key={selected}

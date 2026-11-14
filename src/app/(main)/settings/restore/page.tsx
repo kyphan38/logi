@@ -24,6 +24,7 @@ import {
   type RestorePlan,
   type RestorePreview,
 } from '@/lib/backup';
+import { btn, LABEL } from '@/lib/ui';
 
 interface Loaded {
   file: BackupFile;
@@ -117,7 +118,7 @@ export default function RestorePage() {
       </label>
 
       {error && (
-        <p role="alert" className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+        <p role="alert" className="text-sm font-medium text-ink">
           {error}
         </p>
       )}
@@ -137,7 +138,7 @@ export default function RestorePage() {
       {loaded && (
         <div className="flex flex-col gap-4 rounded-md border border-line-strong bg-surface-1 p-4">
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-wide text-ink-muted">In this file</span>
+            <span className={LABEL}>In this file</span>
             <p className="text-sm tabular-nums text-ink">
               {loaded.preview.records} records · {loaded.preview.weeks} weeks
             </p>
@@ -147,7 +148,7 @@ export default function RestorePage() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-wide text-ink-muted">Will add</span>
+            <span className={LABEL}>Will add</span>
             <p className="text-sm tabular-nums text-ink">
               {loaded.plan.add.length} new · {loaded.plan.skip} already there
             </p>
@@ -182,7 +183,7 @@ export default function RestorePage() {
                 type="button"
                 onClick={() => void run()}
                 disabled={!ready}
-                className="rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99] disabled:opacity-40"
+                className={btn('primary')}
               >
                 {busy ? 'Restoring…' : `Add ${loaded.plan.add.length} records`}
               </button>

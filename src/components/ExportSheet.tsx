@@ -15,6 +15,7 @@ import type { Range } from '@/lib/range';
 import type { Activity, Category } from '@/types/logi';
 
 import SheetShell from './SheetShell';
+import { btn, LABEL } from '@/lib/ui';
 
 type Format = 'csv' | 'json';
 type Scope = 'range' | 'all';
@@ -94,7 +95,7 @@ export default function ExportSheet({
 
       {loadAllTime && (
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-[11px] uppercase tracking-wide text-ink-muted">
+          <legend className={`${LABEL} mb-1`}>
             Data
           </legend>
           <div className="flex gap-2">
@@ -115,7 +116,7 @@ export default function ExportSheet({
       )}
 
       <div className="flex flex-col gap-1">
-        <span className="text-[11px] uppercase tracking-wide text-ink-muted">Range</span>
+        <span className={LABEL}>Range</span>
         <p className="text-sm tabular-nums text-ink">
           {loading ? 'Loading…' : rangeText(data.range)}
         </p>
@@ -124,14 +125,14 @@ export default function ExportSheet({
           {scope === 'all' && all ? ` · ${all.weekTargets.size} weeks planned` : ''}
         </p>
         {error && (
-          <p role="alert" className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+          <p role="alert" className="text-[13px] font-medium text-ink">
             {error}
           </p>
         )}
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-[11px] uppercase tracking-wide text-ink-muted">
+        <legend className={`${LABEL} mb-1`}>
           Format
         </legend>
         <div className="flex gap-2">
@@ -162,7 +163,7 @@ export default function ExportSheet({
           type="button"
           onClick={download}
           disabled={loading || data.activities.length === 0}
-          className="flex-1 rounded-sm bg-ink px-4 py-2.5 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99] disabled:opacity-40"
+          className={`${btn('primary')} flex-1`}
         >
           Download
         </button>

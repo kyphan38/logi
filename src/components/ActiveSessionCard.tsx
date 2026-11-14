@@ -63,7 +63,7 @@ export default function ActiveSessionCard({
           <span className="shrink-0 text-sm font-semibold tabular-nums">
             <RollingDigits text={hms(elapsed)} />
           </span>
-          <span className="truncate text-xs text-zinc-400 dark:text-zinc-500">
+          <span className="truncate text-xs text-ink-muted">
             since {clockTime(activity.startAt)}
           </span>
           {pending ? (
@@ -79,7 +79,7 @@ export default function ActiveSessionCard({
           type="button"
           onClick={onStop}
           disabled={busy}
-          className="min-h-11 shrink-0 rounded-lg border border-zinc-300 px-3 text-sm font-medium transition active:scale-[0.97] disabled:opacity-50 dark:border-zinc-700"
+          className="min-h-11 shrink-0 rounded-lg border border-line-strong px-3 text-sm font-medium transition active:scale-[0.97] disabled:opacity-50"
         >
           Stop
         </button>
@@ -114,12 +114,12 @@ export default function ActiveSessionCard({
         </div>
 
         {activity.label ? (
-          <p className="mt-0.5 truncate text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-0.5 truncate text-sm text-ink-muted">
             {activity.label}
           </p>
         ) : null}
 
-        <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
+        <p className="mt-0.5 text-xs text-ink-muted">
           Started {clockTime(activity.startAt)}
           {activity.dueAt ? ` · until ${clockTime(activity.dueAt)}` : ''}
         </p>
@@ -133,7 +133,7 @@ export default function ActiveSessionCard({
         type="button"
         onClick={onStop}
         disabled={busy}
-        className="min-h-11 min-w-11 shrink-0 rounded-lg border border-zinc-300 px-4 text-sm font-medium transition active:scale-[0.97] disabled:opacity-50 dark:border-zinc-700"
+        className="min-h-11 min-w-11 shrink-0 rounded-lg border border-line-strong px-4 text-sm font-medium transition active:scale-[0.97] disabled:opacity-50"
       >
         Stop
       </button>

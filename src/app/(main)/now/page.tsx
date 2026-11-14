@@ -62,6 +62,7 @@ import {
   type Category,
   type RoutineItem,
 } from '@/types/logi';
+import { btn } from '@/lib/ui';
 
 /** From 3 parallel sessions up, cards collapse so Now still fits one screen. */
 const COMPACT_FROM = 3;
@@ -492,7 +493,7 @@ export default function NowPage() {
           <button
             type="button"
             onClick={() => setReviewOpen(reviewWeek)}
-            className="shrink-0 rounded-sm bg-ink px-3 py-1.5 text-[13px] font-medium text-[var(--surface-0)] transition active:scale-[0.98]"
+            className={`${btn('primary', 'sm')} shrink-0`}
           >
             Open
           </button>
@@ -532,7 +533,7 @@ export default function NowPage() {
           CategoryGrid does not jump down when data arrives. */}
       {activeLoading && active.length === 0 ? (
         <div
-          className="h-[76px] breathe rounded-md bg-zinc-100 dark:bg-zinc-900"
+          className="h-[76px] breathe rounded-md bg-surface-1"
           aria-busy="true"
           aria-label="Loading sessions"
         />
@@ -561,7 +562,7 @@ export default function NowPage() {
           {active.length > 1 ? (
             <p
               ref={flip('parallel')}
-              className="text-xs text-zinc-500 dark:text-zinc-400"
+              className="text-xs text-ink-muted"
               style={{ order: cards.length }}
             >
               {active.length} running in parallel · {overlap.toFixed(1)}h overlap
@@ -597,7 +598,7 @@ export default function NowPage() {
       {todayActivities.length === 0 &&
       !activeLoading &&
       active.length === 0 ? (
-        <p className="text-sm text-zinc-400 dark:text-zinc-500">
+        <p className="text-sm text-ink-muted">
           Nothing tracked yet. Tap a category to start.
         </p>
       ) : null}
@@ -615,7 +616,7 @@ export default function NowPage() {
               type="button"
               onClick={() => void discardStop(zeroStop.id)}
               disabled={busy}
-              className="flex-1 rounded-sm border border-line py-2.5 text-sm font-medium text-ink-soft disabled:opacity-40"
+              className={`${btn('secondary')} flex-1`}
             >
               Discard
             </button>
@@ -623,7 +624,7 @@ export default function NowPage() {
               type="button"
               onClick={() => void commitStop(zeroStop.id, zeroStop.at)}
               disabled={busy}
-              className="flex-1 rounded-sm bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-40"
+              className={`${btn('primary')} flex-1`}
             >
               Save
             </button>
@@ -655,7 +656,7 @@ export default function NowPage() {
       {voice.thinking || voice.saving ? (
         <div
           aria-hidden="true"
-          className="dim-in pointer-events-none fixed inset-0 z-30 bg-zinc-950/10 dark:bg-black/30"
+          className="dim-in pointer-events-none fixed inset-0 z-30 bg-black/10 dark:bg-black/30"
         />
       ) : null}
 

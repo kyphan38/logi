@@ -6,6 +6,7 @@ import { minutesLabel } from '@/lib/routine';
 import type { Activity } from '@/types/logi';
 
 import SheetShell from './SheetShell';
+import { btn } from '@/lib/ui';
 
 // ---------------------------------------------------------------------------
 // logi - "Done?" when a routine session reaches its planned length
@@ -16,8 +17,8 @@ import SheetShell from './SheetShell';
 
 const MORE_MINUTES: readonly number[] = [10, 25, 50];
 
-const BTN = 'min-h-11 flex-1 rounded-lg border border-line-strong text-sm font-medium text-ink-soft disabled:opacity-40';
-const BTN_MAIN = 'min-h-11 flex-1 rounded-lg bg-ink text-sm font-medium text-[var(--surface-0)] disabled:opacity-40';
+const BTN = `${btn('secondary')} flex-1`;
+const BTN_MAIN = `${btn('primary')} flex-1`;
 
 export default function RoutineDueSheet({
   activity,

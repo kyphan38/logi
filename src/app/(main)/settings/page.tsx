@@ -24,6 +24,7 @@ import {
 } from '@/lib/push';
 import { isStandalone } from '@/lib/standalone';
 import { themeStore, type Theme } from '@/lib/theme';
+import { btn } from '@/lib/ui';
 
 const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
 
@@ -111,14 +112,14 @@ export default function SettingsPage() {
             type="button"
             onClick={() => void turnOn()}
             disabled={busy || !uid}
-            className="self-start rounded-sm bg-ink px-4 py-2 text-sm font-medium text-[var(--surface-0)] transition active:scale-[0.99] disabled:opacity-40"
+            className={`${btn('primary')} self-start`}
           >
             {busy ? 'Turning on…' : 'Turn on reminders'}
           </button>
         )}
 
         {error && (
-          <p role="alert" className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+          <p role="alert" className="text-[13px] font-medium text-ink">
             {error}
           </p>
         )}
@@ -161,7 +162,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={signOut}
-          className="min-h-11 self-start rounded-sm border border-line px-4 text-sm font-medium text-ink-soft transition active:scale-[0.99]"
+          className={`${btn('secondary')} self-start`}
         >
           Sign out
         </button>
@@ -230,7 +231,7 @@ function InsightData({ uid }: { uid: string | null }) {
             type="button"
             disabled={busy}
             onClick={() => void wipe()}
-            className="shrink-0 rounded-sm bg-ink px-3 py-1.5 text-[13px] font-medium text-[var(--surface-0)] transition active:scale-[0.98] disabled:opacity-40"
+            className={`${btn('primary', 'sm')} shrink-0`}
           >
             {busy ? 'Deleting…' : 'Delete'}
           </button>

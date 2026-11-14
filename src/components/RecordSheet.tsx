@@ -22,6 +22,7 @@ import {
 } from '@/types/logi';
 
 import SheetShell from './SheetShell';
+import { btn } from '@/lib/ui';
 
 export type SheetTarget =
   | { mode: 'edit'; activity: Activity }
@@ -47,7 +48,7 @@ export async function restoreActivity(uid: string, a: Activity): Promise<void> {
 }
 
 const FIELD =
-  'min-h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-base dark:border-zinc-800 dark:bg-zinc-900';
+  'min-h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-base';
 
 export default function RecordSheet({
   target,
@@ -205,7 +206,7 @@ export default function RecordSheet({
       labelledBy="sheet-title"
       z={60}
       locked={busy}
-      className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-lg bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 dark:bg-zinc-900"
+      className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-lg bg-surface-2 px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3"
       header={
         <h2 id="sheet-title" className="mt-1 text-lg font-semibold tracking-tight">
           {editing ? 'Edit record' : 'Add record'}
@@ -214,7 +215,7 @@ export default function RecordSheet({
     >
       <div className="mt-4 flex flex-col gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Category</span>
+          <span className="text-xs font-medium text-ink-muted">Category</span>
           <select
             value={category}
             disabled={busy}
@@ -230,7 +231,7 @@ export default function RecordSheet({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <span className="text-xs font-medium text-ink-muted">
             Label <span className="font-normal">(optional)</span>
           </span>
           <input
@@ -244,7 +245,7 @@ export default function RecordSheet({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Start</span>
+          <span className="text-xs font-medium text-ink-muted">Start</span>
           <input
             type="datetime-local"
             value={startStr}
@@ -254,14 +255,14 @@ export default function RecordSheet({
             className={FIELD}
           />
           {errors.start ? (
-            <span role="alert" className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+            <span role="alert" className="text-xs font-medium text-ink">
               {errors.start}
             </span>
           ) : null}
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <span className="text-xs font-medium text-ink-muted">
             End{' '}
             {endRequired ? null : (
               <span className="font-normal">(leave empty if still running)</span>
@@ -276,14 +277,14 @@ export default function RecordSheet({
             className={FIELD}
           />
           {errors.end ? (
-            <span role="alert" className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+            <span role="alert" className="text-xs font-medium text-ink">
               {errors.end}
             </span>
           ) : null}
         </label>
 
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm tabular-nums text-ink-muted">
             Duration: {running ? 'running' : duration}
           </p>
           {/* Clearing a datetime field on a phone is fiddly - give a shortcut button. */}
@@ -292,7 +293,7 @@ export default function RecordSheet({
               type="button"
               disabled={busy}
               onClick={() => setEndStr(running ? toLocalInput(now) : '')}
-              className="text-sm font-medium text-zinc-500 hover:text-ink active:text-ink disabled:opacity-50 dark:text-zinc-400"
+              className="text-sm font-medium text-ink-muted hover:text-ink active:text-ink disabled:opacity-50"
             >
               {running ? 'End now' : 'Still running'}
             </button>
@@ -301,7 +302,7 @@ export default function RecordSheet({
       </div>
 
       {failure ? (
-        <p role="alert" className="mt-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+        <p role="alert" className="mt-3 text-sm font-medium text-ink">
           {failure}
         </p>
       ) : null}
@@ -315,8 +316,8 @@ export default function RecordSheet({
             className={[
               'min-h-11 flex-1 rounded-md border text-sm font-medium transition active:scale-[0.99] disabled:opacity-50',
               confirming
-                ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
-                : 'border-zinc-200 font-medium text-zinc-900 dark:border-zinc-700 dark:text-zinc-100',
+                ? 'border-ink bg-ink text-surface-0'
+                : 'border-line-strong font-medium text-ink',
             ].join(' ')}
           >
             {confirming ? 'Really delete?' : 'Delete'}
@@ -326,7 +327,7 @@ export default function RecordSheet({
             type="button"
             disabled={busy}
             onClick={onClose}
-            className="min-h-11 flex-1 rounded-md border border-zinc-200 text-sm font-medium disabled:opacity-50 dark:border-zinc-700"
+            className="min-h-11 flex-1 rounded-md border border-line-strong text-sm font-medium disabled:opacity-50"
           >
             Cancel
           </button>
@@ -336,7 +337,7 @@ export default function RecordSheet({
           type="button"
           disabled={busy || !valid}
           onClick={save}
-          className="min-h-11 flex-1 rounded-md bg-zinc-900 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className={`${btn('primary')} flex-1`}
         >
           {busy ? 'Saving…' : 'Save'}
         </button>

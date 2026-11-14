@@ -86,7 +86,7 @@ export default function BedtimeDots({
                 key={p.key}
                 className="flex min-w-0 flex-1 flex-col items-center justify-between py-1"
               >
-                <span className="text-[11px] text-zinc-300 dark:text-zinc-700">·</span>
+                <span className="text-[11px] text-line-strong">·</span>
                 <span className="truncate text-[11px] text-ink-muted">{label}</span>
               </div>
             ) : (
@@ -98,7 +98,7 @@ export default function BedtimeDots({
                 {/* The min-max band. Earliest is at the TOP, so `top` comes from min. */}
                 <span
                   aria-hidden="true"
-                  className="absolute left-1/2 w-[2px] -translate-x-1/2 rounded bg-zinc-300 dark:bg-zinc-700"
+                  className="absolute left-1/2 w-[2px] -translate-x-1/2 rounded bg-line-strong"
                   style={{
                     top: `${y(p.stats.min)}%`,
                     height: `${Math.max(2, y(p.stats.max) - y(p.stats.min))}%`,
@@ -107,7 +107,7 @@ export default function BedtimeDots({
                 {/* Median dot */}
                 <span
                   aria-hidden="true"
-                  className="absolute left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100"
+                  className="absolute left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-ink"
                   style={{ top: `calc(${y(p.stats.median)}% - 4px)` }}
                 />
                 {showValue && (

@@ -112,7 +112,7 @@ export default function DateStrip({
               className={[
                 'flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-md text-xs transition',
                 active
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                  ? 'bg-ink text-surface-0'
                   : future
                     ? 'text-ink-muted opacity-40'
                     : 'text-ink-soft active:scale-[0.97]',
@@ -134,7 +134,7 @@ export default function DateStrip({
                     />
                   ))
                 ) : (
-                  <span className={future ? 'w-full' : 'w-full bg-zinc-200 dark:bg-zinc-700'} />
+                  <span className={future ? 'w-full' : 'w-full bg-line-strong'} />
                 )}
               </span>
             </button>
