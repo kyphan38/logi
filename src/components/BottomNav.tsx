@@ -2,20 +2,24 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
 
 import { useIndicator } from '@/hooks/useIndicator';
 
 /** `paths`: every page that lights up this tab. `href` is the first one. */
-type Tab = { href: string; paths: string[]; label: string; icon: ReactNode };
+type Tab = { href: string; paths: string[]; label: string };
 
 // Grouped by time: today, looking back, looking forward.
 const TABS: Tab[] = [
-  { href: '/now', paths: ['/now'], label: 'Now', icon: <IconNow /> },
-  { href: '/history', paths: ['/history', '/analytics'], label: 'Review', icon: <IconReview /> },
-  { href: '/targets', paths: ['/targets', '/reminders'], label: 'Plan', icon: <IconPlan /> },
+  { href: '/now', paths: ['/now'], label: 'Now' },
+  { href: '/history', paths: ['/history', '/analytics'], label: 'Review' },
+  { href: '/targets', paths: ['/targets', '/reminders'], label: 'Plan' },
 ];
 
+/**
+ * logi's own nav (DESIGN.md "Nav: one signature per app"): no icons, mono
+ * uppercase words like a clock face, the open tab marked by a bar on the top
+ * edge. fina's bar marks below; keep them apart.
+ */
 export default function BottomNav() {
   const pathname = usePathname();
   const current = TABS.find((t) =>
@@ -33,21 +37,21 @@ export default function BottomNav() {
         // the toolbar when the page scrolls, so Analytics (a long page) sank
         // while the 3 short tabs did not. As a flex column child all tabs match.
         // Opaque background, no blur: blur makes iOS scrolling stutter.
-        // `relative`: the sliding line below anchors to the bar.
-        'relative z-40 flex shrink-0 border-t border-line bg-surface-0',
+        // `relative`: the sliding bar below anchors to the nav.
+        'relative z-40 flex shrink-0 border-t border-line bg-surface-0 font-mono',
         // Room for the iPhone home indicator.
         'pb-[env(safe-area-inset-bottom)]',
-        // Desktop: becomes a left sidebar.
-        'md:fixed md:inset-y-0 md:left-0 md:w-[180px] md:flex-col md:gap-1 md:border-r md:border-t-0 md:p-3 md:pb-3',
+        // Desktop: becomes a left list.
+        'md:fixed md:inset-y-0 md:left-0 md:w-[180px] md:flex-col md:gap-1 md:border-r md:border-t-0 md:p-3 md:pt-6',
       ].join(' ')}
     >
-      {/* One bold line under the open tab, sliding between tabs. Phone only. */}
+      {/* One bar on the top edge of the open tab, over the hairline. Phone only. */}
       <span
         ref={indicator}
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-[env(safe-area-inset-bottom)] left-0 flex justify-center md:hidden"
+        className="pointer-events-none absolute -top-px left-0 flex justify-center md:hidden"
       >
-        <span className="h-0.5 w-10 rounded-full bg-ink" />
+        <span className="h-0.5 w-1/2 bg-ink" />
       </span>
       {TABS.map((tab) => {
         const active = tab === current;
@@ -58,52 +62,15 @@ export default function BottomNav() {
             aria-current={active ? 'page' : undefined}
             data-active={active}
             className={[
-              'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition',
-              'md:h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:rounded-lg md:px-3 md:text-sm',
-              active
-                ? 'text-ink md:font-semibold'
-                : 'text-ink-muted hover:text-ink',
+              'flex min-h-12 flex-1 items-center justify-center text-[11px] uppercase tracking-[0.12em] transition-colors',
+              'md:min-h-10 md:flex-none md:justify-start md:px-3',
+              active ? 'text-ink' : 'text-ink-muted hover:text-ink active:text-ink',
             ].join(' ')}
           >
-            <span
-              aria-hidden="true"
-              className={[
-                'flex h-6 w-6 items-center justify-center rounded-full md:h-5 md:w-5',
-                active ? 'md:bg-transparent' : '',
-              ].join(' ')}
-            >
-              {tab.icon}
-            </span>
-            <span>{tab.label}</span>
+            {tab.label}
           </Link>
         );
       })}
     </nav>
-  );
-}
-
-function IconNow() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconReview() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
-      <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconPlan() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-full w-full">
-      <circle cx="12" cy="12" r="8" />
-      <circle cx="12" cy="12" r="3.5" />
-    </svg>
   );
 }
