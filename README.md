@@ -1,44 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# logi
 
-## Getting Started
+Time log for one person: what you do, when, and against weekly targets.
+Next.js (App Router) + Firebase + Vercel.
 
-First, run the development server:
+| | |
+|---|---|
+| Live | https://logi.kyphan38.com |
+| Firebase project | `kyphan38-logi-app`, database `(default)` |
+| Access | one email, `ALLOWED_USER_EMAIL` (server) and `firestore.rules` |
+| Server | API routes on Vercel, region `sin1`; Cloud Functions for push and the mora link |
+| Plan | [`roadmap/`](roadmap/) |
+
+## Run locally
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in the Firebase and Gemini values
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# logi
+Checks: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 
 ## Backup & restore
 
-Firestore free tier does not back up your data. Do it yourself.
+Since 2026-11-15 Google Cloud keeps a weekly Firestore backup for 98 days
+(`gcloud firestore backups schedules list --database='(default)' --project=kyphan38-logi-app`).
+The JSON export below is your own copy on top of that.
 
 **Export.** Analytics → `Export` → pick `All time` + `JSON`. The file holds
 every record, all week targets, and the debt ledger. On the first Sunday of
