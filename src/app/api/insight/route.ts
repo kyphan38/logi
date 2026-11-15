@@ -17,6 +17,7 @@ import { analyseDigest } from '@/lib/gemini-insight';
 import { sanitizeInsight } from '@/lib/insight-sanitize';
 import type { Digest } from '@/lib/digest';
 import { requireSessionUser } from '@/lib/server-auth';
+import { QUOTA_MESSAGE, isQuotaError } from '@/lib/ai-quota';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -99,6 +100,7 @@ export async function POST(req: Request): Promise<Response> {
   } catch (e) {
     // Log the error name only, never the digest.
     console.error('[api/insight] gemini failed', e instanceof Error ? e.message : 'unknown');
+    if (isQuotaError(e)) return json(402, { error: QUOTA_MESSAGE });
     return json(502, { error: 'Could not analyse right now.' });
   }
 

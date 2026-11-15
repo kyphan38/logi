@@ -9,6 +9,7 @@ import 'server-only';
 import { buildSystemPrompt, parseAudio, parseTextCorrection } from '@/lib/gemini-parse';
 import { sanitizeParse, type ParsedCommand } from '@/lib/parse-sanitize';
 import { requireSessionUser } from '@/lib/server-auth';
+import { QUOTA_MESSAGE, isQuotaError } from '@/lib/ai-quota';
 import { listActiveForPrompt, listRecentForPrompt } from '@/lib/server-activities';
 import { TIMEZONE } from '@/types/logi';
 
@@ -133,6 +134,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   } catch (e) {
     console.error('[api/parse] gemini failed', e);
+    if (isQuotaError(e)) return json(402, { error: QUOTA_MESSAGE });
     return json(502, { error: 'Could not understand that' });
   }
 
