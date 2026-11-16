@@ -8,7 +8,8 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import { useOnForeground, useTick } from '@/hooks/useActivities';
+import { useOnForeground } from '@/hooks/useOnForeground';
+import { useTick } from '@/hooks/useTick';
 import { pickReminder, type Reminder } from '@/lib/reminders';
 import type { Activity, Category } from '@/types/logi';
 

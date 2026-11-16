@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 
-import { useTick } from '@/hooks/useActivities';
+import { useTick } from '@/hooks/useTick';
 import { useRecorder, type Recording } from '@/hooks/useRecorder';
 
 /** Swipe up past this and release = cancel, nothing is sent. */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useTick } from '@/hooks/useActivities';
+import { useTick } from '@/hooks/useTick';
 import { clockTime, countdown } from '@/lib/datetime';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
 

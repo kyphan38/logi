@@ -15,7 +15,7 @@ import RoutineSection from '@/components/RoutineSection';
 import WeeklyReview from '@/components/WeeklyReview';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTargetsDraft } from '@/hooks/useTargetsDraft';
-import { useToasts } from '@/hooks/useActivities';
+import { useToasts } from '@/hooks/useToasts';
 import {
   useCrunchStreak,
   useCurrentWeek,

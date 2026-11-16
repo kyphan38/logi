@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import { useTick } from '@/hooks/useActivities';
+import { useTick } from '@/hooks/useTick';
 import { MAX_PINNED, rebalance, validateTargets } from '@/lib/balance';
 import { reapplyDebt, roundToBudget, type Weekly } from '@/lib/rollover';
 import { TargetError, resetBaseline, setCustomTargets, setPreset } from '@/lib/targets';

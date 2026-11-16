@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useOnForeground } from '@/hooks/useOnForeground';
+import { useTick } from '@/hooks/useTick';
 import {
   abandonStaleScheduled,
   NO_PENDING,
@@ -257,49 +259,6 @@ export function useRecentDates(sinceDate: string): ReadonlySet<string> {
 }
 
 // ------------------------------------------------------------
-// Timer - derived state
-// ------------------------------------------------------------
-
-/**
- * Re-render tick. NO accumulation: only pushes a fresh Date.now() into state.
- * iOS throttles background timers hard, so resync when the tab returns to the
- * foreground - without it the timer shows a stale value when the app opens.
- */
-export function useTick(intervalMs = 1000, enabled = true): number {
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    const tick = () => setNow(Date.now());
-    tick();
-
-    const iv = setInterval(tick, intervalMs);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') tick();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', tick);
-    window.addEventListener('pageshow', tick);
-
-    return () => {
-      clearInterval(iv);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', tick);
-      window.removeEventListener('pageshow', tick);
-    };
-  }, [intervalMs, enabled]);
-
-  return now;
-}
-
-/** SECONDS elapsed. Always = now - startAt, never a counter. */
-export function useElapsed(startAt: number): number {
-  const now = useTick(1000, true);
-  return Math.max(0, Math.floor((now - startAt) / 1000));
-}
-
-// ------------------------------------------------------------
 // One logical week - for the balance banner
 // ------------------------------------------------------------
 
@@ -333,80 +292,4 @@ export function useWeekActivities(logicalWeek: string | null) {
   }, [uid, logicalWeek]);
 
   return { activities, loading };
-}
-
-// ------------------------------------------------------------
-// Foreground: rerun something whenever the app comes back
-// ------------------------------------------------------------
-
-export function useOnForeground(fn: () => void) {
-  const ref = useRef(fn);
-
-  useEffect(() => {
-    ref.current = fn;
-  });
-
-  useEffect(() => {
-    const run = () => {
-      if (document.visibilityState === 'visible') ref.current();
-    };
-    document.addEventListener('visibilitychange', run);
-    window.addEventListener('focus', run);
-    return () => {
-      document.removeEventListener('visibilitychange', run);
-      window.removeEventListener('focus', run);
-    };
-  }, []);
-}
-
-// ------------------------------------------------------------
-// Network status
-// ------------------------------------------------------------
-
-export function useOnline(): boolean {
-  const [online, setOnline] = useState(true);
-
-  useEffect(() => {
-    const sync = () => setOnline(navigator.onLine);
-    sync();
-    window.addEventListener('online', sync);
-    window.addEventListener('offline', sync);
-    return () => {
-      window.removeEventListener('online', sync);
-      window.removeEventListener('offline', sync);
-    };
-  }, []);
-
-  return online;
-}
-
-// ------------------------------------------------------------
-// Small shared toast
-// ------------------------------------------------------------
-
-export interface Toast {
-  id: number;
-  message: string;
-  action?: { label: string; run: () => void };
-}
-
-export function useToasts(ttlMs = 5000) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const seq = useRef(0);
-
-  const dismiss = useCallback((id: number) => {
-    setToasts((t) => t.filter((x) => x.id !== id));
-  }, []);
-
-  const push = useCallback(
-    (message: string, action?: Toast['action']) => {
-      const id = ++seq.current;
-      setToasts((t) => [...t, { id, message, action }]);
-      setTimeout(() => dismiss(id), ttlMs);
-      return id;
-    },
-    [dismiss, ttlMs]
-  );
-
-  return { toasts, push, dismiss };
 }

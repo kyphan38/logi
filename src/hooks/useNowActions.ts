@@ -6,7 +6,8 @@ import { useState } from 'react';
 
 import { type SheetTarget } from '@/components/RecordSheet';
 import { type StartWhen } from '@/components/StartWhenSheet';
-import { capWait, useToasts } from '@/hooks/useActivities';
+import { capWait } from '@/hooks/useActivities';
+import { useToasts } from '@/hooks/useToasts';
 import { bedtimeDate, logBedtime, useRecentBedtime } from '@/hooks/useBedtime';
 import { useRoutineChecks } from '@/hooks/useRoutine';
 import {

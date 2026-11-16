@@ -10,7 +10,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useTick, useWeekActivities } from '@/hooks/useActivities';
+import { useWeekActivities } from '@/hooks/useActivities';
+import { useTick } from '@/hooks/useTick';
 import { useCrunchStreak, useDebt, useWeekTarget } from '@/hooks/useTargets';
 import { buildReview, canSetNextWeek, reviewDueWeek, type ReviewSummary } from '@/lib/review';
 import { subscribeReviews, type ReviewFlags } from '@/lib/targets';

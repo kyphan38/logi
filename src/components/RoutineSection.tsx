@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { GroupSheet, ItemSheet, type ItemDraft } from '@/components/RoutineSheet';
 import Toasts from '@/components/Toasts';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToasts } from '@/hooks/useActivities';
+import { useToasts } from '@/hooks/useToasts';
 import { useRoutines } from '@/hooks/useRoutine';
 import { logicalWeekday } from '@/lib/balance';
 import {

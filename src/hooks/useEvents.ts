@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useTick } from '@/hooks/useActivities';
+import { useTick } from '@/hooks/useTick';
 import { subscribeEvents } from '@/lib/event-store';
 import { splitEvents } from '@/lib/events';
 import type { EventItem } from '@/types/logi';

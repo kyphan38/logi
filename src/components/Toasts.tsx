@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import type { Toast } from '@/hooks/useActivities';
+import type { Toast } from '@/hooks/useToasts';
 import { useFlip } from '@/hooks/useFlip';
 import { leavingItems, reducedMotion } from '@/lib/motion';
 

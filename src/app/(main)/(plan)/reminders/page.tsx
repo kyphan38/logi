@@ -16,7 +16,7 @@ import EventRow from '@/components/EventRow';
 import EventSheet from '@/components/EventSheet';
 import Toasts from '@/components/Toasts';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToasts } from '@/hooks/useActivities';
+import { useToasts } from '@/hooks/useToasts';
 import { useEvents } from '@/hooks/useEvents';
 import { logicalDate } from '@/lib/balance';
 import {

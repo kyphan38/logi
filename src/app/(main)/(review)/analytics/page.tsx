@@ -15,7 +15,7 @@ import TrendHoursCard from '@/components/TrendHoursCard';
 import TrendSleepCard from '@/components/TrendSleepCard';
 import TrendSpanChips from '@/components/TrendSpanChips';
 import WeekSleepCard from '@/components/WeekSleepCard';
-import { useTick } from '@/hooks/useActivities';
+import { useTick } from '@/hooks/useTick';
 import { fetchAllTime, useExportNudge } from '@/hooks/useBackup';
 import { useRangeData } from '@/hooks/useRangeData';
 import { useTrend } from '@/hooks/useTrend';

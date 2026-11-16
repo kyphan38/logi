@@ -27,10 +27,10 @@ import {
   useActiveActivities,
   useDayActivities,
   useScheduledActivities,
-  useTick,
-  useToasts,
   useWeekActivities,
 } from '@/hooks/useActivities';
+import { useTick } from '@/hooks/useTick';
+import { useToasts } from '@/hooks/useToasts';
 import { useRecentBedtime } from '@/hooks/useBedtime';
 import { useReminders } from '@/hooks/useReminders';
 import { useReviewDue } from '@/hooks/useReview';

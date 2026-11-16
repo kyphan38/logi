@@ -1,6 +1,6 @@
 'use client';
 
-import { useElapsed } from '@/hooks/useActivities';
+import { useElapsed } from '@/hooks/useTick';
 import { useTap } from '@/hooks/useTap';
 import { clockTime } from '@/lib/datetime';
 import { CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';

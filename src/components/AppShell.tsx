@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import BottomNav from '@/components/BottomNav';
-import { useOnline } from '@/hooks/useActivities';
+import { useOnline } from '@/hooks/useOnline';
 
 /** A thin banner on top. Blocks nothing - Firestore still writes to the cache. */
 function OfflineBanner() {

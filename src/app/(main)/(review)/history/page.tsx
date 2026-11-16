@@ -9,13 +9,9 @@ import Timeline from '@/components/Timeline';
 import Toasts from '@/components/Toasts';
 import MoonIcon from '@/components/MoonIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  capWait,
-  useDayActivities,
-  useTick,
-  useToasts,
-  useWeekActivities,
-} from '@/hooks/useActivities';
+import { capWait, useDayActivities, useWeekActivities } from '@/hooks/useActivities';
+import { useTick } from '@/hooks/useTick';
+import { useToasts } from '@/hooks/useToasts';
 import { actualHours, logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
 import { prettyDay } from '@/lib/datetime';
 import { dayGaps, dayWindow, layoutDay } from '@/lib/timeline';

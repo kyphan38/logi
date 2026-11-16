@@ -10,7 +10,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useOnForeground, useTick } from '@/hooks/useActivities';
+import { useOnForeground } from '@/hooks/useOnForeground';
+import { useTick } from '@/hooks/useTick';
 import { crunchStreak, logicalWeek } from '@/lib/balance';
 import { createOnce } from '@/lib/once';
 import type { DebtBalance } from '@/lib/rollover';
