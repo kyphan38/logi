@@ -37,7 +37,7 @@ or parsers that handle real Vietnamese text; proper names.
 - If the title already says it, add no description.
 - Otherwise one short line, about 10 words or less.
 - No reasons or history in the UI. Put those in a code comment.
-- Exception: in-app guide pages (none in logi yet).
+- Exception: in-app guide pages (`src/app/(main)/guide/page.tsx`). Update it with every feature change.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
