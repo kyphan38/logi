@@ -59,6 +59,10 @@ function spyRepo(before: Activity = act({ id: 'x1', startAt: NOW - H })) {
       log('getActivity', [uid, id]);
       return before;
     },
+    restoreActivities: async (uid, add) => {
+      log('restoreActivities', [uid, add]);
+      return add.length;
+    },
     setBedtime: async (uid, at) => {
       log('setBedtime', [uid, at]);
       return '2026-08-26';
@@ -320,5 +324,48 @@ describe('bedtime - a bedtime mark, NOT an activity', () => {
     );
     assert.equal(p.kind, 'retired');
     assert.match(p.kind === 'retired' ? p.message : '', /bedtime button/);
+  });
+});
+
+describe('delete - removes a record, Undo puts the same one back', () => {
+  it('reads the record, deletes it, and names it', async () => {
+    const before = act({ id: 'x1', category: 'fitness', startAt: NOW - 3 * H, endAt: NOW - 2 * H });
+    const s = spyRepo(before);
+    const w = await applyVoice(UID, cmd({ intent: 'delete', category: null, targetActivityId: 'x1' }), s.repo);
+    assert.deepEqual(s.names(), ['getActivity', 'deleteActivity']);
+    assert.match(w.message, /Deleted Fitness/);
+    assert.equal(w.activityId, '');
+    await w.undo();
+    assert.deepEqual(s.first('restoreActivities')?.args, [UID, [before]]);
+  });
+
+  it('always asks first, even when sure', () => {
+    const p = planVoice(cmd({ intent: 'delete', category: null, targetActivityId: 'x1', confidence: 1 }), { active: [] });
+    assert.equal(p.kind, 'confirm');
+  });
+
+  it('"delete that" with no target uses the record just made', () => {
+    const p = planVoice(cmd({ intent: 'delete', category: null }), { active: [], lastCreatedId: 'new1' });
+    assert.equal(p.cmd.targetActivityId, 'new1');
+  });
+});
+
+describe('edit of an older record asks first', () => {
+  it('the record just made → commit', () => {
+    const p = planVoice(cmd({ intent: 'edit', targetActivityId: 'new1' }), { active: [], lastCreatedId: 'new1' });
+    assert.equal(p.kind, 'commit');
+  });
+
+  it('a running record → commit', () => {
+    const p = planVoice(cmd({ intent: 'edit', targetActivityId: 'run1' }), { active: [{ id: 'run1' }] });
+    assert.equal(p.kind, 'commit');
+  });
+
+  it('a record from yesterday → confirm', () => {
+    const p = planVoice(cmd({ intent: 'edit', targetActivityId: 'old1', endAt: NOW - 20 * H }), {
+      active: [],
+      lastCreatedId: 'new1',
+    });
+    assert.equal(p.kind, 'confirm');
   });
 });

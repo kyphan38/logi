@@ -43,6 +43,9 @@ export default function VoiceBatchCard({
               <span className="min-w-0 flex-1">
                 {describeEntry(item.cmd, now)}
                 {!item.ready && <span className="block text-[13px]">Needs a time. Add it by hand.</span>}
+                {item.ready && item.cmd.overlap && (
+                  <span className="block text-[13px] text-ink-muted">Overlaps {item.cmd.overlap}.</span>
+                )}
               </span>
             </label>
           </li>

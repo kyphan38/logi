@@ -8,6 +8,7 @@ import 'server-only';
 
 import { buildSystemPrompt, parseAudio, parseTextCorrection } from '@/lib/gemini-parse';
 import { sanitizeEntries, type ParsedCommand } from '@/lib/parse-sanitize';
+import { annotateEntries } from '@/lib/voice-context';
 import { requireSessionUser } from '@/lib/server-auth';
 import { QUOTA_MESSAGE, isQuotaError } from '@/lib/ai-quota';
 import { listActiveForPrompt, listRecentForPrompt } from '@/lib/server-activities';
@@ -112,7 +113,7 @@ export async function POST(req: Request): Promise<Response> {
   let active: Awaited<ReturnType<typeof listActiveForPrompt>> = [];
   let recent: Awaited<ReturnType<typeof listRecentForPrompt>> = [];
   try {
-    [active, recent] = await Promise.all([listActiveForPrompt(uid), listRecentForPrompt(uid, 5)]);
+    [active, recent] = await Promise.all([listActiveForPrompt(uid), listRecentForPrompt(uid)]);
   } catch (e) {
     console.error('[api/parse] context read failed', e);
   }
@@ -140,7 +141,8 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const knownIds = new Set([...active, ...recent].map((a) => a.id));
-  const entries: ParsedCommand[] = sanitizeEntries(raw, { now, knownIds });
+  // Words for the target and any overlap, so the card can show them.
+  const entries: ParsedCommand[] = annotateEntries(sanitizeEntries(raw, { now, knownIds }), [...active, ...recent], now);
   // Where the time goes, to find what makes voice slow (no content logged).
   console.info('[api/parse] timing', {
     mode: audio ? 'audio' : 'text',

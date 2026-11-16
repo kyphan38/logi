@@ -35,12 +35,16 @@ export async function listActiveForPrompt(uid: string): Promise<PromptActivity[]
   return snap.docs.map(toPromptActivity);
 }
 
-/** A few recent records - so Gemini understands "the same as before", "that one". */
-export async function listRecentForPrompt(uid: string, n = 5): Promise<PromptActivity[]> {
+/**
+ * Records that started in the last `days` days, newest first. The prompt lists
+ * some of them ("yesterday's gym"); all of them feed the overlap check.
+ */
+export async function listRecentForPrompt(uid: string, days = 8, limit = 80): Promise<PromptActivity[]> {
   const snap = await col(uid)
     .where('status', 'in', ['done', 'active'])
+    .where('startAt', '>=', Date.now() - days * 86_400_000)
     .orderBy('startAt', 'desc')
-    .limit(n)
+    .limit(limit)
     .get();
   return snap.docs.map(toPromptActivity);
 }

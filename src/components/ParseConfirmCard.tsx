@@ -23,6 +23,7 @@ const INTENT_TITLE: Record<ParsedCommand['intent'], string> = {
   log_past: 'Log this?',
   schedule: 'Schedule this?',
   edit: 'Change this?',
+  delete: 'Delete this?',
   bedtime: 'Log bedtime?',
   clarify: 'One question',
   unknown: 'Not sure',
@@ -51,13 +52,19 @@ export default function ParseConfirmCard({
   const [target, setTarget] = useState(cmd.targetActivityId ?? '');
 
   const isBedtime = cmd.intent === 'bedtime';
-  const needsTime = cmd.intent !== 'stop' && !isBedtime;
+  const isDelete = cmd.intent === 'delete';
+  const isEdit = cmd.intent === 'edit';
+  const needsTime = cmd.intent !== 'stop' && !isBedtime && !isDelete;
   // 'start' = running. No end time, and never ask for one.
   const running = cmd.intent === 'start';
   const needsEnd = cmd.intent === 'log_past';
+  // Edit shows End too, empty = leave as is ("the gym yesterday ended at 8").
+  const showEnd = needsEnd || isEdit;
   const needsStart = cmd.intent === 'log_past' || cmd.intent === 'schedule';
-  const needsCategory = cmd.intent !== 'stop';
-  const needsTarget = cmd.intent === 'stop' || cmd.intent === 'edit';
+  const needsCategory = cmd.intent !== 'stop' && !isDelete;
+  const needsTarget = cmd.intent === 'stop' || isEdit || isDelete;
+  // An older record is not in the running list: show it in words, no picker.
+  const fixedTarget = cmd.targetActivityId !== null && !active.some((a) => a.id === cmd.targetActivityId);
   // "Change it to 9 AM" names no category - do not force a choice they do not want to change.
   const categoryRequired = needsCategory && cmd.intent !== 'edit';
 
@@ -134,7 +141,12 @@ export default function ParseConfirmCard({
           </label>
         ) : null}
 
-        {needsTarget ? (
+        {needsTarget && fixedTarget ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-ink-muted">Session</span>
+            <p className={`${FIELD} flex items-center`}>{cmd.targetText ?? 'The record you named'}</p>
+          </div>
+        ) : needsTarget ? (
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-ink-muted">Session</span>
             <select
@@ -201,7 +213,7 @@ export default function ParseConfirmCard({
                 className={FIELD + hi('startAt')}
               />
             </label>
-            {needsEnd ? (
+            {showEnd ? (
               <label className="flex flex-1 flex-col gap-1">
                 <span className="text-xs font-medium text-ink-muted">End</span>
                 <input
@@ -223,6 +235,8 @@ export default function ParseConfirmCard({
             ) : null}
           </div>
         ) : null}
+
+        {cmd.overlap ? <p className="text-xs text-ink-muted">Overlaps {cmd.overlap}.</p> : null}
 
         {problem ? (
           <p role="alert" className="text-xs font-medium text-ink">
@@ -246,7 +260,7 @@ export default function ParseConfirmCard({
           disabled={busy || !ready}
           className={`${btn('primary')} flex-1`}
         >
-          {busy ? 'Saving…' : 'Confirm'}
+          {busy ? 'Saving…' : isDelete ? 'Delete' : 'Confirm'}
         </button>
       </div>
     </div>

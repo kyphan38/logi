@@ -7,6 +7,7 @@ import {
   createPastActivity,
   deleteActivity,
   getActivity,
+  restoreActivities,
   startActivity,
   stopActivity,
   updateActivity,
@@ -36,6 +37,7 @@ export interface VoiceRepo {
   updateActivity: typeof updateActivity;
   deleteActivity: typeof deleteActivity;
   getActivity: typeof getActivity;
+  restoreActivities: typeof restoreActivities;
   setBedtime: typeof setBedtime;
   clearBedtime: typeof clearBedtime;
 }
@@ -47,6 +49,7 @@ const LIVE: VoiceRepo = {
   updateActivity,
   deleteActivity,
   getActivity,
+  restoreActivities,
   setBedtime,
   clearBedtime,
 };
@@ -166,6 +169,21 @@ export async function applyVoice(
             confidence: before.confidence,
             rawText: before.rawText,
           }),
+      };
+    }
+
+    case 'delete': {
+      const id = cmd.targetActivityId!;
+      // Read first: Undo writes the same record back under the same id.
+      const before = await repo.getActivity(uid, id);
+      await repo.deleteActivity(uid, id);
+      return {
+        // Gone, so nothing to edit next.
+        activityId: '',
+        message: `Deleted ${CATEGORY_LABEL[before.category]}.`,
+        undo: async () => {
+          await repo.restoreActivities(uid, [before]);
+        },
       };
     }
 

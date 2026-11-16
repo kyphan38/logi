@@ -222,3 +222,37 @@ test('sanitize: a finished block or a bedtime in the future asks back', () => {
   const bed = sanitizeParse(base({ intent: 'bedtime', category: null, bedtimeAt: new Date(NOW + 2 * H).toISOString() }), opts);
   assert.equal(bed.intent, 'clarify');
 });
+
+test('sanitize: "10 PM to 1 AM" with the end on the same date moves the end to the next day', () => {
+  const r = sanitizeParse(
+    base({ startAt: new Date(at('2026-08-25', '22:00')).toISOString(), endAt: new Date(at('2026-08-25', '01:00')).toISOString() }),
+    opts,
+  );
+  assert.equal(r.intent, 'log_past');
+  assert.equal(r.startAt, at('2026-08-25', '22:00'));
+  assert.equal(r.endAt, at('2026-08-26', '01:00'));
+});
+
+test('sanitize: overnight block placed tonight by mistake moves back to last night', () => {
+  const r = sanitizeParse(
+    base({ startAt: new Date(at('2026-08-26', '22:00')).toISOString(), endAt: new Date(at('2026-08-26', '01:00')).toISOString() }),
+    opts,
+  );
+  assert.equal(r.intent, 'log_past');
+  assert.equal(r.startAt, at('2026-08-25', '22:00'));
+  assert.equal(r.endAt, at('2026-08-26', '01:00'));
+});
+
+test('sanitize: an end far before the start is still dropped', () => {
+  const r = sanitizeParse(base({ startAt: new Date(NOW - H).toISOString(), endAt: new Date(NOW - 3 * H).toISOString() }), opts);
+  assert.equal(r.endAt, null);
+});
+
+test('sanitize: delete keeps only its target', () => {
+  const r = sanitizeParse(base({ intent: 'delete', targetActivityId: 'a1' }), opts);
+  assert.equal(r.intent, 'delete');
+  assert.equal(r.targetActivityId, 'a1');
+  assert.equal(r.category, null);
+  assert.equal(r.startAt, null);
+  assert.equal(r.endAt, null);
+});

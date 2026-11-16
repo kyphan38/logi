@@ -14,8 +14,8 @@ export const PARSE_SCHEMA = {
   properties: {
     intent: {
       type: 'string',
-      enum: ['start', 'stop', 'log_past', 'schedule', 'edit', 'bedtime', 'clarify', 'unknown'],
-      description: 'start = start now; log_past = log something already done; schedule = start in N minutes; edit = fix the record just made; bedtime = a bedtime mark, NOT a session; clarify = missing info, ask back',
+      enum: ['start', 'stop', 'log_past', 'schedule', 'edit', 'delete', 'bedtime', 'clarify', 'unknown'],
+      description: 'start = start now; log_past = log something already done; schedule = start later; edit = fix a record; delete = remove a record; bedtime = a bedtime mark, NOT a session; clarify = missing info, ask back',
     },
     category: {
       type: 'string',
@@ -60,7 +60,7 @@ export const PARSE_SCHEMA = {
     targetActivityId: {
       type: 'string',
       nullable: true,
-      description: 'Only when intent = edit or stop; points to an activity in the context.',
+      description: 'Only when intent = edit, delete or stop; points to an activity in the context.',
     },
     transcript: {
       type: 'string',
@@ -77,6 +77,9 @@ export const PARSE_SCHEMA = {
 
 /** One utterance can hold several activities: one entry each, in the order spoken. */
 export const MAX_ENTRIES = 6;
+
+/** Records listed in the prompt, so "yesterday's gym" can be edited or deleted. */
+export const RECENT_IN_PROMPT = 25;
 
 export const ENTRIES_SCHEMA = {
   type: 'object',
@@ -95,7 +98,7 @@ export interface ParseResponse {
 }
 
 export interface ParseResult {
-  intent: 'start' | 'stop' | 'log_past' | 'schedule' | 'edit' | 'bedtime' | 'clarify' | 'unknown';
+  intent: 'start' | 'stop' | 'log_past' | 'schedule' | 'edit' | 'delete' | 'bedtime' | 'clarify' | 'unknown';
   category: Category | null;
   label: string | null;
   startAt: string | null;
@@ -125,7 +128,10 @@ export function buildSystemPrompt(ctx: {
   recentActivities: Pick<Activity, 'id' | 'category' | 'label' | 'startAt' | 'endAt'>[];
 }): string {
   const fmt = (ts: number) =>
-    new Date(ts).toLocaleString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', hour12: true });
+    // Weekday included so "Monday's work" can be matched to a record.
+    new Date(ts).toLocaleString('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true,
+    });
 
   return `You parse spoken English into time-tracking entries. Output JSON only, matching the schema.
 
@@ -213,6 +219,31 @@ Examples:
     → log_past, endAt = now − 11min
   "I'll start studying in 5 minutes"
     → schedule, startAt = now + 5min
+  "I'll go to the gym at 6" (said at 16:00)
+    → schedule, startAt = 18:00 today
+  "I studied for 2 hours"
+    → log_past, endAt = now, startAt = now − 2h
+  "Ran for 30 minutes, finished 10 minutes ago"
+    → log_past, endAt = now − 10min, startAt = endAt − 30min
+  "On Monday I worked 8 to 5"
+    → log_past, Monday's date, 08:00-17:00
+  "Worked from 10 PM to 1 AM" (said in the morning)
+    → log_past, startAt = 22:00 yesterday, endAt = 01:00 today
+
+DURATION ONLY ("for 2 hours", "an hour of reading", "30 minutes at the gym"):
+- A finished block with no clock time: endAt = the end they gave ("finished 10
+  minutes ago", "until 5"), else CURRENT TIME. startAt = endAt − duration.
+- A part of day with no clock time ("an hour this morning", "2 hours last night"):
+  place it at a typical time from the schedule below and set confidence 0.7.
+
+OTHER DAYS:
+- "yesterday", "on Monday", "last Saturday", "two days ago" → that concrete date.
+  A weekday name means the most recent past date with that name; it is today only
+  when the times already passed today. Never more than 7 days back.
+
+OVERNIGHT: an end clock time earlier than the start ("10 PM to 1 AM") means the
+block crosses midnight: endAt is on the day after startAt. If it already ended,
+startAt is yesterday evening.
 
 TIME RESOLUTION RULES:
 1. Bare hours: pick the reading consistent with the schedule above.
@@ -223,16 +254,30 @@ TIME RESOLUTION RULES:
 3. "This morning", "last night", "yesterday" → resolve to the concrete date.
 4. Ranges: "from 8 AM to 11 AM" → intent=log_past with both startAt and endAt.
 5. Future start: "start work in 5 mins" → intent=schedule, startAt = now + 5 min.
-   Do NOT emit endAt.
+   A clock time later today ("gym at 6", "study at 9 tonight", "work at 2 PM")
+   is also schedule, startAt = that time. Do NOT emit endAt.
 6. Never emit a startAt more than 7 days in the past. If the utterance implies that,
    set intent=clarify.
 
-STOP AND EDIT:
-- "I'm done", "stop", "finished" → intent=stop. Pick targetActivityId from ACTIVE below.
-  If several are active and the utterance names none, intent=clarify with the active ones
-  as clarifyOptions.
-- "no, that was learning", "change it to 9 AM", "it was two hours" → intent=edit,
-  targetActivityId = the most recent activity, and emit only the fields that change.
+STOP, SWITCH, BREAK:
+- "I'm done", "stop", "finished", "taking a break", "pausing for lunch" → intent=stop.
+  Pick targetActivityId from ACTIVE below. If several are active and the utterance
+  names none, intent=clarify with the active ones as clarifyOptions.
+- Switching: "stop work and start gym", "switching to study", "done with work, now
+  reading" → TWO entries: stop (target = the running one) then start, startAt = now.
+  With nothing ACTIVE, emit only the start.
+- Resuming: "back to work", "resume", "continue studying" → intent=start, startAt =
+  now, with the category and label of the most recent matching record in RECENT
+  (with no category named, the most recently finished record).
+
+EDIT AND DELETE - targetActivityId MUST be an id from ACTIVE or RECENT:
+- "no, that was learning", "change it to 9 AM", "it was two hours" → intent=edit on
+  the most recent activity. Emit only the fields that change; the rest stay null.
+- A named older record: "the gym session yesterday ended at 8", "Monday's work
+  started at 9" → intent=edit, target = that record, only the changed fields.
+- "delete the last one", "cancel that", "remove yesterday's gym" → intent=delete,
+  target = that record (no record named → the most recent one). No other fields.
+- If no record in the lists matches, intent=clarify.
 
 CONFIDENCE - this drives whether the user must confirm, so be honest:
   0.95+  explicit category and explicit time
@@ -248,9 +293,9 @@ ${ctx.activeActivities.length
   ? ctx.activeActivities.map((a) => `- id=${a.id} ${a.category}${a.label ? ` (${a.label})` : ''} since ${fmt(a.startAt)}`).join('\n')
   : '- none'}
 
-RECENT:
+RECENT (newest first):
 ${ctx.recentActivities.length
-  ? ctx.recentActivities.slice(0, 5).map((a) => `- id=${a.id} ${a.category}${a.label ? ` (${a.label})` : ''} ${fmt(a.startAt)} → ${a.endAt ? fmt(a.endAt) : 'running'}`).join('\n')
+  ? ctx.recentActivities.slice(0, RECENT_IN_PROMPT).map((a) => `- id=${a.id} ${a.category}${a.label ? ` (${a.label})` : ''} ${fmt(a.startAt)} → ${a.endAt ? fmt(a.endAt) : 'running'}`).join('\n')
   : '- none'}`;
 }
 

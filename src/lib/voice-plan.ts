@@ -60,6 +60,7 @@ function requiredOf(cmd: ParsedCommand): MissingField[] {
       return ['category', 'startAt', 'endAt'];
     case 'stop':
     case 'edit':
+    case 'delete':
       return ['target'];
     case 'bedtime':
       return ['bedtimeAt'];
@@ -105,8 +106,8 @@ export function planVoice(cmd: ParsedCommand, ctx: PlanContext): VoicePlan {
 
   let next = cmd;
 
-  // Just saved, then "no, that was learning" → edit that record.
-  if (next.intent === 'edit' && next.targetActivityId === null && ctx.lastCreatedId) {
+  // Just saved, then "no, that was learning" / "delete that" → that record.
+  if ((next.intent === 'edit' || next.intent === 'delete') && next.targetActivityId === null && ctx.lastCreatedId) {
     next = { ...next, targetActivityId: ctx.lastCreatedId };
   }
 
@@ -132,6 +133,19 @@ export function planVoice(cmd: ParsedCommand, ctx: PlanContext): VoicePlan {
   //
   // start/stop/edit are NOT blocked - they change the present, mistakes show at once.
   if (next.intent === 'log_past') return { kind: 'confirm', cmd: next, missing: [] };
+
+  // Removing a record always asks first, even with Undo.
+  if (next.intent === 'delete') return { kind: 'confirm', cmd: next, missing: [] };
+
+  // Editing an older record (not the one just made, not a running one) changes
+  // the past out of sight, so it asks first like log_past.
+  if (
+    next.intent === 'edit' &&
+    next.targetActivityId !== ctx.lastCreatedId &&
+    !ctx.active.some((a) => a.id === next.targetActivityId)
+  ) {
+    return { kind: 'confirm', cmd: next, missing: [] };
+  }
 
   if (next.confidence >= AUTO_COMMIT_THRESHOLD) return { kind: 'commit', cmd: next };
   return { kind: 'confirm', cmd: next, missing: [] };

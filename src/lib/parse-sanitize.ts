@@ -24,6 +24,10 @@ export interface ParsedCommand {
   clarifyOptions: string[] | null;
   targetActivityId: string | null;
   transcript: string;
+  /** Set by the server for stop/edit/delete: the target in words ("Work · 08:00-12:00, yesterday"). */
+  targetText?: string | null;
+  /** Set by the server when the new block overlaps saved records ("Work 08:00-12:00"). */
+  overlap?: string | null;
 }
 
 const INTENTS: readonly Intent[] = [
@@ -32,6 +36,7 @@ const INTENTS: readonly Intent[] = [
   'log_past',
   'schedule',
   'edit',
+  'delete',
   'bedtime',
   'clarify',
   'unknown',
@@ -39,6 +44,7 @@ const INTENTS: readonly Intent[] = [
 
 const MAX_TEXT = 200;
 const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
 /** Matches `MAX_BACKDATE_MS` in activities.ts - over 7 days, validateTimes blocks it too. */
 const MAX_BACKDATE_MS = 7 * 24 * HOUR;
 const MAX_FUTURE_MS = 24 * HOUR;
@@ -88,7 +94,7 @@ export function sanitizeParse(
   }
 
   // --- times ------------------------------------------------------
-  const startAt = toMs(r.startAt);
+  let startAt = toMs(r.startAt);
   let endAt = toMs(r.endAt);
   // The bedtime mark: only read for the bedtime intent. In other sentences a
   // time is a session time, not a bedtime - never guess for the user.
@@ -103,6 +109,15 @@ export function sanitizeParse(
   let badEndDropped = false;
 
   if (startAt !== null && endAt !== null) {
+    if (endAt <= startAt && endAt + DAY - startAt <= MAX_SPAN_MS) {
+      // "10 PM to 1 AM": the end is on the next day.
+      endAt += DAY;
+      // Said in the morning, both times landed tonight: it was last night.
+      if (startAt > now + FUTURE_SLACK_MS && endAt - DAY <= now + FUTURE_SLACK_MS) {
+        startAt -= DAY;
+        endAt -= DAY;
+      }
+    }
     if (endAt <= startAt) {
       endAt = null; // a nonsense end time → drop it, let the user fill it in
       badEndDropped = true;
@@ -162,6 +177,23 @@ export function sanitizeParse(
       confidence,
       clarifyQuestion: question,
       clarifyOptions: opts2.length ? opts2 : null,
+      targetActivityId,
+      transcript: clip(r.transcript) ?? '',
+    };
+  }
+
+  // Delete needs only its target; stray times or a category mean nothing here.
+  if (intent === 'delete') {
+    return {
+      intent,
+      category: null,
+      label: null,
+      startAt: null,
+      endAt: null,
+      bedtimeAt: null,
+      confidence,
+      clarifyQuestion: question,
+      clarifyOptions: null,
       targetActivityId,
       transcript: clip(r.transcript) ?? '',
     };
