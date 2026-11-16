@@ -3,11 +3,11 @@ import 'server-only';
 // ============================================================
 // POST /api/parse
 // Body: { audio?: base64, mimeType?: string, text?: string, requestId: string }
-// Returns: ParsedCommand (sanitized, times as epoch ms)
+// Returns: { entries: ParsedCommand[] } (sanitized, times as epoch ms), one per activity said
 // ============================================================
 
 import { buildSystemPrompt, parseAudio, parseTextCorrection } from '@/lib/gemini-parse';
-import { sanitizeParse, type ParsedCommand } from '@/lib/parse-sanitize';
+import { sanitizeEntries, type ParsedCommand } from '@/lib/parse-sanitize';
 import { requireSessionUser } from '@/lib/server-auth';
 import { QUOTA_MESSAGE, isQuotaError } from '@/lib/ai-quota';
 import { listActiveForPrompt, listRecentForPrompt } from '@/lib/server-activities';
@@ -125,6 +125,7 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   let raw;
+  const askedAt = Date.now();
   try {
     raw = await withTimeout(
       audio
@@ -139,7 +140,16 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const knownIds = new Set([...active, ...recent].map((a) => a.id));
-  const command: ParsedCommand = sanitizeParse(raw, { now, knownIds });
+  const entries: ParsedCommand[] = sanitizeEntries(raw, { now, knownIds });
+  // Where the time goes, to find what makes voice slow (no content logged).
+  console.info('[api/parse] timing', {
+    mode: audio ? 'audio' : 'text',
+    audioKb: audio ? Math.round((audio.length * 3) / 4 / 1024) : 0,
+    contextMs: askedAt - now,
+    geminiMs: Date.now() - askedAt,
+    totalMs: Date.now() - now,
+    entries: entries.length,
+  });
 
-  return json(200, { ...command, requestId });
+  return json(200, { entries, requestId });
 }

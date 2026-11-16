@@ -12,6 +12,7 @@ import { ActivityError } from '@/lib/activities';
 import { createOnce } from '@/lib/once';
 import type { ParsedCommand } from '@/lib/parse-sanitize';
 import { applyVoice, planVoice } from '@/lib/voice-command';
+import { planBatch, type BatchItem } from '@/lib/voice-batch';
 import type { Activity } from '@/types/logi';
 
 export interface VoicePending {
@@ -26,6 +27,14 @@ export interface VoiceClarify {
   transcript: string | null;
   requestId: string;
 }
+
+/** Several activities said at once: confirmed together on one card. */
+export interface VoiceBatch {
+  items: BatchItem[];
+  requestId: string;
+}
+
+type ParseBody = { entries?: ParsedCommand[]; requestId: string; error?: string };
 
 type Push = (message: string, action?: { label: string; run: () => void }) => void;
 
@@ -45,6 +54,7 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState<VoicePending | null>(null);
   const [clarify, setClarify] = useState<VoiceClarify | null>(null);
+  const [batch, setBatch] = useState<VoiceBatch | null>(null);
 
   // The record just written, so "no, that was learning" knows what to fix.
   const lastCreated = useRef<{ id: string; at: number } | null>(null);
@@ -170,11 +180,9 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
           }),
         });
 
-        const body = (await res.json().catch(() => null)) as
-          | (ParsedCommand & { requestId: string; error?: string })
-          | null;
+        const body = (await res.json().catch(() => null)) as ParseBody | null;
 
-        if (!res.ok || !body) {
+        if (!res.ok || !body?.entries?.length) {
           // The server refused (quota, too long, broken key) - do not abandon the
           // user midway, open the sheet to log by hand.
           push(body?.error ?? 'Voice failed. Fill it in instead.');
@@ -182,7 +190,11 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
           return;
         }
 
-        await runPlan(body, requestId, false, onManual);
+        if (body.entries.length > 1) {
+          setBatch({ items: planBatch(body.entries, { active, lastCreatedId: lastCreatedId() }), requestId });
+          return;
+        }
+        await runPlan(body.entries[0], requestId, false, onManual);
       } catch (e) {
         // Offline: fetch throws at once. Manual logging must still work.
         push(`Voice failed. ${msg(e)}`);
@@ -191,8 +203,52 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
         setThinking(false);
       }
     },
-    [uid, push, runPlan]
+    [uid, push, runPlan, active, lastCreatedId]
   );
+
+  /**
+   * Saves the ticked entries of a batch, one by one, each with its own id
+   * (requestId:index) so a retry never doubles one. One toast, one Undo for all.
+   */
+  const saveBatch = useCallback(
+    async (indexes: number[]) => {
+      const current = batch;
+      if (!uid || current === null) return;
+      setSaving(true);
+      const undos: (() => Promise<void>)[] = [];
+      let lastId: string | null = null;
+      let failed = 0;
+      for (const i of indexes) {
+        try {
+          await once.current.run(`${current.requestId}:${i}`, async () => {
+            const done = await applyVoice(uid, current.items[i].cmd);
+            undos.push(done.undo);
+            if (done.activityId) lastId = done.activityId;
+          });
+        } catch {
+          failed++;
+        }
+      }
+      setSaving(false);
+      setBatch(null);
+      lastCreated.current = lastId ? { id: lastId, at: Date.now() } : null;
+      const saved = undos.length;
+      const text = failed > 0 ? `Saved ${saved}, ${failed} failed.` : `Saved ${saved} ${saved === 1 ? 'entry' : 'entries'}.`;
+      push(text, {
+        label: 'Undo',
+        run: () => {
+          lastCreated.current = null;
+          // Newest first, so each undo sees the state it expects.
+          void (async () => {
+            for (const undo of [...undos].reverse()) await undo();
+          })().catch((e) => push(`Could not undo. ${msg(e)}`));
+        },
+      });
+    },
+    [uid, batch, push]
+  );
+
+  const cancelBatch = useCallback(() => setBatch(null), []);
 
   /**
    * A choice tapped in the question. Send it back to the parser with the
@@ -215,18 +271,16 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
           body: JSON.stringify({ text, requestId: asking.requestId }),
         });
 
-        const body = (await res.json().catch(() => null)) as
-          | (ParsedCommand & { requestId: string; error?: string })
-          | null;
+        const body = (await res.json().catch(() => null)) as ParseBody | null;
 
-        if (!res.ok || !body) {
+        if (!res.ok || !body?.entries?.length) {
           push(body?.error ?? 'Voice failed. Fill it in instead.');
           setClarify(null);
           onManual();
           return;
         }
 
-        await runPlan(body, asking.requestId, true, onManual);
+        await runPlan(body.entries[0], asking.requestId, true, onManual);
       } catch (e) {
         push(`Voice failed. ${msg(e)}`);
         setClarify(null);
@@ -243,6 +297,9 @@ export function useVoice(uid: string | null, active: Activity[], push: Push) {
     saving,
     pending,
     clarify,
+    batch,
+    saveBatch,
+    cancelBatch,
     handleRecording,
     confirmPending,
     cancelPending,

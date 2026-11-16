@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { sanitizeParse } from '@/lib/parse-sanitize';
+import { sanitizeEntries, sanitizeParse } from '@/lib/parse-sanitize';
 import { at, H } from './_helpers.ts';
 
 const NOW = at('2026-08-26', '12:00');
@@ -192,4 +192,33 @@ test('sanitize: non-bedtime phrase always has bedtimeAt null', () => {
   const r = sanitizeParse(base({ bedtimeAt: new Date(NOW - H).toISOString() }), opts);
   assert.equal(r.intent, 'log_past');
   assert.equal(r.bedtimeAt, null);
+});
+
+test('entries: each activity cleaned on its own, in order, at most 6', () => {
+  const work = base({ intent: 'log_past', category: 'work' });
+  const gym = base({ intent: 'log_past', category: 'fitness' });
+  const out = sanitizeEntries({ entries: [work, gym] }, opts);
+  assert.deepEqual(out.map((c) => c.category), ['work', 'fitness']);
+  assert.equal(sanitizeEntries({ entries: Array.from({ length: 9 }, () => work) }, opts).length, 6);
+});
+
+test('entries: an unclear phrase does not drop the rest; all unclear keeps one', () => {
+  const work = base({ intent: 'log_past', category: 'work' });
+  const unknown = base({ intent: 'unknown', category: null });
+  assert.deepEqual(sanitizeEntries({ entries: [unknown, work] }, opts).map((c) => c.intent), ['log_past']);
+  assert.deepEqual(sanitizeEntries({ entries: [unknown, unknown] }, opts).map((c) => c.intent), ['unknown']);
+});
+
+test('entries: the old single-command shape and junk still give one command', () => {
+  assert.equal(sanitizeEntries(base({ intent: 'log_past', category: 'learn' }), opts)[0].category, 'learn');
+  assert.equal(sanitizeEntries(null, opts)[0].intent, 'unknown');
+});
+
+test('sanitize: a finished block or a bedtime in the future asks back', () => {
+  const later = sanitizeParse(base({ startAt: new Date(NOW - H).toISOString(), endAt: new Date(NOW + H).toISOString() }), opts);
+  assert.equal(later.intent, 'clarify');
+  const soon = sanitizeParse(base({ startAt: new Date(NOW - H).toISOString(), endAt: new Date(NOW + 60_000).toISOString() }), opts);
+  assert.equal(soon.intent, 'log_past', 'a minute ahead is still now');
+  const bed = sanitizeParse(base({ intent: 'bedtime', category: null, bedtimeAt: new Date(NOW + 2 * H).toISOString() }), opts);
+  assert.equal(bed.intent, 'clarify');
 });

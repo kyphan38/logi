@@ -11,6 +11,7 @@ import StaleSessionModal from '@/components/StaleSessionModal';
 import MicButton from '@/components/MicButton';
 import NextEventBanner from '@/components/NextEventBanner';
 import ParseConfirmCard from '@/components/ParseConfirmCard';
+import VoiceBatchCard from '@/components/VoiceBatchCard';
 import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
@@ -93,7 +94,7 @@ export default function NowPage() {
   const voice = useVoice(uid, active, push);
 
   // While the voice card is open, the FAB steps aside.
-  const voiceCardOpen = voice.pending !== null || voice.clarify !== null;
+  const voiceCardOpen = voice.pending !== null || voice.clarify !== null || voice.batch !== null;
 
   // When voice is stuck there must be a way out: the manual sheet, for the last hour.
   const openManual = useCallback(() => {
@@ -434,6 +435,19 @@ export default function NowPage() {
             busy={voice.saving}
             onConfirm={voice.confirmPending}
             onCancel={voice.cancelPending}
+          />
+        </VoiceSheet>
+      ) : null}
+
+      {voice.batch ? (
+        <VoiceSheet>
+          <VoiceBatchCard
+            key={voice.batch.requestId}
+            items={voice.batch.items}
+            now={nowMinute}
+            busy={voice.saving}
+            onSave={(idx) => void voice.saveBatch(idx)}
+            onCancel={voice.cancelBatch}
           />
         </VoiceSheet>
       ) : null}

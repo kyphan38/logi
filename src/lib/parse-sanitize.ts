@@ -6,7 +6,7 @@
 // ============================================================
 
 import { CATEGORIES, MAX_SESSION_MIN, type Category } from '@/types/logi';
-import type { ParseResult } from '@/lib/gemini-parse';
+import { MAX_ENTRIES, type ParseResult } from '@/lib/gemini-parse';
 
 export type Intent = ParseResult['intent'];
 
@@ -56,6 +56,9 @@ function toMs(v: unknown): number | null {
   const ms = Date.parse(v);
   return Number.isFinite(ms) ? ms : null;
 }
+
+/** Spoken times are rounded; a few minutes ahead of now still counts as now. */
+const FUTURE_SLACK_MS = 5 * 60_000;
 
 export function sanitizeParse(
   raw: Partial<ParseResult> | null | undefined,
@@ -116,6 +119,15 @@ export function sanitizeParse(
   if (intent === 'log_past' && endAt === null && !badEndDropped) {
     intent = 'start';
   }
+  // A finished block cannot end in the future ("gym 6 to 7:30" said at 19:07).
+  // Ask instead of saving a block that has not happened yet.
+  if (intent === 'log_past' && endAt !== null && endAt > now + FUTURE_SLACK_MS) {
+    askBack('That ends later than now. Is it still going?');
+  }
+  // Same for a bedtime that is still ahead.
+  if (intent === 'bedtime' && bedtimeAt !== null && bedtimeAt > now + FUTURE_SLACK_MS) {
+    askBack('That bedtime is still ahead. Did you mean last night?');
+  }
   // "until now" means STILL RUNNING, not an end time.
   // Running means no endAt - the two cannot go together.
   if (intent === 'start' && endAt !== null) {
@@ -168,4 +180,26 @@ export function sanitizeParse(
     targetActivityId,
     transcript: clip(r.transcript) ?? '',
   };
+}
+
+/**
+ * Every entry of one utterance, each cleaned on its own (sanitizeParse), in the
+ * order spoken and at most MAX_ENTRIES. An old single-command shape still works.
+ * "unknown" entries are dropped when the utterance also held something usable,
+ * so one unclear phrase does not throw away the rest.
+ */
+export function sanitizeEntries(
+  raw: unknown,
+  opts: { now: number; knownIds: ReadonlySet<string> },
+): ParsedCommand[] {
+  const r = (raw ?? {}) as { entries?: unknown; intent?: unknown };
+  const list: Partial<ParseResult>[] = Array.isArray(r.entries)
+    ? (r.entries as Partial<ParseResult>[])
+    : r.intent !== undefined
+      ? [r as Partial<ParseResult>]
+      : [];
+  const cleaned = list.slice(0, MAX_ENTRIES).map((e) => sanitizeParse(e, opts));
+  const usable = cleaned.filter((c) => c.intent !== 'unknown');
+  if (usable.length > 0) return usable;
+  return cleaned.length > 0 ? [cleaned[0]] : [sanitizeParse(null, opts)];
 }

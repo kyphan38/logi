@@ -75,6 +75,25 @@ export const PARSE_SCHEMA = {
   ],
 } as const;
 
+/** One utterance can hold several activities: one entry each, in the order spoken. */
+export const MAX_ENTRIES = 6;
+
+export const ENTRIES_SCHEMA = {
+  type: 'object',
+  properties: {
+    entries: {
+      type: 'array',
+      items: PARSE_SCHEMA,
+      description: `One entry per activity or bedtime in the utterance, in the order spoken. At most ${MAX_ENTRIES}.`,
+    },
+  },
+  required: ['entries'],
+} as const;
+
+export interface ParseResponse {
+  entries: ParseResult[];
+}
+
 export interface ParseResult {
   intent: 'start' | 'stop' | 'log_past' | 'schedule' | 'edit' | 'bedtime' | 'clarify' | 'unknown';
   category: Category | null;
@@ -110,6 +129,14 @@ export function buildSystemPrompt(ctx: {
 
   return `You parse spoken English into time-tracking entries. Output JSON only, matching the schema.
 
+SEVERAL ACTIVITIES IN ONE UTTERANCE:
+The user often says more than one thing at once ("worked 8 to 12, gym 6 to 7,
+then studied until now", "went to bed at 11:30 last night and I'm starting work now").
+Emit ONE entry per activity or bedtime, in the order spoken, at most 6. Each entry
+follows every rule below on its own, with its own intent and times.
+"Then", "after that", "and then" with no time: the next activity starts when the
+previous one ended. One activity → exactly one entry.
+
 CURRENT TIME: ${ctx.nowISO} (${ctx.weekday}), timezone Asia/Ho_Chi_Minh (+07:00).
 All timestamps you emit MUST be ISO 8601 with the +07:00 offset.
 
@@ -125,12 +152,16 @@ If an activity fits none, pick the nearest and drop confidence below 0.7.
 SLEEP IS NOT TRACKED as a session. There is no sleep category any more.
 Going to bed is recorded as a single bedtime MARKER, never as an activity:
 
-- "going to bed now", "I went to bed at 11:30", "bedtime 23:45"
+- "going to bed now", "I went to bed at 11:30", "bedtime 23:45", "I slept at 11:30",
+  "I fell asleep around midnight", "yesterday I slept at 11", "last night I went to bed at 1"
   → intent=bedtime, bedtimeAt = that moment, category=null.
   "now" means CURRENT TIME. "at 11:30" resolves like any other clock time.
-- Anything else about sleeping, napping, or waking up ("I slept 8 hours",
-  "I woke up at 6") → intent=unknown with category=null, keep the spoken
-  words in \`transcript\` as they are.
+  "Yesterday" / "last night" mean the night before today: 11 PM yesterday is
+  yesterday's date; 1 AM "last night" is TODAY's date at 01:00. With no day given,
+  pick the most recent past moment with that clock time.
+- Waking up, sleep length and naps ("I slept 8 hours", "I woke up at 6") are not
+  tracked: emit NO entry for them. If the utterance has nothing else, emit one
+  entry intent=unknown with category=null and the spoken words in \`transcript\`.
 
 Do NOT map bedtime or sleep onto leisure or any other category, and do not
 silently drop it. A bedtime utterance MUST NEVER create an activity.
@@ -156,12 +187,14 @@ is still running:
   "haven't finished", "still", "not done", "am still", "keep", "ongoing",
   "since 2 PM", "for the last hour", "started X ago" with no end given.
 
-"until now", "so far", "up to now" mean STILL RUNNING. They are NOT an
-end time. Never turn them into endAt.
+"until now", "till now", "up to now", "so far" WITH a start ("from 8 until now",
+"studied from 2 PM till now", "worked 9 to now") describe a block that ENDS NOW:
+intent=log_past, endAt = CURRENT TIME. Only when the utterance also says it is
+still going ("still studying, started at 8 so far") is it 'start'.
 
-Only choose 'log_past' when the utterance clearly says it stopped:
-  "finished", "done", "stopped", "ended", "from X to Y", "for 2 hours"
-  spoken about a completed block.
+Choose 'log_past' when the utterance says it stopped:
+  "finished", "done", "stopped", "ended", "from X to Y", "from X until now",
+  "for 2 hours" spoken about a completed block.
 
 Examples:
   "I started watching YouTube 30 minutes ago and haven't finished yet"
@@ -172,6 +205,10 @@ Examples:
     → start, startAt = now − 1h, no endAt
   "I worked on devops from 8 AM to 11 AM"
     → log_past, both times
+  "I studied from 8 until now"
+    → log_past, startAt = 8:00 today, endAt = now
+  "Worked 8 to 12, gym 6 to 7, then studied until now"
+    → three log_past entries: work 8:00-12:00, fitness 18:00-19:00, learn 19:00-now
   "I finished cooking 11 minutes ago"
     → log_past, endAt = now − 11min
   "I'll start studying in 5 minutes"
@@ -223,6 +260,10 @@ ${ctx.recentActivities.length
 
 export const AUTO_COMMIT_THRESHOLD = 0.85;
 
+/** 'low' is the default; 'minimal' is only for A/B runs (scripts/ab-voice.mjs) until it wins one. */
+export type Thinking = 'low' | 'minimal';
+const thinkingOf = (t: Thinking) => ({ thinkingConfig: { thinkingLevel: t } });
+
 // Flash with low thinking parsed the same as gemini-4-argon on test clips,
 // in about 3-4s instead of 5-50s.
 const MODEL = 'gemini-3.8-flash';
@@ -238,8 +279,9 @@ export async function parseAudio(
   audioBase64: string,
   mimeType: string, // "audio/webm" (Android/desktop) | "audio/mp4" (iOS Safari/Edge)
   systemPrompt: string,
-  apiKey: string
-): Promise<ParseResult> {
+  apiKey: string,
+  thinking: Thinking = 'low',
+): Promise<ParseResponse> {
   const res = await fetch(`${ENDPOINT}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -254,9 +296,9 @@ export async function parseAudio(
       }],
       generationConfig: {
         responseMimeType: 'application/json',
-        responseSchema: PARSE_SCHEMA,
+        responseSchema: ENTRIES_SCHEMA,
         temperature: 0.1,
-        thinkingConfig: { thinkingLevel: 'low' },
+        ...thinkingOf(thinking),
       },
     }),
   });
@@ -265,16 +307,20 @@ export async function parseAudio(
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('Gemini returned no content');
-  return JSON.parse(text) as ParseResult;
+  return JSON.parse(text) as ParseResponse;
 }
 
 /** Quick voice fix - sends the record just made, gets back a patch. */
 export async function parseTextCorrection(
   utterance: string,
   systemPrompt: string,
-  apiKey: string
-): Promise<ParseResult> {
-  const res = await fetch(`${ENDPOINT}?key=${apiKey}`, {
+  apiKey: string,
+  thinking: Thinking = 'low',
+  /** Only A/B runs pass another model. */
+  model: string = MODEL,
+): Promise<ParseResponse> {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const res = await fetch(`${endpoint}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -282,15 +328,15 @@ export async function parseTextCorrection(
       contents: [{ role: 'user', parts: [{ text: utterance }] }],
       generationConfig: {
         responseMimeType: 'application/json',
-        responseSchema: PARSE_SCHEMA,
+        responseSchema: ENTRIES_SCHEMA,
         temperature: 0.1,
-        thinkingConfig: { thinkingLevel: 'low' },
+        ...thinkingOf(thinking),
       },
     }),
   });
   if (!res.ok) throw new Error(`Gemini ${res.status}`);
   const data = await res.json();
-  return JSON.parse(data.candidates[0].content.parts[0].text) as ParseResult;
+  return JSON.parse(data.candidates[0].content.parts[0].text) as ParseResponse;
 }
 
 /**
