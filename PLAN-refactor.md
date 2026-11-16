@@ -1,5 +1,18 @@
 # PLAN-refactor (logi)
 
+Trạng thái: Phase 1-4 xong (2026-11-16, branch `refactor/pages`). Test 657/657 (thêm 8), build OK. Chưa thử bằng tay (logi không có emulator, cần đăng nhập thật).
+
+Kết quả:
+| File | Trước | Sau |
+|---|---|---|
+| targets/page.tsx | 796 | 315 |
+| now/page.tsx | 753 | 467 |
+| history/page.tsx | 463 | 310 |
+| hooks/useActivities.ts | 412 | 295 |
+
+Mới: `components/targets/` (7), `components/now/StoppedCards`, `components/history/` (2), `hooks/useTargetsDraft`, `useNowActions`, `useLeavingCards`, `useTick`, `useOnForeground`, `useOnline`, `useToasts`, `lib/targets-view`, `lib/record-defaults`, `prettyDay` trong `lib/datetime`.
+Các trang vẫn trên mục tiêu 200-300 dòng: phần còn lại chủ yếu là JSX bố cục. Chỉ tách thêm khi sắp sửa trang đó.
+
 Mục tiêu: làm gọn 3 trang to và 1 hook "ôm nhiều việc". Phần `lib/` đã tốt, giữ nguyên.
 
 Không đổi tính năng. Không đổi giao diện.
