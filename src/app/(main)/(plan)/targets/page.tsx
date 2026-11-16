@@ -7,15 +7,15 @@
 // Everything on this screen must make that obvious.
 // ============================================================
 
-import { Suspense, useCallback, useMemo, useState } from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import Toasts from '@/components/Toasts';
 import RoutineSection from '@/components/RoutineSection';
-import SheetShell from '@/components/SheetShell';
 import WeeklyReview from '@/components/WeeklyReview';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTick, useToasts } from '@/hooks/useActivities';
+import { useTargetsDraft } from '@/hooks/useTargetsDraft';
+import { useToasts } from '@/hooks/useActivities';
 import {
   useCrunchStreak,
   useCurrentWeek,
@@ -24,61 +24,17 @@ import {
   useWeekTarget,
 } from '@/hooks/useTargets';
 import { budgetMessages, PRESET_HINT } from '@/lib/copy';
-import { dragBounds, MAX_PINNED, rebalance, validateTargets } from '@/lib/balance';
-import { reapplyDebt, roundToBudget, type Weekly } from '@/lib/rollover';
-import {
-  TargetError,
-  previewSwitch,
-  resetBaseline,
-  setCustomTargets,
-  setPreset,
-} from '@/lib/targets';
-import { isWeekClosed, weekLabel } from '@/lib/week';
-import {
-  CATEGORIES,
-  CATEGORY_COLOR,
-  CATEGORY_LABEL,
-  HARD_FLOOR,
-  PRESETS,
-  TOTAL_BUDGET,
-  type Category,
-  type PresetId,
-  type WeekTarget,
-} from '@/types/logi';
+import { dragBounds, MAX_PINNED } from '@/lib/balance';
+import { weekLabel } from '@/lib/week';
+import { PRESETS, type PresetId } from '@/types/logi';
 import { btn, LABEL } from '@/lib/ui';
-
-const PRESET_ORDER: PresetId[] = ['normal', 'crunch', 'deep_learn', 'recovery'];
-
-/**
- * Custom is the FIFTH MODE, not a separate block underneath.
- *
- * Four presets used to sit in a dropdown while four sliders always showed
- * below under "CUSTOM". The screen said two opposite things at once:
- * "Mode: Recovery" above, "Custom 43.5h" below. Now there is ONE list of five
- * choices, and only the selected mode shows its controls.
- */
-type ModeId = PresetId | 'custom';
-const MODE_ORDER: ModeId[] = [...PRESET_ORDER, 'custom'];
-const SHORT: Record<Category, string> = {
-  work: 'W',
-  learn: 'L',
-  fitness: 'F',
-  leisure: 'Le',
-};
-
-const h = (n: number) => `${Math.round(n * 10) / 10}h`;
-const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
-/**
- * With Sleep gone, NO category is fixed: all 4 can be dragged
- * (AMENDMENT-remove-sleep section 11). The name `ADJUSTABLE` stays to avoid
- * touching every caller, but it now equals `CATEGORIES`.
- */
-const ADJUSTABLE = CATEGORIES;
-
-function summary(weekly: Weekly): string {
-  return ADJUSTABLE.map((c) => `${SHORT[c]}${Math.round(weekly[c])}`).join(' · ');
-}
+import { ADJUSTABLE, MODE_ORDER, PRESET_ORDER, h, summary } from '@/lib/targets-view';
+import ModeCard from '@/components/targets/ModeCard';
+import Slider from '@/components/targets/Slider';
+import TotalRow from '@/components/targets/TotalRow';
+import DebtSection from '@/components/targets/DebtSection';
+import StreakPrompt from '@/components/targets/StreakPrompt';
+import ConfirmSheet from '@/components/targets/ConfirmSheet';
 
 /**
  * `useSearchParams` forces the subtree to render on the client, so wrap it in
@@ -114,116 +70,30 @@ function TargetsView() {
   /** There is a suggestion, and it differs from the current preset → something to do. */
   const suggestPending = suggested !== null && suggested !== target?.preset;
 
-  const [busy, setBusy] = useState(false);
-  // The mode list is collapsed by default. It opens when arriving via `?suggest=` -
-  // a deep link that lands on a closed block leads nowhere.
-  const [modeOpen, setModeOpen] = useState(suggested !== null);
-  const [confirm, setConfirm] = useState<PresetId | null>(null);
-  const [draft, setDraft] = useState<Weekly | null>(null);
-  /** The user just picked Custom, even if the saved numbers still equal the preset. */
-  const [customPicked, setCustomPicked] = useState(false);
-  /**
-   * Pinned categories: dragging another one must NOT take their hours.
-   * Session only - this is how you are dragging, not a weekly goal.
-   */
-  const [pinned, setPinned] = useState<Set<Category>>(() => new Set());
-  const [keepStreak, setKeepStreak] = useState(false);
-  /** Weekly Review opened by hand from here, no need to wait for Sunday evening. */
-  const [reviewOpen, setReviewOpen] = useState<string | null>(null);
-
-  // From 21:00 Sunday to 04:00 Monday the week is still "this week" but closed.
-  // The lazy lock may not have written `lockedAt` yet, so the UI checks the time itself.
-  const nowMinute = useTick(60_000, true);
-  const locked = target?.lockedAt != null || isWeekClosed(week, nowMinute);
-  const saved: Weekly | null = target?.weekly ?? null;
-  const weekly = draft ?? saved;
-
-  const check = useMemo(
-    () => (weekly ? validateTargets(weekly) : null),
-    [weekly]
-  );
-  const dirty = draft !== null && saved !== null && ADJUSTABLE.some((c) => draft[c] !== saved[c]);
-
-  // Saved numbers DIFFER from the preset in the doc → this week is really Custom.
-  // Without this the screen keeps saying "Recovery" after you dragged 20h away,
-  // and the mode becomes a lying label.
-  const savedIsCustom = useMemo(() => {
-    if (!saved || !target) return false;
-    const base = reapplyDebt(PRESETS[target.preset].weekly, target.debtApplied ?? {});
-    return ADJUSTABLE.some((c) => Math.abs(saved[c] - base[c]) > 0.05);
-  }, [saved, target]);
-
-  const mode: ModeId =
-    dirty || customPicked || savedIsCustom ? 'custom' : (target?.preset ?? 'normal');
-
-  // --- Actions -----------------------------------------------------
-
-  const guard = useCallback(
-    async (fn: () => Promise<void>) => {
-      if (!uid || busy) return;
-      setBusy(true);
-      try {
-        await fn();
-      } catch (e) {
-        // A closed week is normal, not a system error.
-        push(e instanceof TargetError ? e.message : `Could not save. ${msg(e)}`);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [uid, busy, push]
-  );
-
-  const applyPreset = (id: PresetId) =>
-    guard(async () => {
-      await setPreset(uid!, week, id);
-      setDraft(null);
-      setConfirm(null);
-      setCustomPicked(false);
-      setPinned(new Set());
-      push(`Switched to ${PRESETS[id].label}.`);
-    });
-
-  /** Picking Custom = keep the current hours and open the sliders. Nothing saved yet. */
-  const pickCustom = () => {
-    setCustomPicked(true);
-    setConfirm(null);
-    setModeOpen(false);
-  };
-
-  const cancelCustom = () => {
-    setDraft(null);
-    setPinned(new Set());
-    if (!savedIsCustom) setCustomPicked(false);
-  };
-
-  /** Pin / unpin. Beyond 3 the request is silently refused - the button is disabled. */
-  const togglePin = (c: Category) =>
-    setPinned((prev) => {
-      const next = new Set(prev);
-      if (next.has(c)) next.delete(c);
-      else if (next.size < MAX_PINNED) next.add(c);
-      return next;
-    });
-
-  const saveCustom = () =>
-    guard(async () => {
-      await setCustomTargets(uid!, week, draft!);
-      setDraft(null);
-      push('Targets saved.');
-    });
-
-  const doResetBaseline = () =>
-    guard(async () => {
-      await resetBaseline(uid!, week);
-      setDraft(null);
-      push('Baseline reset to Crunch. Matching debt cleared.');
-    });
-
-  const drag = (c: Category, value: number) => {
-    if (!weekly || locked) return;
-    setDraft(roundToBudget(rebalance(weekly, c, value, pinned)));
-  };
+  const {
+    busy,
+    modeOpen,
+    setModeOpen,
+    confirm,
+    setConfirm,
+    pinned,
+    keepStreak,
+    setKeepStreak,
+    reviewOpen,
+    setReviewOpen,
+    locked,
+    weekly,
+    check,
+    dirty,
+    mode,
+    applyPreset,
+    pickCustom,
+    cancelCustom,
+    togglePin,
+    saveCustom,
+    doResetBaseline,
+    drag,
+  } = useTargetsDraft({ uid, week, target, suggested, push });
 
   // --- Render ------------------------------------------------------
 
@@ -428,369 +298,18 @@ function TargetsView() {
 // Mode card
 // ----------------------------------------------------------------------
 
-function ModeCard({
-  label,
-  hint,
-  summary: line,
-  selected,
-  suggested = false,
-  lockedReason = null,
-  disabled,
-  onSelect,
-}: {
-  label: string;
-  hint: string;
-  summary: string;
-  selected: boolean;
-  /** Suggested by the AI on Analytics. Only a hint, nothing applied. */
-  suggested?: boolean;
-  lockedReason?: string | null;
-  disabled: boolean;
-  onSelect: () => void;
-}) {
-  const off = disabled || lockedReason !== null;
-
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      disabled={off}
-      aria-pressed={selected}
-      className={[
-        'w-full rounded-md border px-4 py-3 text-left transition',
-        selected
-          ? 'border-ink bg-surface-1'
-          : 'border-line',
-        off ? 'cursor-not-allowed opacity-50' : 'active:scale-[0.99]',
-      ].join(' ')}
-    >
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-ink">{label}</span>
-        {selected ? (
-          <span className="text-ink">✓</span>
-        ) : suggested ? (
-          <span className="text-xs text-ink-muted">Suggested</span>
-        ) : null}
-      </div>
-      <p className="mt-0.5 text-xs text-ink-muted">
-        {lockedReason ?? hint}
-      </p>
-      <p className="mt-1 font-mono text-xs text-ink-muted">{line}</p>
-    </button>
-  );
-}
-
 // ----------------------------------------------------------------------
 // Slider
 // ------------------------------------------------------------
-
-/** Small lock next to each category. Closed = nobody can take its hours. */
-function PinButton({
-  pinned,
-  canPin,
-  disabled,
-  label,
-  onClick,
-}: {
-  pinned: boolean;
-  canPin: boolean;
-  disabled: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  const off = disabled || (!pinned && !canPin);
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={off}
-      aria-pressed={pinned}
-      aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
-      className={[
-        'shrink-0 rounded p-1 transition',
-        pinned ? 'text-ink' : 'text-line-strong',
-        off ? 'cursor-not-allowed opacity-40' : 'active:scale-90',
-      ].join(' ')}
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="5" y="11" width="14" height="9" rx="2" />
-        {pinned ? (
-          <path d="M8 11V7a4 4 0 0 1 8 0v4" strokeLinecap="round" />
-        ) : (
-          <path d="M8 11V7a4 4 0 0 1 7.5-2" strokeLinecap="round" />
-        )}
-      </svg>
-    </button>
-  );
-}
-
-function Slider({
-  category,
-  value,
-  min,
-  max,
-  pinned,
-  derived,
-  canPin,
-  disabled,
-  onChange,
-  onTogglePin,
-}: {
-  category: Category;
-  value: number;
-  /** This category's hard floor. */
-  min: number;
-  /** The REAL cap after pinned hours - not always 70h. */
-  max: number;
-  pinned: boolean;
-  /** The other three are pinned → this number is the rest, read-only. */
-  derived: boolean;
-  canPin: boolean;
-  disabled: boolean;
-  onChange: (v: number) => void;
-  onTogglePin: () => void;
-}) {
-  const floor = HARD_FLOOR[category] ?? 0;
-  // At the floor, say so clearly, and `min` blocks it - no dragging lower.
-  const atFloor = value <= floor + 0.05 && floor > 0;
-  // 70h is the slider's limit; `max` is the budget's limit.
-  const ceiling = Math.max(min, Math.min(70, max));
-
-  return (
-    <div className="mb-3">
-      <div className="mb-1 flex items-baseline justify-between text-sm">
-        <span className="flex items-center gap-1.5 text-ink-soft">
-          <span
-            aria-hidden="true"
-            className="h-2 w-2 rounded-full"
-            style={{ background: CATEGORY_COLOR[category] }}
-          />
-          {CATEGORY_LABEL[category]}
-          {atFloor && (
-            <span className="rounded bg-ink px-1.5 py-0.5 text-[10px] font-medium text-surface-0">
-              floor
-            </span>
-          )}
-          {derived && (
-            <span className="rounded bg-surface-1 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
-              auto
-            </span>
-          )}
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="font-mono tabular-nums text-ink">
-            {h(value)}
-          </span>
-          <PinButton
-            pinned={pinned}
-            canPin={canPin}
-            disabled={derived}
-            label={CATEGORY_LABEL[category]}
-            onClick={onTogglePin}
-          />
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={ceiling}
-        step={0.5}
-        value={value}
-        disabled={disabled}
-        aria-label={CATEGORY_LABEL[category]}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className={[
-          'h-1.5 w-full cursor-pointer appearance-none rounded-full disabled:cursor-not-allowed disabled:opacity-50',
-          atFloor ? 'bg-ink-muted' : 'bg-sunk',
-        ].join(' ')}
-      />
-    </div>
-  );
-}
-
-function TotalRow({ weekly, errors }: { weekly: Weekly; errors: string[] }) {
-  const total = CATEGORIES.reduce((a, c) => a + weekly[c], 0);
-  const ok = errors.length === 0;
-
-  return (
-    <div className="mt-4 border-t border-line pt-3">
-      <div className="flex items-baseline justify-between text-sm">
-        <span className="text-ink-muted">Total</span>
-        <span
-          className={[
-            'font-mono tabular-nums',
-            ok ? 'text-ink' : 'font-medium text-ink',
-          ].join(' ')}
-        >
-          {Math.round(total * 10) / 10} / {TOTAL_BUDGET}h {ok ? '✓' : ''}
-        </span>
-      </div>
-      {errors.map((e) => (
-        <p key={e} className="mt-1 text-xs font-medium text-ink">
-          {e}
-        </p>
-      ))}
-    </div>
-  );
-}
 
 // ------------------------------------------------------------
 // Debt
 // ------------------------------------------------------------
 
-function DebtSection({
-  debt,
-  applied,
-}: {
-  debt: Partial<Record<Category, number>>;
-  applied: Partial<Record<Category, number>>;
-}) {
-  const rows = CATEGORIES.filter((c) => (debt[c] ?? 0) > 0 || (applied[c] ?? 0) > 0);
-  if (rows.length === 0) return null; // No debt, no section.
-
-  return (
-    <section className="mb-6">
-      <h2 className={`${LABEL} mb-2`}>Debt</h2>
-      <div className="rounded-md border border-line px-4 py-3">
-        {rows.map((c) => (
-          <div key={c} className="flex items-baseline justify-between py-1 text-sm">
-            <span className="text-ink-soft">{CATEGORY_LABEL[c]}</span>
-            <span className="font-mono tabular-nums text-ink">
-              {h(debt[c] ?? 0)}
-              {(applied[c] ?? 0) > 0 && (
-                <span className="ml-2 text-xs font-normal text-ink-muted">
-                  ({h(applied[c]!)} applied this week)
-                </span>
-              )}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 // ------------------------------------------------------------
 // Streak
 // ------------------------------------------------------------
 
-function StreakPrompt({
-  count,
-  of,
-  busy,
-  onReset,
-  onKeep,
-}: {
-  count: number;
-  of: number;
-  busy: boolean;
-  onReset: () => void;
-  onKeep: () => void;
-}) {
-  return (
-    <div className="mb-6 rounded-md border border-line-strong bg-surface-1 px-4 py-3">
-      <p className="text-sm font-medium text-ink">
-        Crunch: {count} of the last {of} weeks.
-      </p>
-      <p className="mt-1 text-sm text-ink-soft">
-        Reset your baseline, or is this something to fix?
-      </p>
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={onReset}
-          disabled={busy}
-          className={`${btn('primary')} flex-1`}
-        >
-          Reset baseline
-        </button>
-        <button
-          type="button"
-          onClick={onKeep}
-          className={`${btn('secondary')} flex-1`}
-        >
-          Keep as is
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ------------------------------------------------------------
 // Confirm sheet
 // ------------------------------------------------------------
-
-function ConfirmSheet({
-  to,
-  from,
-  target,
-  busy,
-  onCancel,
-  onConfirm,
-}: {
-  to: PresetId;
-  from: Weekly;
-  target: WeekTarget | null;
-  busy: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const rows = previewSwitch(from, to, target?.debtApplied ?? {}).filter(
-    (r) => Math.abs(r.to - r.from) > 0.05
-  );
-
-  return (
-    <SheetShell
-      onClose={onCancel}
-      label={`Switch to ${PRESETS[to].label}`}
-      center
-      className="w-full max-w-lg rounded-t-lg bg-surface-0 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:rounded-lg md:pb-5"
-      header={
-        <h3 className="mb-3 text-base font-semibold text-ink">
-          Switch to {PRESETS[to].label}
-        </h3>
-      }
-    >
-
-      <div className="mb-4">
-        {rows.map((r) => (
-          <div key={r.category} className="flex items-baseline justify-between py-1 text-sm">
-            <span className="text-ink-soft">
-              {CATEGORY_LABEL[r.category]}
-            </span>
-            <span className="font-mono tabular-nums text-ink">
-              {h(r.from)} → {h(r.to)}
-              {/* Changing preset without seeing the cost makes this mechanism pointless. */}
-              {r.debt > 0 && (
-                <span className="ml-2 font-medium text-ink">
-                  +{h(r.debt)} debt
-                </span>
-              )}
-            </span>
-          </div>
-        ))}
-        {rows.length === 0 && (
-          <p className="text-sm text-ink-muted">No change to your targets.</p>
-        )}
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className={`${btn('secondary')} flex-1`}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={busy}
-          className={`${btn('primary')} flex-1`}
-        >
-          Switch
-        </button>
-      </div>
-    </SheetShell>
-  );
-}
