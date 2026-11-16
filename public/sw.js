@@ -25,7 +25,7 @@ const CACHE_VERSION = 'logi-v1';
 // Every page, so a page never opened before still opens offline. A miss must
 // not fall back to another page: signed out and offline, the /login <-> app
 // redirect would then loop forever.
-const PAGES = ['/now', '/history', '/analytics', '/targets', '/reminders', '/settings', '/settings/restore', '/login'];
+const PAGES = ['/now', '/history', '/analytics', '/targets', '/reminders', '/settings', '/settings/restore', '/guide', '/login'];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

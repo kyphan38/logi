@@ -75,6 +75,10 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       </TopBar>
 
+      <Link href="/guide" className="self-start text-sm font-medium text-ink hover:text-ink-soft after:ml-1 after:content-['›']">
+        Guide
+      </Link>
+
       <section className="flex flex-col gap-3 rounded-md border border-line-strong bg-surface-1 p-4">
         <div className="flex flex-col gap-1">
           <h2 className="text-sm font-medium text-ink">Reminders on the lock screen</h2>
