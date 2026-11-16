@@ -15,7 +15,6 @@ import ReminderBanner from '@/components/ReminderBanner';
 import RecordSheet, { type SheetTarget } from '@/components/RecordSheet';
 import ScheduledCard from '@/components/ScheduledCard';
 import SheetShell from '@/components/SheetShell';
-import { type StartWhen } from '@/components/StartWhenSheet';
 import RoutineChecklist from '@/components/RoutineChecklist';
 import RoutineDueSheet from '@/components/RoutineDueSheet';
 import Toasts from '@/components/Toasts';
@@ -25,7 +24,6 @@ import MoonIcon from '@/components/MoonIcon';
 import TopBar from '@/components/TopBar';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  capWait,
   useActiveActivities,
   useDayActivities,
   useScheduledActivities,
@@ -33,54 +31,27 @@ import {
   useToasts,
   useWeekActivities,
 } from '@/hooks/useActivities';
-import { bedtimeDate, logBedtime, useRecentBedtime } from '@/hooks/useBedtime';
+import { useRecentBedtime } from '@/hooks/useBedtime';
 import { useReminders } from '@/hooks/useReminders';
 import { useReviewDue } from '@/hooks/useReview';
 import { useFlip } from '@/hooks/useFlip';
 import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
 import { useRoutineChecks, useRoutines } from '@/hooks/useRoutine';
+import { useLeavingCards } from '@/hooks/useLeavingCards';
+import { useNowActions } from '@/hooks/useNowActions';
 import { useVoice } from '@/hooks/useVoice';
-import {
-  ActivityError,
-  deleteActivity,
-  startActivity,
-  stopActivity,
-  updateActivity,
-} from '@/lib/activities';
 import { actualHours, findStale, logicalDate, logicalWeekday, overlapHours } from '@/lib/balance';
 import { pickBalance } from '@/lib/banner';
-import { clearBedtime } from '@/lib/bedtime-store';
 import { formatBedtime } from '@/lib/bedtime';
-import { leavingItems, reducedMotion } from '@/lib/motion';
-import { clockTime, formatDuration, roundDown } from '@/lib/datetime';
+import { formatDuration, prettyDay, roundDown } from '@/lib/datetime';
 import { nowTiles } from '@/lib/day-progress';
 import { routineForDay } from '@/lib/routine';
-import {
-  CATEGORIES,
-  CATEGORY_LABEL,
-  type Activity,
-  type Category,
-  type RoutineItem,
-} from '@/types/logi';
+import { CATEGORIES } from '@/types/logi';
 import { btn } from '@/lib/ui';
+import StoppedCards from '@/components/now/StoppedCards';
 
 /** From 3 parallel sessions up, cards collapse so Now still fits one screen. */
 const COMPACT_FROM = 3;
-
-/** Matches `.row-out` in globals.css. */
-const CARD_EXIT_MS = 180;
-
-const ignore = () => {};
-
-/** "2026-08-26" → "Wednesday, Aug 26". Parsed by hand to avoid timezone shifts. */
-function prettyLogicalDate(d: string): string {
-  const [y, m, day] = d.split('-').map(Number);
-  return new Date(y, m - 1, day).toLocaleDateString([], {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 export default function NowPage() {
   const { uid } = useAuth();
@@ -117,10 +88,7 @@ export default function NowPage() {
     weekActivities,
     weekTarget?.weekly ?? null
   );
-  const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
-  // A sub-minute record waiting for the user to confirm (4.6 Task 5).
-  const [zeroStop, setZeroStop] = useState<{ id: string; at: number } | null>(null);
 
   const voice = useVoice(uid, active, push);
 
@@ -143,36 +111,7 @@ export default function NowPage() {
 
   const running = useMemo(() => new Set(active.map((a) => a.category)), [active]);
 
-  // Cards rise in when a session starts while the page is open, and slide out
-  // when it stops. The stream drops a stopped session at once, so it is kept
-  // here for the exit animation. Data from the first load just appears.
-  const [ready, setReady] = useState(false);
-  const [prevActive, setPrevActive] = useState(active);
-  const [leaving, setLeaving] = useState<Activity[]>([]);
-  const [risen, setRisen] = useState<Set<string>>(() => new Set());
-  if (active !== prevActive) {
-    if (ready && !reducedMotion()) {
-      const stopped = leavingItems(prevActive, active);
-      const before = new Set(prevActive.map((a) => a.id));
-      const added = active.filter((a) => !before.has(a.id)).map((a) => a.id);
-      if (stopped.length > 0) setLeaving((l) => [...l, ...stopped]);
-      if (added.length > 0) setRisen((r) => new Set([...r, ...added]));
-    }
-    setPrevActive(active);
-  }
-  if (!ready && !activeLoading) setReady(true);
-
-  useEffect(() => {
-    if (leaving.length === 0) return;
-    const ids = new Set(leaving.map((a) => a.id));
-    const t = setTimeout(() => setLeaving((l) => l.filter((a) => !ids.has(a.id))), CARD_EXIT_MS);
-    return () => clearTimeout(t);
-  }, [leaving]);
-
-  const gone = leaving.filter((a) => !active.some((x) => x.id === a.id));
-  // Both lists render in one flex column; `order` keeps them by start time.
-  const cards = [...active, ...gone].sort((a, b) => a.startAt - b.startAt);
-  const slot = new Map(cards.map((a, i) => [a.id, i]));
+  const { cards, gone, slot, risen } = useLeavingCards(active, activeLoading);
   const compact = active.length >= COMPACT_FROM;
   // Everything below the cards slides to its new place instead of jumping.
   const flip = useFlip([...cards.map((a) => a.id), active.length > 1 ? 'parallel' : '', String(compact)]);
@@ -191,7 +130,6 @@ export default function NowPage() {
     const sum = CATEGORIES.reduce((t, c) => t + actual[c], 0);
     return Math.max(0, (sum - overlapHours(todayActivities, nowMinute)) * 3_600_000);
   }, [todayActivities, nowMinute]);
-
 
   // Today's routine (Stage 10): ticks only, not tied to hours. `today` turns at
   // 04:00 → the hook reads the new day's empty tick doc. That is the reset.
@@ -226,236 +164,37 @@ export default function NowPage() {
   const { tonight: bedtimeLog, lastNight } = useRecentBedtime(today);
   const [bedtimeOpen, setBedtimeOpen] = useState(false);
 
+  const {
+    busy,
+    zeroStop,
+    handleStart,
+    handleStartRoutine,
+    handleRoutineDone,
+    handleRoutineMore,
+    editRunning,
+    handleCancelScheduled,
+    handleStop,
+    commitStop,
+    discardStop,
+    handleBedtime,
+    handleClearBedtime,
+    focusRunning,
+  } = useNowActions({
+    uid,
+    active,
+    push,
+    routine,
+    setSheet,
+    today,
+    bedtimeLog,
+    lastNight,
+    setBedtimeOpen,
+  });
+
   // `active` sessions over 15h. `active` is a realtime stream, so this list
   // updates on mount, when the app returns to the foreground (useTick catches
   // 'focus'), and as soon as the user handles each one.
   const stale = useMemo(() => findStale(active, nowMinute), [active, nowMinute]);
-
-  /**
-   * `when.startAt === null` is the everyday path: one tap, start now.
-   * `scheduled` means the record waits until its time; `promoteScheduled()` starts it.
-   */
-  async function handleStart(category: Category, when: StartWhen, item?: RoutineItem) {
-    if (!uid || busy) return;
-    setBusy(true);
-    try {
-      // Offline: the cache already has the write, do not make the button wait for a server ack.
-      const started = startActivity(uid, {
-        category,
-        startAt: when.startAt ?? undefined,
-        status: when.scheduled ? 'scheduled' : 'active',
-        ...(item
-          ? {
-              label: item.text,
-              routineItemId: item.id,
-              dueAt: item.minutes ? Date.now() + item.minutes * 60_000 : undefined,
-            }
-          : {}),
-      });
-      await capWait(started, (e) => push(`Sync failed. ${(e as Error).message}`));
-      // Layer 3 of 6c: Start is one tap, so there must always be a 5-second way back.
-      // `started` is kept separately because `capWait` may return before there is an id.
-      const done =
-        when.scheduled && when.startAt !== null
-          ? `${CATEGORY_LABEL[category]} scheduled for ${clockTime(when.startAt)}`
-          : `Started ${item ? item.text : CATEGORY_LABEL[category]}`;
-      push(done, {
-        label: 'Undo',
-        run: () => {
-          void started
-            .then((id) => deleteActivity(uid, id))
-            .catch((e) => push(`Could not undo. ${(e as Error).message}`));
-        },
-      });
-    } catch (e) {
-      push(
-        e instanceof ActivityError && e.code === 'duplicate'
-          ? `${CATEGORY_LABEL[category]} is already running.`
-          : `Could not start. ${(e as Error).message}`
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function handleStartRoutine(item: RoutineItem) {
-    if (item.category) void handleStart(item.category, { startAt: null, scheduled: false }, item);
-  }
-
-  /** "Done?" → yes: stop the session and tick its item. */
-  async function handleRoutineDone(a: Activity) {
-    if (!uid || busy) return;
-    setBusy(true);
-    try {
-      await capWait(stopActivity(uid, a.id, Date.now()), (e) =>
-        push(`Sync failed. ${(e as Error).message}`),
-      );
-      const itemId = a.routineItemId;
-      if (itemId && !routine.isChecked(itemId)) {
-        void routine.toggle(itemId).catch((e) => push(`Could not tick. ${(e as Error).message}`));
-      }
-      push(`${a.label ?? CATEGORY_LABEL[a.category]} done.`);
-    } catch (e) {
-      push(`Could not stop. ${(e as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** "Done?" → not yet: keep the same session running, ask again later. */
-  async function handleRoutineMore(a: Activity, minutes: number) {
-    if (!uid || busy) return;
-    setBusy(true);
-    try {
-      await capWait(updateActivity(uid, a.id, { dueAt: Date.now() + minutes * 60_000 }), (e) =>
-        push(`Sync failed. ${(e as Error).message}`),
-      );
-    } catch (e) {
-      push(`Could not save. ${(e as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** Long-press a running button = "I started at the wrong time" → open the edit sheet. */
-  function editRunning(category: Category) {
-    const a = active.find((x) => x.category === category);
-    if (a) setSheet({ mode: 'edit', activity: a });
-  }
-
-  /** Cancel a scheduled session: hard-delete the record, with Undo since a mistap loses the plan. */
-  async function handleCancelScheduled(a: Activity) {
-    if (!uid || busy) return;
-    setBusy(true);
-    try {
-      await capWait(deleteActivity(uid, a.id), (e) => push(`Sync failed. ${(e as Error).message}`));
-      push(`${CATEGORY_LABEL[a.category]} cancelled.`, {
-        label: 'Undo',
-        run: () => {
-          void startActivity(uid, {
-            category: a.category,
-            label: a.label,
-            startAt: a.startAt,
-            status: 'scheduled',
-          }).catch((e) => push(`Could not undo. ${(e as Error).message}`));
-        },
-      });
-    } catch (e) {
-      push(`Could not cancel. ${(e as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleStop(id: string) {
-    if (!uid || busy) return;
-    // Fix the stop time AT the tap. Waiting until the user taps Save in the
-    // dialog would stretch the record by exactly their hesitation.
-    const at = Date.now();
-    const a = active.find((x) => x.id === id);
-    // Start then stop in the same minute is almost always a mistake.
-    // Ask, but DO NOT block - they may really want to record it.
-    if (a && at - a.startAt < 60_000) {
-      setZeroStop({ id, at });
-      return;
-    }
-    await commitStop(id, at);
-  }
-
-  async function commitStop(id: string, at: number) {
-    if (!uid) return;
-    setZeroStop(null);
-    setBusy(true);
-    try {
-      await capWait(stopActivity(uid, id, at), (e) =>
-        push(`Sync failed. ${(e as Error).message}`),
-      );
-    } catch (e) {
-      push(`Could not stop. ${(e as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function discardStop(id: string) {
-    if (!uid) return;
-    setZeroStop(null);
-    setBusy(true);
-    try {
-      await capWait(deleteActivity(uid, id), (e) =>
-        push(`Sync failed. ${(e as Error).message}`),
-      );
-      push('Record discarded.');
-    } catch (e) {
-      push(`Could not discard. ${(e as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** A night's existing mark, so Undo restores it instead of clearing. */
-  function bedtimeOf(date: string): number | null {
-    if (date === bedtimeLog.date) return bedtimeLog.bedtimeAt;
-    if (date === lastNight.date) return lastNight.bedtimeAt;
-    return null;
-  }
-
-  /** Shared Undo for save and delete: rewrite the old mark if any, else delete. */
-  function restoreBedtime(date: string, prev: number | null) {
-    if (!uid) return;
-    const back = prev === null ? clearBedtime(uid, date) : logBedtime(uid, prev);
-    void back.catch((e) => push(`Could not undo. ${(e as Error).message}`));
-  }
-
-  /** Log the bedtime. `at` may be last night - the logical day comes from it. */
-  async function handleBedtime(at: number) {
-    if (!uid || busy) return;
-    setBedtimeOpen(false);
-    setBusy(true);
-    const date = bedtimeDate(at);
-    const prev = bedtimeOf(date);
-    try {
-      await capWait(logBedtime(uid, at), (e) => push(`Sync failed. ${(e as Error).message}`));
-      push(
-        date === today
-          ? `Bedtime ${formatBedtime(at)} logged.`
-          : `Bedtime ${formatBedtime(at)} logged for ${prettyLogicalDate(date)}.`,
-        { label: 'Undo', run: () => restoreBedtime(date, prev) }
-      );
-    } catch (e) {
-      push(`Could not log bedtime. ${(e as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** Delete a mistaken mark. Only in the sheet - nobody deletes it by accident from the header. */
-  async function handleClearBedtime(date: string) {
-    if (!uid || busy) return;
-    setBedtimeOpen(false);
-    setBusy(true);
-    const prev = bedtimeOf(date);
-    try {
-      await capWait(clearBedtime(uid, date), (e) => push(`Sync failed. ${(e as Error).message}`));
-      push(`Bedtime cleared for ${prettyLogicalDate(date)}.`, {
-        label: 'Undo',
-        run: () => restoreBedtime(date, prev),
-      });
-    } catch (e) {
-      push(`Could not clear bedtime. ${(e as Error).message}`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function focusRunning(category: Category) {
-    // Tapping a running category again: no duplicate. Scroll to its card and say
-    // why, otherwise the tap looks swallowed when the card is already on screen.
-    document
-      .getElementById(`session-${category}`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    push(`${CATEGORY_LABEL[category]} is already running.`);
-  }
 
   return (
     // pb-20: room for the mic FAB, so it does not cover the last card's Stop button.
@@ -467,7 +206,7 @@ export default function NowPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Now</h1>
         </TopBar>
         <p className="flex min-h-11 flex-wrap items-center gap-2 text-sm tabular-nums text-ink-muted">
-          <span>{prettyLogicalDate(today)}</span>
+          <span>{prettyDay(today)}</span>
           <span aria-hidden="true">·</span>
           <span>{formatDuration(trackedMs)} tracked</span>
           <span aria-hidden="true">·</span>
@@ -725,29 +464,4 @@ export default function NowPage() {
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </div>
   );
-}
-
-/** Stopped sessions, shown only while they slide out. Nothing to tap. */
-function StoppedCards({
-  items,
-  slot,
-  compact,
-  flip,
-}: {
-  items: Activity[];
-  slot: Map<string, number>;
-  compact: boolean;
-  flip: (id: string) => (el: HTMLElement | null) => void;
-}) {
-  return items.map((a) => (
-    <div
-      key={a.id}
-      ref={flip(a.id)}
-      className="row-out"
-      style={{ order: slot.get(a.id) }}
-      aria-hidden="true"
-    >
-      <ActiveSessionCard activity={a} busy compact={compact} onStop={ignore} />
-    </div>
-  ));
 }

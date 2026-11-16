@@ -7,6 +7,7 @@ import {
   formatDuration,
   shortDate,
   countdown,
+  prettyDay,
 } from '@/lib/datetime';
 import { at } from './_helpers.ts';
 
@@ -58,4 +59,9 @@ test('countdown rounds up and is never negative', () => {
   assert.equal(countdown(4_200), '0:05');
   assert.equal(countdown(0), '0:00');
   assert.equal(countdown(-9_000), '0:00');
+});
+
+test('prettyDay reads a logical date without timezone shifts', () => {
+  assert.equal(prettyDay('2026-08-26'), new Date(2026, 7, 26).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }));
+  assert.match(prettyDay('2026-01-01'), /Thursday/);
 });

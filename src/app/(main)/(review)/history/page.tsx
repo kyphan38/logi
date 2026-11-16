@@ -17,7 +17,7 @@ import {
   useWeekActivities,
 } from '@/hooks/useActivities';
 import { actualHours, logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
-import { roundDown } from '@/lib/datetime';
+import { prettyDay, roundDown } from '@/lib/datetime';
 import { dayGaps, dayWindow, layoutDay } from '@/lib/timeline';
 import { daySummary, gaugeShape, type DayLine } from '@/lib/day-target';
 import { useWeekTarget } from '@/hooks/useTargets';
@@ -25,15 +25,6 @@ import { bedtimeDate, logBedtime, useDayLog } from '@/hooks/useBedtime';
 import { clearBedtime } from '@/lib/bedtime-store';
 import { formatBedtime } from '@/lib/bedtime';
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
-
-function prettyDate(date: string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString([], {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 /** Long enough for 8 staggered rows (8 x 20ms + 240ms) to finish. */
 const RISE_WINDOW_MS = 600;
@@ -170,7 +161,7 @@ export default function HistoryPage() {
     const prev = bedtimeOf(date);
     try {
       await capWait(logBedtime(uid, at), (e) => push(`Sync failed. ${(e as Error).message}`));
-      push(`Bedtime ${formatBedtime(at)} logged for ${prettyDate(date)}.`, {
+      push(`Bedtime ${formatBedtime(at)} logged for ${prettyDay(date)}.`, {
         label: 'Undo',
         run: () => restoreBedtime(date, prev),
       });
@@ -188,7 +179,7 @@ export default function HistoryPage() {
     const prev = bedtimeOf(date);
     try {
       await capWait(clearBedtime(uid, date), (e) => push(`Sync failed. ${(e as Error).message}`));
-      push(`Bedtime cleared for ${prettyDate(date)}.`, {
+      push(`Bedtime cleared for ${prettyDay(date)}.`, {
         label: 'Undo',
         run: () => restoreBedtime(date, prev),
       });
@@ -226,7 +217,7 @@ export default function HistoryPage() {
       >
         {/* No title: the Days switch in the top bar already names the page. */}
         <div className="flex min-h-11 items-center justify-between gap-3">
-          <p className="min-w-0 flex-1 truncate text-sm text-ink-muted">{prettyDate(selected)}</p>
+          <p className="min-w-0 flex-1 truncate text-sm text-ink-muted">{prettyDay(selected)}</p>
           {/* Bedtime sits on the same row as the + button, NOT appended to the
               date line: that line has `truncate`, so a long "Wednesday, Sep 24"
               would cut off the time. Same text size and color token as the moon
@@ -240,8 +231,8 @@ export default function HistoryPage() {
             disabled={bedtimeBusy}
             aria-label={
               bedtimeLog.bedtimeAt === null
-                ? `Add bedtime for ${prettyDate(selected)}`
-                : `Edit bedtime for ${prettyDate(selected)}`
+                ? `Add bedtime for ${prettyDay(selected)}`
+                : `Edit bedtime for ${prettyDay(selected)}`
             }
             className={`min-h-11 shrink-0 px-1 text-xs tabular-nums transition active:scale-95 disabled:opacity-40 ${
               bedtimeLog.bedtimeAt === null
