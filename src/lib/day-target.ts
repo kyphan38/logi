@@ -115,3 +115,13 @@ export function gaugeShape(actual: number, target: number): GaugeShape {
     dim: noTarget && actual <= 0,
   };
 }
+
+/** "week done" beats "at cap". No "Xh left": the number already says it. */
+export function gaugeNote({ met, capped }: DayLine): string {
+  return met ? 'week done' : capped ? 'at cap' : '';
+}
+
+/** 3.9 -> "3.9", 1.0 -> "1", 0 -> "0". A trailing ".0" is noise. */
+export function hours(n: number): string {
+  return String(Math.round(n * 10) / 10);
+}

@@ -17,31 +17,19 @@ import {
   useWeekActivities,
 } from '@/hooks/useActivities';
 import { actualHours, logicalDate, logicalWeek, logicalWeekday } from '@/lib/balance';
-import { prettyDay, roundDown } from '@/lib/datetime';
+import { prettyDay } from '@/lib/datetime';
 import { dayGaps, dayWindow, layoutDay } from '@/lib/timeline';
-import { daySummary, gaugeShape, type DayLine } from '@/lib/day-target';
+import { daySummary } from '@/lib/day-target';
+import { newRecordDefaults } from '@/lib/record-defaults';
 import { useWeekTarget } from '@/hooks/useTargets';
 import { bedtimeDate, logBedtime, useDayLog } from '@/hooks/useBedtime';
 import { clearBedtime } from '@/lib/bedtime-store';
 import { formatBedtime } from '@/lib/bedtime';
-import { CATEGORIES, CATEGORY_COLOR, CATEGORY_LABEL, type Activity } from '@/types/logi';
+import { CATEGORIES, type Activity } from '@/types/logi';
+import SummaryGauge from '@/components/history/SummaryGauge';
 
 /** Long enough for 8 staggered rows (8 x 20ms + 240ms) to finish. */
 const RISE_WINDOW_MS = 600;
-
-/**
- * Default time for a manually added record: today → the last hour (rounded to
- * 15 minutes); a past day → 12:00–13:00 of the day being viewed.
- */
-function newRecordDefaults(selected: string, today: string, now: number): SheetTarget {
-  if (selected === today) {
-    const end = roundDown(now, 15);
-    return { mode: 'create', startAt: end - 3_600_000, endAt: end };
-  }
-  const [y, m, d] = selected.split('-').map(Number);
-  const start = new Date(y, m - 1, d, 12, 0, 0, 0).getTime();
-  return { mode: 'create', startAt: start, endAt: start + 3_600_000 };
-}
 
 export default function HistoryPage() {
   const { uid } = useAuth();
@@ -324,131 +312,3 @@ export default function HistoryPage() {
 //
 // No weekTarget for that week (old data) → fall back to the old line.
 // ---------------------------------------------------------------------------
-function SummaryGauge({
-  lines,
-  trackedH,
-  gapH,
-  overlap,
-}: {
-  lines: DayLine[];
-  trackedH: number;
-  gapH: number;
-  overlap: number;
-}) {
-  const h = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
-
-  // No weekTarget for that week → daySummary returns [] - no gauges to draw,
-  // so fall back to the old text line instead of an empty row.
-  if (lines.length === 0) {
-    return (
-      <div className="mt-3 text-xs tabular-nums text-ink-soft">
-        <p>
-          {h(trackedH)}h logged{gapH > 0 ? ` · ${h(gapH)}h gaps` : ''}
-        </p>
-        {overlap > 0 ? <p className="mt-0.5 text-ink-muted">{h(overlap)}h overlap</p> : null}
-      </div>
-    );
-  }
-
-  const by = new Map(lines.map((l) => [l.category, l]));
-  // The note row shows only when some cell has a note, so a normal day is
-  // just label, bar and number.
-  const anyNote = lines.some((l) => gaugeNote(l) !== '');
-
-  return (
-    <div className="mt-3">
-      <div className="grid grid-cols-4 gap-2">
-        {CATEGORIES.map((c) => (
-          <Gauge
-            key={c}
-            showNote={anyNote}
-            line={
-              by.get(c) ?? {
-                category: c,
-                actual: 0,
-                target: 0,
-                standard: 0,
-                met: false,
-                capped: false,
-                low: false,
-              }
-            }
-          />
-        ))}
-      </div>
-      {overlap > 0 ? (
-        <p className="mt-1.5 text-[11px] tabular-nums text-ink-muted">{h(overlap)}h overlap</p>
-      ) : null}
-    </div>
-  );
-}
-
-/** "week done" beats "at cap". No "Xh left": the number already says it. */
-function gaugeNote({ met, capped }: DayLine): string {
-  return met ? 'week done' : capped ? 'at cap' : '';
-}
-
-/** 3.9 -> "3.9", 1.0 -> "1", 0 -> "0". A trailing ".0" is noise. */
-function hours(n: number): string {
-  return String(Math.round(n * 10) / 10);
-}
-
-/**
- * One gauge cell: label / bar / number (/ note). The bar is 6px tall, no border.
- * On a planned week the target is hours left / days left, so it moves daily.
- */
-function Gauge({ line, showNote }: { line: DayLine; showNote: boolean }) {
-  const { category: c, actual, target } = line;
-  const h = hours;
-
-  const { fill, over, noTarget, dim } = gaugeShape(actual, target);
-  const note = gaugeNote(line);
-
-  return (
-    <div className={`min-w-0 ${dim ? 'opacity-40' : ''}`}>
-      <p className="truncate text-[10px] tracking-[-0.01em] text-ink-soft">{CATEGORY_LABEL[c]}</p>
-
-      {noTarget ? (
-        // "no bar" - still reserves the same height so the 4 columns line up.
-        <div className="mt-1 h-1.5" aria-hidden="true" />
-      ) : (
-        <div
-          className="relative mt-1 h-1.5 overflow-hidden rounded-full bg-line"
-          role="img"
-          aria-label={`${CATEGORY_LABEL[c]} ${h(actual)} of ${h(target)} hours`}
-        >
-          <span
-            className="absolute inset-y-0 left-0 rounded-full"
-            style={{ width: `${fill * 100}%`, backgroundColor: CATEGORY_COLOR[c] }}
-          />
-          {/* Over target: a strong ink tick at the right edge. Never recolor the
-              whole bar - going over on Learn is good, do not paint it red. */}
-          {over ? <span className="absolute inset-y-0 right-0 w-[3px] bg-ink" /> : null}
-        </div>
-      )}
-
-      {/* The number also says where you stand against the plan, no need to read
-          the bar closely: nothing logged → gray; over plan → bold (with the ink
-          tick at the bar's edge); short → normal. Gray only, per DESIGN.md. */}
-      <p className="mt-1 truncate text-[11px] tabular-nums">
-        <span
-          className={
-            actual <= 0
-              ? 'text-ink-muted'
-              : over
-                ? 'font-semibold text-ink'
-                : 'text-ink'
-          }
-        >
-          {h(actual)}
-        </span>
-        <span className="text-ink-muted">/{noTarget ? '-' : h(target)}</span>
-      </p>
-
-      {/* Empty cells still take the space when shown, so the 4 columns line up. */}
-      {showNote ? (
-        <p className="mt-0.5 h-3.5 truncate text-[10px] tabular-nums text-ink-muted">{note}</p>
-      ) : null}
-    </div>
-  );
-}
