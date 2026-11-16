@@ -1,5 +1,15 @@
 # Agent instructions (logi)
 
+## Code layout: keep files small
+
+- A file over about 500 lines is split before a feature is added to it: move a part of
+  the UI to its own component, a pure function to its own module (with a test), or a block
+  of state and actions to its own hook.
+- Pure logic (no React, no Firebase) lives in its own module and has unit tests.
+- A page keeps only layout; its parts go to `src/components/<page>/` and its state and
+  actions to a hook (see `useTargetsDraft`, `useNowActions`). Generic hooks get their own
+  file (`useTick`, `useToasts`).
+
 ## Git: no co-author
 
 Never add `Co-Authored-By:` (or any other author line) to a commit message
