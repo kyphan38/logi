@@ -32,7 +32,7 @@ export default function VoiceBatchCard({
       <ul className="flex flex-col gap-1.5">
         {items.map((item, i) => (
           <li key={i}>
-            <label className={`flex items-center gap-3 text-[15px] ${item.ready ? '' : 'text-faint'}`}>
+            <label className={`flex items-center gap-3 text-[15px] ${item.ready ? '' : 'text-ink-muted'}`}>
               <input
                 type="checkbox"
                 checked={picked[i] && item.ready}
@@ -56,11 +56,11 @@ export default function VoiceBatchCard({
           type="button"
           disabled={busy || chosen.length === 0}
           onClick={() => onSave(chosen)}
-          className="min-h-11 flex-1 rounded-md bg-ink px-4 text-base font-medium text-bg disabled:opacity-40"
+          className="min-h-11 flex-1 rounded-md bg-ink px-4 text-base font-medium text-surface-0 disabled:opacity-40"
         >
           {busy ? 'Saving…' : chosen.length === items.length ? 'Save all' : `Save ${chosen.length}`}
         </button>
-        <button type="button" onClick={onCancel} className="min-h-11 px-4 text-base text-muted">
+        <button type="button" onClick={onCancel} className="min-h-11 px-4 text-base text-ink-muted">
           Cancel
         </button>
       </div>
