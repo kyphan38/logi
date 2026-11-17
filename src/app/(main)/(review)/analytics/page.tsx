@@ -15,6 +15,7 @@ import TrendHoursCard from '@/components/TrendHoursCard';
 import TrendSleepCard from '@/components/TrendSleepCard';
 import TrendSpanChips from '@/components/TrendSpanChips';
 import WeekSleepCard from '@/components/WeekSleepCard';
+import YearTab from '@/components/analytics/YearTab';
 import { useTick } from '@/hooks/useTick';
 import { fetchAllTime, useExportNudge } from '@/hooks/useBackup';
 import { useRangeData } from '@/hooks/useRangeData';
@@ -41,7 +42,7 @@ export default function AnalyticsPage() {
   const { activities, weekTargets, lateWeeks, loading, error, reload } = useRangeData(range);
 
   const base = useId();
-  const [tab, setTab] = useState<'week' | 'trend'>('week');
+  const [tab, setTab] = useState<'week' | 'trend' | 'year'>('week');
   const [span, setSpan] = useState<TrendSpan>(DEFAULT_SPAN);
 
   // Called unconditionally (hook rules). It only runs with a `uid`; on the Week
@@ -105,6 +106,7 @@ export default function AnalyticsPage() {
           items={[
             { value: 'week', label: 'Week' },
             { value: 'trend', label: 'Trend' },
+            { value: 'year', label: 'Year' },
           ]}
         />
         {tab === 'trend' && (
@@ -176,6 +178,10 @@ export default function AnalyticsPage() {
               />
             </>
           )}
+        </TabPanel>
+      ) : tab === 'year' ? (
+        <TabPanel base={base} value="year">
+          <YearTab now={now} />
         </TabPanel>
       ) : (
         <TabPanel base={base} value="trend">

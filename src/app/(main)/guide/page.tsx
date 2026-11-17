@@ -23,6 +23,7 @@ const BLOCKS: Block[] = [
       'The thin strip under each button shows today against its target.',
       'Tap Stop on the running card to finish it. A toast gives you 5 seconds to undo.',
       'Hold a button to pick when it started: a few minutes ago, an exact time, or "After" to plan it for later.',
+      'Start links: opening /now?start=learn starts Learn at once, with the same 5-second Undo. Use work, fitness or leisure the same way. Add &label=gym to name it. Settings lists the 4 links to copy, for iPhone Shortcuts or the Home Screen.',
     ],
   },
   {
@@ -51,6 +52,9 @@ const BLOCKS: Block[] = [
     lines: [
       'The moon on Now shows last night. Tap it to set or change the time for the last two nights.',
       'For an older night, open History, pick the day, and tap the moon there.',
+      'After you log tonight\'s bedtime, a Today screen opens: hours per category against the target, routine done, and tomorrow\'s events.',
+      'From 20:00, the word today next to the moon opens it again.',
+      'Bedtime reminder: in Settings, set your wake time and hours of sleep. logi works out the bedtime. 30 minutes before, a push arrives and a faint line shows on Now. No reminder once bedtime is logged. Turn it off in Settings.',
     ],
   },
   {
@@ -68,6 +72,7 @@ const BLOCKS: Block[] = [
       'Pick a day at the top. The timeline shows each block. Long gaps show as untracked.',
       'Tap a block to change or delete it.',
       'Tap + to add a block you forgot.',
+      'With a day plan, a few lines above the timeline compare it: plan 5h learn · did 3h, the biggest gap, and each planned block with hours done.',
     ],
   },
   {
@@ -78,6 +83,7 @@ const BLOCKS: Block[] = [
       'Trends show one category across weeks.',
       'AI notes sit below the charts. They point out what to notice in the range.',
       'Export downloads your data. Pick "All time" for a full backup.',
+      'Year: totals and hours per week for each category, usual bedtime, best and worst month, and a 12-month chart. Pick an earlier year above.',
     ],
   },
   {
@@ -88,6 +94,14 @@ const BLOCKS: Block[] = [
       'The small lock next to a category keeps its hours fixed.',
       'Review opens the weekly review: three screens you swipe sideways.',
       'On Now, a review banner shows from Sunday 19:00 until the end of Tuesday.',
+    ],
+  },
+  {
+    title: 'Day plan',
+    lines: [
+      'Plan › Day: your usual day as time blocks (start, end, category).',
+      'One plan for Mon-Fri, one for Saturday, one for Sunday.',
+      'History compares each day with its plan.',
     ],
   },
   {
@@ -107,6 +121,8 @@ const BLOCKS: Block[] = [
     title: 'Settings',
     lines: [
       'Reminders on the lock screen: checks at 06:15 and 20:45, and a Sunday wrap-up. On iPhone, add logi to the Home Screen first.',
+      'Bedtime reminder: wake time and hours of sleep. On or off.',
+      'Start links: the 4 links that start a category at once. Copy copies one.',
       'Saved AI notes can be deleted for good. Your records stay.',
       'Restore brings back records from an export file.',
       'Theme: system, light or dark.',

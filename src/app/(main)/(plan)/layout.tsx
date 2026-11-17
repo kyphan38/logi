@@ -2,6 +2,7 @@ import SubTabs from '@/components/SubTabs';
 
 const TABS = [
   { href: '/targets', label: 'Week' },
+  { href: '/day', label: 'Day' },
   { href: '/reminders', label: 'Dates' },
 ];
 

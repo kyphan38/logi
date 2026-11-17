@@ -23,6 +23,7 @@ import { clearBedtime } from '@/lib/bedtime-store';
 import { formatBedtime } from '@/lib/bedtime';
 import { CATEGORIES, type Activity } from '@/types/logi';
 import SummaryGauge from '@/components/history/SummaryGauge';
+import PlanCompare from '@/components/history/PlanCompare';
 
 /** Long enough for 8 staggered rows (8 x 20ms + 240ms) to finish. */
 const RISE_WINDOW_MS = 600;
@@ -249,6 +250,7 @@ export default function HistoryPage() {
       </header>
 
       <div ref={bodyRef} className="pt-4">
+        {!loading ? <PlanCompare date={selected} activities={activities} now={nowMinute} /> : null}
         {loading && segments.length === 0 ? (
           <p className="pb-3 text-sm text-ink-muted">Loading…</p>
         ) : (

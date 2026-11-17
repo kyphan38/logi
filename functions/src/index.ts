@@ -5,8 +5,8 @@
 // reminder window, has this type been sent today. Activity is read only when
 // all three are true, so most runs cost a single read.
 //
-// 96 runs/day × 1 read = ~100 reads/day. Activity reads happen only in the few
-// runs around 06:15, 20:45 and Sunday 19:00.
+// 96 runs/day × ~2 reads (devices + the bedtime plan). Activity reads happen
+// only in the few runs around 06:15, 20:45, Sunday 19:00 and the own bedtime.
 //
 // In-app reminders still run alongside. If push breaks, that path remains.
 // ---------------------------------------------------------------------------
@@ -21,6 +21,7 @@ import { logger } from 'firebase-functions';
 
 import { countdownText, daysBetween, isMilestone, whenLabel } from './events';
 import { moraStopFor } from './mora';
+import { REMIND_BEFORE_MIN, bedtimeMinute, cleanSleep, clockOf } from './sleep';
 import { dayStart, logicalDate, logicalWeek, logicalWeekday, markAt } from './time';
 
 initializeApp();
@@ -29,7 +30,7 @@ initializeApp();
 // See roadmap/PLAN-project-split-logi.md.
 const db = getFirestore();
 
-type ReminderType = 'morning' | 'evening' | 'weekly';
+type ReminderType = 'morning' | 'evening' | 'weekly' | 'bedtime';
 
 /**
  * Only send within one hour after the mark. Later, the message loses meaning:
@@ -40,6 +41,8 @@ const WINDOW_MS = 60 * 60 * 1000;
 interface Candidate {
   type: ReminderType;
   mark: number;
+  /** Bedtime only: the planned time, for the message. */
+  bedAt?: string;
 }
 
 /** Candidates by mark time DESCENDING - the latest reminder wins, like `pickReminder()`. */
@@ -53,6 +56,19 @@ function candidates(now: number): Candidate[] {
     list.push({ type: 'weekly', mark: markAt(today, 19) });
   }
   return list.sort((a, b) => b.mark - a.mark).filter((c) => now >= c.mark && now < c.mark + WINDOW_MS);
+}
+
+/**
+ * G10: the user's own bedtime reminder, 30 minutes before the planned time.
+ * Sent only inside those 30 minutes; one extra read per run while push is on.
+ */
+async function bedtimeDue(uid: string, now: number): Promise<Candidate | null> {
+  const plan = cleanSleep((await db.doc(`users/${uid}/meta/sleep`).get()).data());
+  if (!plan.on) return null;
+  const bed = bedtimeMinute(plan);
+  const mark = markAt(logicalDate(now), 0, bed - REMIND_BEFORE_MIN);
+  if (now < mark || now >= mark + REMIND_BEFORE_MIN * 60_000) return null;
+  return { type: 'bedtime', mark, bedAt: clockOf(bed) };
 }
 
 interface Row {
@@ -99,10 +115,18 @@ interface Message {
 
 async function buildMessage(
   uid: string,
-  type: ReminderType,
+  pick: Candidate,
   now: number
 ): Promise<Message | null> {
+  const type = pick.type;
   const today = logicalDate(now);
+
+  if (type === 'bedtime') {
+    // Already logged tonight: nothing to remind.
+    const log = (await db.doc(`users/${uid}/dayLogs/${today}`).get()).data();
+    if (log?.bedtimeAt) return null;
+    return { title: 'Bedtime', body: `Bed at ${pick.bedAt}.` };
+  }
 
   if (type === 'weekly') {
     const h = await hoursOfWeek(uid, logicalWeek(now));
@@ -129,8 +153,7 @@ export const pushReminders = onSchedule(
   },
   async () => {
     const now = Date.now();
-    const due = candidates(now);
-    if (due.length === 0) return;
+    const shared = candidates(now);
 
     // Only devices with push on. Needs a collection-group index on `meta.token`
     // (declared in firestore.indexes.json).
@@ -142,17 +165,20 @@ export const pushReminders = onSchedule(
       const token = (device.data() as { token?: string }).token;
       if (!uid || !token) continue;
 
+      const bed = await bedtimeDue(uid, now);
+      const due = (bed ? [bed, ...shared] : shared).sort((a, b) => b.mark - a.mark);
+      if (due.length === 0) continue;
+
       const today = logicalDate(now);
       const logRef = db.doc(`users/${uid}/meta/pushLog`);
       const log = (await logRef.get()).data() ?? {};
       const sentToday = (log[today] ?? {}) as Record<string, number>;
-
-      // One reminder type, once per logical day. The one hour window is longer
-      // than the 15 minute cycle, so without this flag users get the same text four times.
+      // One reminder type, once per logical day. The window is longer than
+      // the 15 minute cycle, so without this flag users get the same text again.
       const pick = due.find((c) => sentToday[c.type] == null);
       if (!pick) continue;
 
-      const msg = await buildMessage(uid, pick.type, now);
+      const msg = await buildMessage(uid, pick, now);
       if (!msg) continue;
 
       try {

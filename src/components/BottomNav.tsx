@@ -12,7 +12,7 @@ type Tab = { href: string; paths: string[]; label: string };
 const TABS: Tab[] = [
   { href: '/now', paths: ['/now'], label: 'Now' },
   { href: '/history', paths: ['/history', '/analytics'], label: 'Review' },
-  { href: '/targets', paths: ['/targets', '/reminders'], label: 'Plan' },
+  { href: '/targets', paths: ['/targets', '/day', '/reminders'], label: 'Plan' },
 ];
 
 /**

@@ -11,6 +11,8 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 
 import TopBar from '@/components/TopBar';
+import BedtimeSettings from '@/components/settings/BedtimeSettings';
+import StartLinks from '@/components/settings/StartLinks';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { deleteAllInsights, listInsights } from '@/lib/insights';
@@ -128,6 +130,10 @@ export default function SettingsPage() {
           </p>
         )}
       </section>
+
+      <BedtimeSettings />
+
+      <StartLinks />
 
       <InsightData uid={uid} />
 

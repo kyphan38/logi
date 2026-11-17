@@ -34,6 +34,7 @@ export function useNowActions({
   bedtimeLog,
   lastNight,
   setBedtimeOpen,
+  onTonightLogged,
 }: {
   uid: string | null;
   active: Activity[];
@@ -44,6 +45,8 @@ export function useNowActions({
   bedtimeLog: ReturnType<typeof useRecentBedtime>['tonight'];
   lastNight: ReturnType<typeof useRecentBedtime>['lastNight'];
   setBedtimeOpen: (open: boolean) => void;
+  /** G9: the day summary opens after tonight's bedtime is saved. */
+  onTonightLogged?: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   // A sub-minute record waiting for the user to confirm (4.6 Task 5).
@@ -53,7 +56,7 @@ export function useNowActions({
    * `when.startAt === null` is the everyday path: one tap, start now.
    * `scheduled` means the record waits until its time; `promoteScheduled()` starts it.
    */
-  async function handleStart(category: Category, when: StartWhen, item?: RoutineItem) {
+  async function handleStart(category: Category, when: StartWhen, item?: RoutineItem, label?: string | null) {
     if (!uid || busy) return;
     setBusy(true);
     try {
@@ -68,7 +71,9 @@ export function useNowActions({
               routineItemId: item.id,
               dueAt: item.minutes ? Date.now() + item.minutes * 60_000 : undefined,
             }
-          : {}),
+          : label
+            ? { label }
+            : {}),
       });
       await capWait(started, (e) => push(`Sync failed. ${(e as Error).message}`));
       // Layer 3 of 6c: Start is one tap, so there must always be a 5-second way back.
@@ -76,7 +81,7 @@ export function useNowActions({
       const done =
         when.scheduled && when.startAt !== null
           ? `${CATEGORY_LABEL[category]} scheduled for ${clockTime(when.startAt)}`
-          : `Started ${item ? item.text : CATEGORY_LABEL[category]}`;
+          : `Started ${item ? item.text : (label ?? CATEGORY_LABEL[category])}`;
       push(done, {
         label: 'Undo',
         run: () => {
@@ -240,6 +245,7 @@ export function useNowActions({
           : `Bedtime ${formatBedtime(at)} logged for ${prettyDay(date)}.`,
         { label: 'Undo', run: () => restoreBedtime(date, prev) }
       );
+      if (date === today) onTonightLogged?.();
     } catch (e) {
       push(`Could not log bedtime. ${(e as Error).message}`);
     } finally {

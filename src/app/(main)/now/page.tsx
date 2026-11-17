@@ -21,8 +21,6 @@ import RoutineDueSheet from '@/components/RoutineDueSheet';
 import Toasts from '@/components/Toasts';
 import VoiceSheet from '@/components/VoiceSheet';
 import WeeklyReview from '@/components/WeeklyReview';
-import MoonIcon from '@/components/MoonIcon';
-import TopBar from '@/components/TopBar';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useActiveActivities,
@@ -40,16 +38,21 @@ import { useCurrentWeek, useRollover, useWeekTarget } from '@/hooks/useTargets';
 import { useRoutineChecks, useRoutines } from '@/hooks/useRoutine';
 import { useLeavingCards } from '@/hooks/useLeavingCards';
 import { useNowActions } from '@/hooks/useNowActions';
+import { useStartLink } from '@/hooks/useStartLink';
 import { useVoice } from '@/hooks/useVoice';
 import { actualHours, findStale, logicalDate, logicalWeekday, overlapHours } from '@/lib/balance';
 import { pickBalance } from '@/lib/banner';
-import { formatBedtime } from '@/lib/bedtime';
-import { formatDuration, prettyDay, roundDown } from '@/lib/datetime';
+import { roundDown } from '@/lib/datetime';
 import { nowTiles } from '@/lib/day-progress';
 import { routineForDay } from '@/lib/routine';
 import { CATEGORIES } from '@/types/logi';
 import { btn } from '@/lib/ui';
 import StoppedCards from '@/components/now/StoppedCards';
+import NowHeader from '@/components/now/NowHeader';
+import DaySummarySheet from '@/components/now/DaySummarySheet';
+import { showsTodayWord } from '@/lib/day-summary';
+import { bedtimeHint } from '@/lib/bedtime-hint';
+import { useSleepPlan } from '@/hooks/useSleepPlan';
 
 /** From 3 parallel sessions up, cards collapse so Now still fits one screen. */
 const COMPACT_FROM = 3;
@@ -164,6 +167,8 @@ export default function NowPage() {
   // shows tonight; the sheet is where last night can be seen and edited.
   const { tonight: bedtimeLog, lastNight } = useRecentBedtime(today);
   const [bedtimeOpen, setBedtimeOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const sleepPlan = useSleepPlan();
 
   const {
     busy,
@@ -190,7 +195,12 @@ export default function NowPage() {
     bedtimeLog,
     lastNight,
     setBedtimeOpen,
+    onTonightLogged: () => setSummaryOpen(true),
   });
+
+  useStartLink(!!uid && !activeLoading, (category, label) =>
+    void handleStart(category, { startAt: null, scheduled: false }, undefined, label),
+  );
 
   // `active` sessions over 15h. `active` is a realtime stream, so this list
   // updates on mount, when the app returns to the foreground (useTick catches
@@ -200,32 +210,16 @@ export default function NowPage() {
   return (
     // pb-20: room for the mic FAB, so it does not cover the last card's Stop button.
     <div className="flex flex-1 flex-col gap-6 pb-20">
-      {/* Title and gear on top. Date, hours and bedtime share one quiet line
-           below, so the gear never has to share its corner. */}
-      <div className="flex flex-col">
-        <TopBar>
-          <h1 className="text-2xl font-semibold tracking-tight">Now</h1>
-        </TopBar>
-        <p className="flex min-h-11 flex-wrap items-center gap-2 text-sm tabular-nums text-ink-muted">
-          <span>{prettyDay(today)}</span>
-          <span aria-hidden="true">·</span>
-          <span>{formatDuration(trackedMs)} tracked</span>
-          <span aria-hidden="true">·</span>
-          <button
-            type="button"
-            onClick={() => setBedtimeOpen(true)}
-            disabled={busy}
-            aria-label={
-              bedtimeLog.bedtimeAt
-                ? `Bedtime ${formatBedtime(bedtimeLog.bedtimeAt)}, tap to edit`
-                : 'Log bedtime'
-            }
-            className="transition hover:text-ink active:scale-95 active:text-ink disabled:opacity-50"
-          >
-            <MoonIcon /> {bedtimeLog.bedtimeAt ? formatBedtime(bedtimeLog.bedtimeAt) : 'bedtime'}
-          </button>
-        </p>
-      </div>
+      <NowHeader
+        today={today}
+        trackedMs={trackedMs}
+        bedtimeAt={bedtimeLog.bedtimeAt}
+        busy={busy}
+        showToday={showsTodayWord(nowMinute)}
+        bedtimeHint={bedtimeHint(sleepPlan, today, nowMinute, bedtimeLog.bedtimeAt)}
+        onBedtime={() => setBedtimeOpen(true)}
+        onToday={() => setSummaryOpen(true)}
+      />
 
       {reviewWeek && (
         <div className="flex items-center justify-between gap-3 border-l-2 border-line-strong py-1 pl-3">
@@ -461,6 +455,15 @@ export default function NowPage() {
           onPick={(at) => void handleBedtime(at)}
           onClear={(date) => void handleClearBedtime(date)}
           onClose={() => setBedtimeOpen(false)}
+        />
+      ) : null}
+
+      {summaryOpen ? (
+        <DaySummarySheet
+          today={today}
+          tiles={tiles}
+          routine={routineToday}
+          onClose={() => setSummaryOpen(false)}
         />
       ) : null}
 
