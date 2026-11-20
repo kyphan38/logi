@@ -8,6 +8,7 @@
 // ============================================================
 
 import type { Digest } from '@/lib/digest';
+import type { OnUsage } from '@/lib/gemini-parse';
 
 // ------------------------------------------------------------
 // 1. Structured output schema
@@ -129,7 +130,7 @@ const MAX_OUTPUT_TOKENS = 2000;
  * Returns the model's RAW JSON. The caller MUST pass it through
  * `sanitizeInsight()` before sending it to the client - no exceptions.
  */
-export async function analyseDigest(digest: Digest, apiKey: string): Promise<unknown> {
+export async function analyseDigest(digest: Digest, apiKey: string, onUsage?: OnUsage): Promise<unknown> {
   const res = await fetch(`${ENDPOINT}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -158,6 +159,7 @@ export async function analyseDigest(digest: Digest, apiKey: string): Promise<unk
 
   if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
   const data = await res.json();
+  await onUsage?.(MODEL, data?.usageMetadata);
   const cand = data?.candidates?.[0];
   const text = cand?.content?.parts?.[0]?.text;
 

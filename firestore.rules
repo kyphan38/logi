@@ -160,6 +160,12 @@ service cloud.firestore {
     }
 
     // Everything else: denied
+    // AI cost per month (YYYY-MM). Written by the server only (Admin SDK).
+    match /aiUsage/{month} {
+      allow read: if allowed();
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

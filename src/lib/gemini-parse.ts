@@ -3,7 +3,11 @@
 // SERVER-SIDE ONLY. Never called from the browser.
 // ============================================================
 
+import type { UsageMeta } from '@/lib/ai-cost';
 import type { Activity, Category } from '@/types/logi';
+
+/** Gets each call's token counts; the API route saves the cost. */
+export type OnUsage = (model: string, meta: UsageMeta | undefined) => Promise<void>;
 
 // ------------------------------------------------------------
 // 1. Structured output schema
@@ -326,6 +330,7 @@ export async function parseAudio(
   systemPrompt: string,
   apiKey: string,
   thinking: Thinking = 'low',
+  onUsage?: OnUsage,
 ): Promise<ParseResponse> {
   const res = await fetch(`${ENDPOINT}?key=${apiKey}`, {
     method: 'POST',
@@ -350,6 +355,7 @@ export async function parseAudio(
 
   if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
   const data = await res.json();
+  await onUsage?.(MODEL, data?.usageMetadata);
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('Gemini returned no content');
   return JSON.parse(text) as ParseResponse;
@@ -363,6 +369,7 @@ export async function parseTextCorrection(
   thinking: Thinking = 'low',
   /** Only A/B runs pass another model. */
   model: string = MODEL,
+  onUsage?: OnUsage,
 ): Promise<ParseResponse> {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const res = await fetch(`${endpoint}?key=${apiKey}`, {
@@ -381,6 +388,7 @@ export async function parseTextCorrection(
   });
   if (!res.ok) throw new Error(`Gemini ${res.status}`);
   const data = await res.json();
+  await onUsage?.(model, data?.usageMetadata);
   return JSON.parse(data.candidates[0].content.parts[0].text) as ParseResponse;
 }
 

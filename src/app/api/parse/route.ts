@@ -6,6 +6,7 @@ import 'server-only';
 // Returns: { entries: ParsedCommand[] } (sanitized, times as epoch ms), one per activity said
 // ============================================================
 
+import { logAiCost } from '@/lib/ai-cost-log';
 import { buildSystemPrompt, parseAudio, parseTextCorrection } from '@/lib/gemini-parse';
 import { sanitizeEntries, type ParsedCommand } from '@/lib/parse-sanitize';
 import { annotateEntries } from '@/lib/voice-context';
@@ -130,8 +131,8 @@ export async function POST(req: Request): Promise<Response> {
   try {
     raw = await withTimeout(
       audio
-        ? parseAudio(audio, mimeType, systemPrompt, apiKey)
-        : parseTextCorrection(text as string, systemPrompt, apiKey),
+        ? parseAudio(audio, mimeType, systemPrompt, apiKey, 'low', logAiCost)
+        : parseTextCorrection(text as string, systemPrompt, apiKey, 'low', undefined, logAiCost),
       GEMINI_TIMEOUT_MS,
     );
   } catch (e) {

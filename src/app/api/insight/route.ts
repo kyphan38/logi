@@ -13,6 +13,7 @@ import 'server-only';
 // The digest is NEVER logged anywhere - it is personal daily-life data.
 // ============================================================
 
+import { logAiCost } from '@/lib/ai-cost-log';
 import { analyseDigest } from '@/lib/gemini-insight';
 import { sanitizeInsight } from '@/lib/insight-sanitize';
 import type { Digest } from '@/lib/digest';
@@ -96,7 +97,7 @@ export async function POST(req: Request): Promise<Response> {
 
   let raw: unknown;
   try {
-    raw = await withTimeout(analyseDigest(digest as Digest, apiKey), GEMINI_TIMEOUT_MS);
+    raw = await withTimeout(analyseDigest(digest as Digest, apiKey, logAiCost), GEMINI_TIMEOUT_MS);
   } catch (e) {
     // Log the error name only, never the digest.
     console.error('[api/insight] gemini failed', e instanceof Error ? e.message : 'unknown');
