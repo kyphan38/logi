@@ -34,29 +34,3 @@ export function costUsd(model: string, meta: UsageMeta | undefined, now: number)
 export function monthKey(now: number): string {
   return new Date(now + 7 * 3600_000).toISOString().slice(0, 7);
 }
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** "2026-11" -> "Nov 2026". */
-export function monthLabel(key: string): string {
-  const [y, m] = key.split('-');
-  return `${MONTHS[Number(m) - 1] ?? m} ${y}`;
-}
-
-export function formatUsd(usd: number): string {
-  if (!(usd > 0)) return '$0.00';
-  if (usd < 0.01) return '< $0.01';
-  return `$${usd.toFixed(2)}`;
-}
-
-export type MonthCost = { month: string; usd: number };
-
-/** This month's cost and the earlier months, newest first. Bad ids are skipped. */
-export function splitMonths(rows: MonthCost[], now: number): { current: number; past: MonthCost[] } {
-  const cur = monthKey(now);
-  const ok = rows.filter((r) => /^\d{4}-\d{2}$/.test(r.month) && Number.isFinite(r.usd));
-  return {
-    current: ok.find((r) => r.month === cur)?.usd ?? 0,
-    past: ok.filter((r) => r.month < cur).sort((a, b) => b.month.localeCompare(a.month)),
-  };
-}

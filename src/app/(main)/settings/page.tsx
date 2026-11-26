@@ -11,7 +11,6 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 
 import TopBar from '@/components/TopBar';
-import AiCostRow from '@/components/settings/AiCostRow';
 import BedtimeSettings from '@/components/settings/BedtimeSettings';
 import StartLinks from '@/components/settings/StartLinks';
 
@@ -155,11 +154,6 @@ export default function SettingsPage() {
             </button>
           ))}
         </div>
-      </section>
-
-      <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">
-        <h2 className="text-sm font-medium text-ink">AI cost</h2>
-        <AiCostRow />
       </section>
 
       <section className="flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-4">

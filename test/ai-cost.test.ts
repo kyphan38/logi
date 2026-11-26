@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { costUsd, formatUsd, monthKey, monthLabel, pricePerMillion, splitMonths } from '@/lib/ai-cost';
+import { costUsd, monthKey, pricePerMillion } from '@/lib/ai-cost';
 
 const NOV = Date.UTC(2026, 10, 20);
 
@@ -23,23 +23,5 @@ test('ai-cost: thinking tokens bill as output', () => {
 test('ai-cost: month is in Vietnam time', () => {
   assert.equal(monthKey(Date.UTC(2026, 10, 30, 16, 59)), '2026-11');
   assert.equal(monthKey(Date.UTC(2026, 10, 30, 17, 0)), '2026-12');
-  assert.equal(monthLabel('2026-11'), 'Nov 2026');
 });
 
-test('ai-cost: format and split months', () => {
-  assert.equal(formatUsd(0), '$0.00');
-  assert.equal(formatUsd(0.004), '< $0.01');
-  assert.equal(formatUsd(1.236), '$1.24');
-  const s = splitMonths(
-    [
-      { month: '2026-09', usd: 1 },
-      { month: '2026-11', usd: 0.5 },
-      { month: '2026-10', usd: 2 },
-      { month: 'bad', usd: 3 },
-    ],
-    NOV,
-  );
-  assert.equal(s.current, 0.5);
-  assert.deepEqual(s.past.map((r) => r.month), ['2026-10', '2026-09']);
-  assert.equal(splitMonths([], NOV).current, 0);
-});
