@@ -1,0 +1,21 @@
+# Monthly library updates: one grouped pull request for minor and patch versions.
+# Major versions are left out on purpose: the owner picks them from the upkeep deps report.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - "/"
+      - "/functions"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
