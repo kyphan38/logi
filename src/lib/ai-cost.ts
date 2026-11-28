@@ -18,6 +18,8 @@ export function pricePerMillion(model: string, now: number): Price {
   const m = model.toLowerCase();
   if (m.includes('embedding')) return { input: 0.15, output: 0 };
   if (m.includes('argon')) return now < Date.UTC(2026, 11, 1) ? { input: 2, output: 10 } : { input: 4, output: 20 };
+  if (m.includes('carbon')) return now < Date.UTC(2026, 11, 1) ? { input: 2, output: 10 } : { input: 4, output: 20 };
+  if (m.includes('neon')) return { input: 3, output: 15 };
   if (m.includes('hydrogen')) return { input: 1.5, output: 7.5 };
   // Flash, and the fallback for any model not listed above.
   return now < Date.UTC(2027, 0, 1) ? { input: 0.75, output: 3.75 } : { input: 1.5, output: 7.5 };
