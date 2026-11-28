@@ -128,6 +128,16 @@ const BLOCKS: Block[] = [
       'Theme: system, light or dark.',
     ],
   },
+  {
+    title: 'Shortcuts',
+    lines: [
+      'For a keyboard.',
+      'Esc: close the open panel.',
+      'Enter or Space on a routine item: tick or untick it. Tab moves between items.',
+      'Enter or Space on the running card: edit the session.',
+      'Analytics tabs, ← and →: previous or next tab. Home and End: first or last tab.',
+    ],
+  },
 ];
 
 export default function GuidePage() {
