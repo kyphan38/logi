@@ -18,6 +18,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Tests import the Firebase client, which needs a config. Fake values: nothing connects.
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-placeholder
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-placeholder
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-placeholder
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-placeholder
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ci-placeholder
+      NEXT_PUBLIC_FIREBASE_APP_ID: ci-placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
